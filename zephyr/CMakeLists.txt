@@ -1,0 +1,8 @@
+
+add_subdirectory(common)
+add_subdirectory(logger)
+add_subdirectory(math)
+
+add_library(zephyr INTERFACE)
+
+target_link_libraries(zephyr INTERFACE zephyr-common zephyr-logger zephyr-math)

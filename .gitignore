@@ -1,0 +1,13 @@
+# IntelliJ CLion
+.idea
+cmake-build-*
+
+# Microsoft Visual Studio
+.vs
+out
+CMakeSettings.json
+
+# Other
+.DS_Store
+build
+docs

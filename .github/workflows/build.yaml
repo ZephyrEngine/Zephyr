@@ -1,0 +1,35 @@
+name: Build
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build-win64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - uses: msys2/setup-msys2@v2
+        with:
+          install: mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-vulkan
+      - name: Build Zephyr
+        run: |
+          cmake -B build \
+                -GNinja \
+                -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static" \
+                -DCMAKE_BUILD_TYPE=Release
+          cd build
+          ninja -j $NUMBER_OF_PROCESSORS
+      - name: Collect artifacts
+        run: |
+          mkdir upload
+          cp build/app/runtime/Zephyr-Runtime.exe upload
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Zephyr-win64
+          path: upload
+          if-no-files-found: error
