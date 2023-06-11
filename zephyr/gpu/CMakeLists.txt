@@ -46,8 +46,7 @@ find_package(Vulkan REQUIRED)
 
 add_library(zephyr-gpu ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
-target_compile_features(zephyr-gpu PUBLIC cxx_std_20)
 target_link_libraries(zephyr-gpu PRIVATE Vulkan::Vulkan VulkanMemoryAllocator)
-target_link_libraries(zephyr-gpu PUBLIC zephyr-common zephyr-logger)
+target_link_libraries(zephyr-gpu PUBLIC zephyr-common zephyr-logger zephyr-cxx-opts)
 target_include_directories(zephyr-gpu PUBLIC include)
 target_include_directories(zephyr-gpu PRIVATE src)

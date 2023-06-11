@@ -11,6 +11,5 @@ set(HEADERS_PUBLIC
 
 add_library(zephyr-math INTERFACE ${HEADERS_PUBLIC})
 
-target_compile_features(zephyr-math INTERFACE cxx_std_20)
 target_include_directories(zephyr-math INTERFACE include)
-target_link_libraries(zephyr-math INTERFACE zephyr-common)
+target_link_libraries(zephyr-math INTERFACE zephyr-common zephyr-cxx-opts)

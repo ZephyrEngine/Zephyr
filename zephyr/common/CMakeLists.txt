@@ -18,6 +18,5 @@ set(HEADERS_PUBLIC
 
 add_library(zephyr-common ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
-target_compile_features(zephyr-common PUBLIC cxx_std_20)
 target_include_directories(zephyr-common PUBLIC include)
-target_link_libraries(zephyr-common PUBLIC fmt)
+target_link_libraries(zephyr-common PUBLIC fmt zephyr-cxx-opts)

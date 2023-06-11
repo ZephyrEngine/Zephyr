@@ -19,7 +19,6 @@ set(HEADERS_PUBLIC
 
 add_library(zephyr-logger ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
-target_compile_features(zephyr-logger PUBLIC cxx_std_20)
-target_link_libraries(zephyr-logger PUBLIC fmt zephyr-common)
+target_link_libraries(zephyr-logger PUBLIC fmt zephyr-common zephyr-cxx-opts)
 target_include_directories(zephyr-logger PRIVATE src)
 target_include_directories(zephyr-logger PUBLIC include)
