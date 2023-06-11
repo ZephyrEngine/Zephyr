@@ -4,6 +4,8 @@
 #include <zephyr/panic.hpp>
 #include <fmt/format.h>
 
+#include "application.hpp"
+
 #ifdef WIN32
 
 #include <windows.h>
@@ -19,7 +21,7 @@ void win32_panic_handler(const char* file, int line, const char* message) {
 
 #endif
 
-int main() {
+int main(int argc, char** argv) {
 
 #ifdef WIN32
   zephyr::set_panic_handler(&win32_panic_handler);
@@ -27,5 +29,5 @@ int main() {
 
   zephyr::get_logger().InstallSink(std::make_unique<zephyr::LoggerConsoleSink>());
 
-  return 0;
+  return Application{}.Run(argc, argv);
 }

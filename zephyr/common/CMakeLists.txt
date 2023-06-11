@@ -17,6 +17,7 @@ set(HEADERS_PUBLIC
   include/zephyr/meta.hpp
   include/zephyr/panic.hpp
   include/zephyr/punning.hpp
+  include/zephyr/vector_n.hpp
 )
 
 add_library(zephyr-common ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
