@@ -1,9 +1,32 @@
 
 #pragma once
 
+#include <zephyr/panic.hpp>
 #include <cstddef>
+#include <type_traits>
 #include <utility>
 #include <initializer_list>
+
+#ifdef NDEBUG
+  #define VECTOR_N_ASSERT_NOT_FULL()
+  #define VECTOR_N_ASSERT_NOT_EMPTY()
+  #define VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index)
+#else
+  #define VECTOR_N_ASSERT_NOT_FULL() \
+    if(!std::is_constant_evaluated() && Full()) { \
+      ZEPHYR_PANIC("{} called, however the vector was already full.", __PRETTY_FUNCTION__); \
+    }
+
+  #define VECTOR_N_ASSERT_NOT_EMPTY() \
+    if(!std::is_constant_evaluated() && Empty()) { \
+      ZEPHYR_PANIC("{} called, however the vector was empty.", __PRETTY_FUNCTION__); \
+    }
+
+  #define VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index) \
+    if(!std::is_constant_evaluated() && index >= Size()) { \
+      ZEPHYR_PANIC("{} called with out-of-bounds index {} (size was {}).", __PRETTY_FUNCTION__, index, Size()); \
+    }
+#endif
 
 namespace zephyr {
 
@@ -28,10 +51,12 @@ namespace zephyr {
       }
 
       constexpr T& operator[](std::size_t index) {
+        VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
         return m_data[index];
       }
 
       constexpr const T& operator[](std::size_t index) const {
+        VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
         return m_data[index];
       }
 
@@ -40,18 +65,23 @@ namespace zephyr {
       }
 
       constexpr void PushBack(T const& value) {
+        VECTOR_N_ASSERT_NOT_FULL();
         m_data[m_size++] = value;
       }
 
       constexpr void PushBack(T&& value) {
+        VECTOR_N_ASSERT_NOT_FULL();
         m_data[m_size++] = std::move(value);
       }
 
       constexpr void PopBack() {
+        VECTOR_N_ASSERT_NOT_EMPTY();
         m_size--;
       }
 
       constexpr void Erase(const_iterator it) {
+        VECTOR_N_ASSERT_NOT_EMPTY();
+
         auto copy_it = (iterator)it;
 
         while (copy_it != end()) {
@@ -63,6 +93,8 @@ namespace zephyr {
       }
 
       constexpr iterator Insert(const_iterator it, T const& value) {
+        VECTOR_N_ASSERT_NOT_FULL();
+
         iterator copy_it = end();
 
         while (copy_it != it) {
@@ -78,6 +110,8 @@ namespace zephyr {
       }
 
       constexpr iterator Insert(const_iterator it, T&& value) {
+        VECTOR_N_ASSERT_NOT_FULL();
+
         iterator copy_it = end();
 
         while (copy_it != it) {
@@ -110,6 +144,10 @@ namespace zephyr {
 
       [[nodiscard]] constexpr bool Empty() const {
         return m_size == 0;
+      }
+
+      [[nodiscard]] constexpr bool Full() const {
+        return m_size == capacity;
       }
 
       [[nodiscard]] constexpr size_t Size() const {
@@ -148,3 +186,7 @@ namespace zephyr {
   };
 
 } // namespace zephyr
+
+#undef VECTOR_N_ASSERT_NOT_FULL
+#undef VECTOR_N_ASSERT_NOT_EMPTY
+#undef VECTOR_N_ASSERT_INDEX_IN_BOUNDS
