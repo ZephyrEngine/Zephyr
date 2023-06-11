@@ -1,8 +1,4 @@
 
-cmake_minimum_required(VERSION 3.2)
-
-project(zephyr-runtime CXX)
-
 set(SOURCES
   src/application.cpp
   src/main.cpp

@@ -1,8 +1,4 @@
 
-cmake_minimum_required(VERSION 3.2)
-
-project(zephyr-math CXX)
-
 set(HEADERS_PUBLIC
   include/zephyr/math/box3.hpp
   include/zephyr/math/frustum.hpp

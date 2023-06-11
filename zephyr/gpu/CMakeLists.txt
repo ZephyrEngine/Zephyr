@@ -1,6 +1,3 @@
-cmake_minimum_required(VERSION 3.2)
-
-project(zephyr-gpu CXX)
 
 set(SOURCES
   src/vulkan/render_device.cpp
