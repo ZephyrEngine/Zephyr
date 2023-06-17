@@ -6,6 +6,11 @@
 #include <zephyr/math/vector.hpp>
 #include <zephyr/float.hpp>
 
+/**
+ * @todo: make this class thread-safe ideally, so that at the least calling Get*() operations
+ * from multiple threads is safe.
+ */
+
 namespace zephyr {
 
   /**
