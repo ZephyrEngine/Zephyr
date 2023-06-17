@@ -85,7 +85,7 @@ namespace zephyr {
        * Returns the rotation in extrinsic x-y-z (intrinsic z-y'-x'') Tait-Bryan angles form.
        * This is an expensive operation because the angles may need to be reconstructed.
        * Due to the reconstruction, there also is no guarantee that calling
-       * {@link #GetEuler} after {@link #SetEuler} will return original angles.
+       * {@link #GetAsEuler} after {@link #SetFrinEuler} will return the original angles.
        * @returns the Tait-Bryan angles
        */
       const Vector3& GetAsEuler() {
