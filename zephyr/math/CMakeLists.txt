@@ -5,6 +5,7 @@ set(HEADERS_PUBLIC
   include/zephyr/math/matrix4.hpp
   include/zephyr/math/plane.hpp
   include/zephyr/math/quaternion.hpp
+  include/zephyr/math/rotation.hpp
   include/zephyr/math/traits.hpp
   include/zephyr/math/vector.hpp
 )
