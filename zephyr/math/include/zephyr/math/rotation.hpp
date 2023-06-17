@@ -71,6 +71,17 @@ namespace zephyr {
       }
 
       /**
+       * Set the rotation from a 4x4 matrix
+       * @param matrix the 4x4 matrix
+       */
+      void SetFromMatrix4(const Matrix4& matrix) {
+        m_quaternion = Quaternion::FromRotationMatrix(matrix);
+        // The 4x4 matrix is likely to be read and copying it now is faster than reconstructing it later.
+        m_matrix = matrix;
+        m_needs_euler_refresh = true;
+      }
+
+      /**
        * Returns the rotation in extrinsic x-y-z (intrinsic z-y'-x'') Tait-Bryan angles form.
        * This is an expensive operation because the angles may need to be reconstructed.
        * Due to the reconstruction, there also is no guarantee that calling
