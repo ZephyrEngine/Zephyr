@@ -31,7 +31,7 @@ namespace zephyr {
             break;
           }
           case IndexDataType::UInt32: {
-            m_size = data.size() * sizeof(u32);
+            m_size = data.size() / sizeof(u32);
             m_number_of_indices = m_size * sizeof(u32);
             break;
           }
