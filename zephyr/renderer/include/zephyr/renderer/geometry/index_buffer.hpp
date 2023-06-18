@@ -26,13 +26,13 @@ namespace zephyr {
       IndexBuffer(IndexDataType data_type, std::span<u8> data) : m_data_type{data_type} {
         switch(data_type) {
           case IndexDataType::UInt16: {
-            m_size = data.size() / sizeof(u16);
-            m_number_of_indices = m_size * sizeof(u16);
+            m_number_of_indices = data.size() / sizeof(u16);
+            m_size = m_number_of_indices * sizeof(u16);
             break;
           }
           case IndexDataType::UInt32: {
-            m_size = data.size() / sizeof(u32);
-            m_number_of_indices = m_size * sizeof(u32);
+            m_number_of_indices = data.size() / sizeof(u32);
+            m_size = m_number_of_indices * sizeof(u32);
             break;
           }
           default: ZEPHYR_PANIC("Unhandled index data type: {}", (int)data_type);
