@@ -11,6 +11,8 @@ set(HEADERS_PUBLIC
   include/zephyr/float.hpp
   include/zephyr/integer.hpp
   include/zephyr/meta.hpp
+  include/zephyr/non_copyable.hpp
+  include/zephyr/non_moveable.hpp
   include/zephyr/panic.hpp
   include/zephyr/punning.hpp
   include/zephyr/vector_n.hpp
