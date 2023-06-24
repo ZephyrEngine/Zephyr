@@ -8,6 +8,11 @@
 namespace zephyr {
 
 struct Fence {
+  enum class CreateSignalled {
+    No = 0,
+    Yes = 1
+  };
+
   virtual ~Fence() = default;
 
   virtual auto Handle() -> void* = 0;

@@ -13,7 +13,7 @@ namespace zephyr {
     int height
   )   : render_device{std::move(render_device)}, surface{surface} {
     SetSize(width, height);
-    fence = this->render_device->CreateFence();
+    fence = this->render_device->CreateFence(Fence::CreateSignalled::No);
   }
 
   std::shared_ptr<RenderTarget>& VulkanSwapChain::AcquireNextRenderTarget() {

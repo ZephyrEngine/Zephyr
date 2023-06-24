@@ -170,8 +170,8 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanCommandBuffer>(device, pool);
   }
 
-  auto CreateFence() -> std::unique_ptr<Fence> override {
-    return std::make_unique<VulkanFence>(device);
+  auto CreateFence(Fence::CreateSignalled create_signalled) -> std::unique_ptr<Fence> override {
+    return std::make_unique<VulkanFence>(device, create_signalled);
   }
 
   auto GraphicsQueue() -> Queue* override {

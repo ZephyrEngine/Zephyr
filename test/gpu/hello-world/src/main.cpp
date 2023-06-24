@@ -53,7 +53,7 @@ class MainWindow final : public Window {
 
       render_pass = builder->Build();
 
-      fence = render_device->CreateFence();
+      fence = render_device->CreateFence(Fence::CreateSignalled::No);
     }
 
     std::shared_ptr<RenderDevice> render_device;

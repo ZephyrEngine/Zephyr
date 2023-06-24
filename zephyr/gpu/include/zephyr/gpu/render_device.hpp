@@ -99,7 +99,7 @@ struct RenderDevice {
 
   virtual auto CreateCommandBuffer(CommandPool* pool) -> std::unique_ptr<CommandBuffer> = 0;
 
-  virtual auto CreateFence() -> std::unique_ptr<Fence> = 0;
+  virtual auto CreateFence(Fence::CreateSignalled create_signalled) -> std::unique_ptr<Fence> = 0;
 
   virtual auto GraphicsQueue() -> Queue* = 0;
 

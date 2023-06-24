@@ -84,7 +84,7 @@ class MainWindow final : public Window {
     }
 
     void CreateFence() {
-      fence = render_device->CreateFence();
+      fence = render_device->CreateFence(Fence::CreateSignalled::No);
     }
 
     void CreateGraphicsPipeline() {

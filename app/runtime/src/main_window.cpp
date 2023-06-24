@@ -16,9 +16,7 @@ namespace zephyr {
     const auto& command_buffer = m_render_command_buffers[frame_index];
     const auto& fence = m_fences[frame_index];
 
-    if(m_frame >= m_frames_in_flight) { // TODO: set fence create signalled bit?
-      fence->Wait();
-    }
+    fence->Wait();
 
     const auto& render_target = GetSwapChain()->AcquireNextRenderTarget();
 
@@ -122,8 +120,7 @@ namespace zephyr {
 
   void MainWindow::CreateFences() {
     for(size_t i = 0; i < m_frames_in_flight; i++) {
-      m_fences.push_back(m_render_device->CreateFence());
-      m_fences[i]->Reset();
+      m_fences.push_back(m_render_device->CreateFence(Fence::CreateSignalled::Yes));
     }
   }
 

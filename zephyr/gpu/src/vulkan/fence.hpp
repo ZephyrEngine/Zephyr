@@ -9,11 +9,11 @@
 namespace zephyr {
 
 struct VulkanFence final : Fence {
-  VulkanFence(VkDevice device) : device(device) {
+  VulkanFence(VkDevice device, CreateSignalled create_signalled) : device(device) {
     auto info = VkFenceCreateInfo{
       .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
       .pNext = nullptr,
-      .flags = 0
+      .flags = (create_signalled == CreateSignalled::Yes) ? VK_FENCE_CREATE_SIGNALED_BIT : 0u
     };
 
     if (vkCreateFence(device, &info, nullptr, &fence) != VK_SUCCESS) {
