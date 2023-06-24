@@ -1,4 +1,6 @@
 
+#include <zephyr/float.hpp>
+
 #include "main_window.hpp"
 
 namespace zephyr {
@@ -18,17 +20,30 @@ namespace zephyr {
     } transform;
 
     transform.projection = m_projection_matrix;
-    transform.model_view = Matrix4::Translation(0, 0, -5) * Matrix4::RotationX((float)m_frame * 0.025f);
 
     m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
 
     m_render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
-    m_render_command_buffer->PushConstants(m_pipeline->GetLayout(), 0, sizeof(transform), &transform);
     m_render_command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     m_render_command_buffer->BindGraphicsPipeline(m_pipeline.get());
     m_render_command_buffer->BindVertexBuffers({{m_vbo.get()}});
     m_render_command_buffer->BindIndexBuffer(m_ibo.get(), IndexDataType::UInt16);
-    m_render_command_buffer->DrawIndexed(36);
+    for(int x = 0; x < 25; x++) {
+      for(int y = 0; y < 25; y++) {
+        for(int z = 24; z >= 0; z--) {
+          const float scene_x = ((f32)x / 25.0f * 2.0f - 1.0f) * 5.0f;
+          const float scene_y = ((f32)y / 25.0f * 2.0f - 1.0f) * 5.0f;
+          const float scene_z = ((f32)z / 25.0f * 2.0f) * 5.0f + 3.0f;
+
+          transform.model_view = Matrix4::Translation(scene_x, scene_y, -scene_z) *
+                                 Matrix4::RotationX((f32)m_frame * 0.025f) *
+                                 Matrix4::Scale(0.1f, 0.1f, 0.1f);
+
+          m_render_command_buffer->PushConstants(m_pipeline->GetLayout(), 0, sizeof(transform), &transform);
+          m_render_command_buffer->DrawIndexed(36);
+        }
+      }
+    }
     m_render_command_buffer->EndRenderPass();
     m_render_command_buffer->End();
 
@@ -46,7 +61,7 @@ namespace zephyr {
     m_pipeline_builder->SetViewport(0, 0, width, height);
     m_pipeline = m_pipeline_builder->Build();
 
-    m_projection_matrix = Matrix4::PerspectiveVK(45.0f, (float)width / (float)height, 0.01f, 100.0f);
+    m_projection_matrix = Matrix4::PerspectiveVK(45.0f, (f32)width / (f32)height, 0.01f, 100.0f);
   }
 
   void MainWindow::Setup() {
