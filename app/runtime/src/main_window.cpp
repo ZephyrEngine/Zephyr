@@ -12,6 +12,14 @@ namespace zephyr {
   }
 
   void MainWindow::OnFrame() {
+    const size_t frame_index = m_frame % m_frames_in_flight;
+    const auto& command_buffer = m_render_command_buffers[frame_index];
+    const auto& fence = m_fences[frame_index];
+
+    if(m_frame >= m_frames_in_flight) { // TODO: set fence create signalled bit?
+      fence->Wait();
+    }
+
     const auto& render_target = GetSwapChain()->AcquireNextRenderTarget();
 
     struct Transform {
@@ -23,15 +31,23 @@ namespace zephyr {
 
     m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
 
-    m_render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
-    m_render_command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
-    m_render_command_buffer->BindGraphicsPipeline(m_pipeline.get());
-    m_render_command_buffer->BindVertexBuffers({{m_vbo.get()}});
-    m_render_command_buffer->BindIndexBuffer(m_ibo.get(), IndexDataType::UInt16);
-    for(int x = 0; x < 25; x++) {
-      for(int y = 0; y < 25; y++) {
-        for(int z = 24; z >= 0; z--) {
-          const float scene_x = ((f32)x / 25.0f * 2.0f - 1.0f) * 5.0f;
+    // Do some non-sense calculations to cause load on the CPU side
+    f32 jitter = 0.0f;
+    for(int i = 0; i < 150000; i++) {
+      jitter = std::sin(jitter + (f32)(m_frame + i) * 0.001f);
+    }
+
+    const int cubes_per_axis = 25;
+
+    command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
+    command_buffer->BindGraphicsPipeline(m_pipeline.get());
+    command_buffer->BindVertexBuffers({{m_vbo.get()}});
+    command_buffer->BindIndexBuffer(m_ibo.get(), IndexDataType::UInt16);
+    for(int z = 0; z < cubes_per_axis; z++) {
+      for(int x = 0; x < cubes_per_axis; x++) {
+        for(int y = 0; y < cubes_per_axis; y++) {
+          const float scene_x = ((f32)x / 25.0f * 2.0f - 1.0f) * 5.0f + jitter * 0.0000001f;
           const float scene_y = ((f32)y / 25.0f * 2.0f - 1.0f) * 5.0f;
           const float scene_z = ((f32)z / 25.0f * 2.0f) * 5.0f + 3.0f;
 
@@ -39,25 +55,28 @@ namespace zephyr {
                                  Matrix4::RotationX((f32)m_frame * 0.025f) *
                                  Matrix4::Scale(0.1f, 0.1f, 0.1f);
 
-          m_render_command_buffer->PushConstants(m_pipeline->GetLayout(), 0, sizeof(transform), &transform);
-          m_render_command_buffer->DrawIndexed(36);
+          command_buffer->PushConstants(m_pipeline->GetLayout(), 0, sizeof(transform), &transform);
+          command_buffer->DrawIndexed(36);
         }
       }
     }
-    m_render_command_buffer->EndRenderPass();
-    m_render_command_buffer->End();
+    command_buffer->EndRenderPass();
+    command_buffer->End();
 
-    m_fence->Reset();
-    m_render_device->GraphicsQueue()->Submit({{m_render_command_buffer.get()}}, m_fence.get());
-    m_fence->Wait();
+    // @todo: remove TmpWaitForImageFullyRead() completely and use a semaphore instead.
+    GetSwapChain()->TmpWaitForImageFullyRead();
+    fence->Reset();
+    m_render_device->GraphicsQueue()->Submit({{command_buffer.get()}}, fence.get());
 
+    // @todo: when is the right time to submit the frame?
     GetSwapChain()->Present();
 
     m_frame++;
+
+    UpdateFramesPerSecondCounter();
   }
 
   void MainWindow::OnResize(int width, int height) {
-    // @todo: should we wait for all frames in flight to be processed or is this safe to do?
     m_pipeline_builder->SetViewport(0, 0, width, height);
     m_pipeline = m_pipeline_builder->Build();
 
@@ -67,18 +86,24 @@ namespace zephyr {
   void MainWindow::Setup() {
     m_render_device = GetRenderDevice();
 
-    CreateCommandPoolAndBuffer();
+    // @todo: does it make sense to directly couple the frames in flight to the number of swapchain images?
+    m_frames_in_flight = GetSwapChain()->GetNumberOfSwapChainImages();
+    ZEPHYR_INFO("Renderer configured to have {} frame(s) in flight", m_frames_in_flight);
+
+    CreateCommandPoolAndBuffers();
     CreateRenderPass();
-    CreateFence();
+    CreateFences();
     CreateGraphicsPipeline();
     CreateVertexAndIndexBuffer();
   }
 
-  void MainWindow::CreateCommandPoolAndBuffer() {
+  void MainWindow::CreateCommandPoolAndBuffers() {
     m_command_pool = m_render_device->CreateGraphicsCommandPool(
       CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-    m_render_command_buffer = m_render_device->CreateCommandBuffer(m_command_pool.get());
+    for(size_t i = 0; i < m_frames_in_flight; i++) {
+      m_render_command_buffers.push_back(m_render_device->CreateCommandBuffer(m_command_pool.get()));
+    }
   }
 
   void MainWindow::CreateRenderPass() {
@@ -95,8 +120,11 @@ namespace zephyr {
     m_render_pass = builder->Build();
   }
 
-  void MainWindow::CreateFence() {
-    m_fence = m_render_device->CreateFence();
+  void MainWindow::CreateFences() {
+    for(size_t i = 0; i < m_frames_in_flight; i++) {
+      m_fences.push_back(m_render_device->CreateFence());
+      m_fences[i]->Reset();
+    }
   }
 
   void MainWindow::CreateGraphicsPipeline() {
@@ -198,6 +226,22 @@ namespace zephyr {
 
     m_render_device->GraphicsQueue()->Submit({{command_buffer.get()}});
     m_render_device->GraphicsQueue()->WaitIdle();
+  }
+
+  void MainWindow::UpdateFramesPerSecondCounter() {
+    const auto time_point_now = std::chrono::steady_clock::now();
+
+    const auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+      time_point_now - m_time_point_last_update).count();
+
+    m_fps_counter++;
+
+    if(time_elapsed >= 1000) {
+      const f32 fps = (f32)m_fps_counter * 1000.0f / (f32)time_elapsed;
+      SetWindowTitle(fmt::format("Zephyr Runtime ({} fps)", fps));
+      m_fps_counter = 0;
+      m_time_point_last_update = std::chrono::steady_clock::now();
+    }
   }
 
 } // namespace zephyr

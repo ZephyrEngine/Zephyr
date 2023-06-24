@@ -22,7 +22,6 @@ namespace zephyr {
     u32 image_id; // current_image_id is std::optional<u32>
     fence->Reset();
     vkAcquireNextImageKHR(device, swap_chain, ~0ULL, VK_NULL_HANDLE, (VkFence)fence->Handle(), &image_id);
-    fence->Wait();
 
     current_image_id = image_id;
 
@@ -31,6 +30,10 @@ namespace zephyr {
 
   size_t VulkanSwapChain::GetNumberOfSwapChainImages() const {
     return render_targets.size();
+  }
+
+  void VulkanSwapChain::TmpWaitForImageFullyRead() {
+    fence->Wait();
   }
 
   void VulkanSwapChain::Present() {

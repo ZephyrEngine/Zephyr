@@ -20,6 +20,7 @@ namespace zephyr {
 
       std::shared_ptr<RenderTarget>& AcquireNextRenderTarget() override;
       [[nodiscard]] size_t GetNumberOfSwapChainImages() const override;
+      void TmpWaitForImageFullyRead() override;
       void Present() override;
       void SetSize(int width, int height);
 
