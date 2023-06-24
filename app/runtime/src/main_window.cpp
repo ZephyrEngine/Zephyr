@@ -17,31 +17,31 @@ namespace zephyr {
       Matrix4 model_view;
     } transform;
 
-    transform.model_view = Matrix4::Translation(0, 0, -5) * Matrix4::RotationX(frame * 0.025f);
+    transform.model_view = Matrix4::Translation(0, 0, -5) * Matrix4::RotationX((float)m_frame * 0.025f);
 
-    render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
+    m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
 
-    render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
-    render_command_buffer->PushConstants(pipeline->GetLayout(), 0, sizeof(transform), &transform);
-    render_command_buffer->BeginRenderPass(render_target.get(), render_pass.get());
-    render_command_buffer->BindGraphicsPipeline(pipeline.get());
-    render_command_buffer->BindVertexBuffers({{vbo.get()}});
-    render_command_buffer->BindIndexBuffer(ibo.get(), IndexDataType::UInt16);
-    render_command_buffer->DrawIndexed(36);
-    render_command_buffer->EndRenderPass();
-    render_command_buffer->End();
+    m_render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    m_render_command_buffer->PushConstants(m_pipeline->GetLayout(), 0, sizeof(transform), &transform);
+    m_render_command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
+    m_render_command_buffer->BindGraphicsPipeline(m_pipeline.get());
+    m_render_command_buffer->BindVertexBuffers({{m_vbo.get()}});
+    m_render_command_buffer->BindIndexBuffer(m_ibo.get(), IndexDataType::UInt16);
+    m_render_command_buffer->DrawIndexed(36);
+    m_render_command_buffer->EndRenderPass();
+    m_render_command_buffer->End();
 
-    fence->Reset();
-    render_device->GraphicsQueue()->Submit({{render_command_buffer.get()}}, fence.get());
-    fence->Wait();
+    m_fence->Reset();
+    m_render_device->GraphicsQueue()->Submit({{m_render_command_buffer.get()}}, m_fence.get());
+    m_fence->Wait();
 
     GetSwapChain()->Present();
 
-    frame++;
+    m_frame++;
   }
 
   void MainWindow::Setup() {
-    render_device = GetRenderDevice();
+    m_render_device = GetRenderDevice();
 
     CreateCommandPoolAndBuffer();
     CreateRenderPass();
@@ -51,14 +51,14 @@ namespace zephyr {
   }
 
   void MainWindow::CreateCommandPoolAndBuffer() {
-    command_pool = render_device->CreateGraphicsCommandPool(
+    m_command_pool = m_render_device->CreateGraphicsCommandPool(
       CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-    render_command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+    m_render_command_buffer = m_render_device->CreateCommandBuffer(m_command_pool.get());
   }
 
   void MainWindow::CreateRenderPass() {
-    auto builder = render_device->CreateRenderPassBuilder();
+    auto builder = m_render_device->CreateRenderPassBuilder();
 
     builder->SetColorAttachmentFormat(0, Texture::Format::B8G8R8A8_SRGB);
     builder->SetColorAttachmentSrcLayout(0, Texture::Layout::Undefined, std::nullopt);
@@ -68,23 +68,23 @@ namespace zephyr {
     builder->SetDepthAttachmentSrcLayout(Texture::Layout::Undefined, std::nullopt);
     builder->SetDepthAttachmentDstLayout(Texture::Layout::DepthStencilAttachment, std::nullopt);
 
-    render_pass = builder->Build();
+    m_render_pass = builder->Build();
   }
 
   void MainWindow::CreateFence() {
-    fence = render_device->CreateFence();
+    m_fence = m_render_device->CreateFence();
   }
 
   void MainWindow::CreateGraphicsPipeline() {
-    std::shared_ptr<ShaderModule> vert_shader = render_device->CreateShaderModule(mesh_vert, sizeof(mesh_vert));
-    std::shared_ptr<ShaderModule> frag_shader = render_device->CreateShaderModule(mesh_frag, sizeof(mesh_frag));
+    std::shared_ptr<ShaderModule> vert_shader = m_render_device->CreateShaderModule(mesh_vert, sizeof(mesh_vert));
+    std::shared_ptr<ShaderModule> frag_shader = m_render_device->CreateShaderModule(mesh_frag, sizeof(mesh_frag));
 
-    auto builder = render_device->CreateGraphicsPipelineBuilder();
+    auto builder = m_render_device->CreateGraphicsPipelineBuilder();
 
     builder->SetViewport(0, 0, 1600, 900);
     builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
     builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
-    builder->SetRenderPass(render_pass);
+    builder->SetRenderPass(m_render_pass);
     builder->SetDepthTestEnable(true);
     builder->SetDepthWriteEnable(true);
     builder->SetDepthCompareOp(CompareOp::LessOrEqual);
@@ -92,7 +92,7 @@ namespace zephyr {
     builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
     builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 3, false);
 
-    pipeline = builder->Build();
+    m_pipeline = builder->Build();
   }
 
   void MainWindow::CreateVertexAndIndexBuffer() {
@@ -146,16 +146,16 @@ namespace zephyr {
       6, 7, 3
     };
 
-    auto staging_vbo = render_device->CreateBuffer(
+    auto staging_vbo = m_render_device->CreateBuffer(
       Buffer::Usage::CopySrc, Buffer::Flags::HostVisible, sizeof(k_vertices));
 
-    auto staging_ibo = render_device->CreateBuffer(
+    auto staging_ibo = m_render_device->CreateBuffer(
       Buffer::Usage::CopySrc, Buffer::Flags::HostVisible, sizeof(k_indices));
 
-    vbo = render_device->CreateBuffer(
+    m_vbo = m_render_device->CreateBuffer(
       Buffer::Usage::VertexBuffer | Buffer::Usage::CopyDst, Buffer::Flags::None, sizeof(k_vertices));
 
-    ibo = render_device->CreateBuffer(
+    m_ibo = m_render_device->CreateBuffer(
       Buffer::Usage::IndexBuffer | Buffer::Usage::CopyDst, Buffer::Flags::None, sizeof(k_indices));
 
     // @todo: fix the API so that we either have to Map() the buffer, or don't have to unmap it.
@@ -165,15 +165,15 @@ namespace zephyr {
     staging_ibo->Update<u8>((u8 const*)k_indices, sizeof(k_indices));
     staging_ibo->Unmap();
 
-    auto command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+    auto command_buffer = m_render_device->CreateCommandBuffer(m_command_pool.get());
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
-    command_buffer->CopyBuffer(staging_vbo.get(), vbo.get(), vbo->Size());
-    command_buffer->CopyBuffer(staging_ibo.get(), ibo.get(), ibo->Size());
+    command_buffer->CopyBuffer(staging_vbo.get(), m_vbo.get(), m_vbo->Size());
+    command_buffer->CopyBuffer(staging_ibo.get(), m_ibo.get(), m_ibo->Size());
     command_buffer->End();
 
-    render_device->GraphicsQueue()->Submit({{command_buffer.get()}});
-    render_device->GraphicsQueue()->WaitIdle();
+    m_render_device->GraphicsQueue()->Submit({{command_buffer.get()}});
+    m_render_device->GraphicsQueue()->WaitIdle();
   }
 
 } // namespace zephyr

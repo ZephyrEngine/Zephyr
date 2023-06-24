@@ -28,16 +28,16 @@ namespace zephyr {
       void CreateGraphicsPipeline();
       void CreateVertexAndIndexBuffer();
 
-      std::shared_ptr<RenderDevice> render_device;
-      std::shared_ptr<CommandPool> command_pool;
-      std::unique_ptr<CommandBuffer> render_command_buffer;
-      std::shared_ptr<RenderPass> render_pass;
-      std::unique_ptr<Fence> fence;
-      std::unique_ptr<GraphicsPipeline> pipeline;
-      std::shared_ptr<Buffer> vbo;
-      std::shared_ptr<Buffer> ibo;
+      std::shared_ptr<RenderDevice> m_render_device;
+      std::shared_ptr<CommandPool> m_command_pool;
+      std::unique_ptr<CommandBuffer> m_render_command_buffer;
+      std::shared_ptr<RenderPass> m_render_pass;
+      std::unique_ptr<Fence> m_fence;
+      std::unique_ptr<GraphicsPipeline> m_pipeline;
+      std::shared_ptr<Buffer> m_vbo;
+      std::shared_ptr<Buffer> m_ibo;
 
-      int frame = 0;
+      int m_frame{0};
   };
 
 } // namespace zephyr
