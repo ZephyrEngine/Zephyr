@@ -13,10 +13,11 @@ namespace zephyr {
     const auto& render_target = GetSwapChain()->AcquireNextRenderTarget();
 
     struct Transform {
-      Matrix4 projection = Matrix4::PerspectiveVK(45.0f, 1600.0f/900.0f, 0.01f, 100.0f);
+      Matrix4 projection;
       Matrix4 model_view;
     } transform;
 
+    transform.projection = m_projection_matrix;
     transform.model_view = Matrix4::Translation(0, 0, -5) * Matrix4::RotationX((float)m_frame * 0.025f);
 
     m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
@@ -38,6 +39,14 @@ namespace zephyr {
     GetSwapChain()->Present();
 
     m_frame++;
+  }
+
+  void MainWindow::OnResize(int width, int height) {
+    // @todo: should we wait for all frames in flight to be processed or is this safe to do?
+    m_pipeline_builder->SetViewport(0, 0, width, height);
+    m_pipeline = m_pipeline_builder->Build();
+
+    m_projection_matrix = Matrix4::PerspectiveVK(45.0f, (float)width / (float)height, 0.01f, 100.0f);
   }
 
   void MainWindow::Setup() {
@@ -79,20 +88,20 @@ namespace zephyr {
     std::shared_ptr<ShaderModule> vert_shader = m_render_device->CreateShaderModule(mesh_vert, sizeof(mesh_vert));
     std::shared_ptr<ShaderModule> frag_shader = m_render_device->CreateShaderModule(mesh_frag, sizeof(mesh_frag));
 
-    auto builder = m_render_device->CreateGraphicsPipelineBuilder();
+    m_pipeline_builder = m_render_device->CreateGraphicsPipelineBuilder();
 
-    builder->SetViewport(0, 0, 1600, 900);
-    builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
-    builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
-    builder->SetRenderPass(m_render_pass);
-    builder->SetDepthTestEnable(true);
-    builder->SetDepthWriteEnable(true);
-    builder->SetDepthCompareOp(CompareOp::LessOrEqual);
-    builder->AddVertexInputBinding(0, sizeof(float) * 6);
-    builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
-    builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 3, false);
+    m_pipeline_builder->SetViewport(0, 0, 512, 512);
+    m_pipeline_builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
+    m_pipeline_builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
+    m_pipeline_builder->SetRenderPass(m_render_pass);
+    m_pipeline_builder->SetDepthTestEnable(true);
+    m_pipeline_builder->SetDepthWriteEnable(true);
+    m_pipeline_builder->SetDepthCompareOp(CompareOp::LessOrEqual);
+    m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 6);
+    m_pipeline_builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
+    m_pipeline_builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 3, false);
 
-    m_pipeline = builder->Build();
+    m_pipeline = m_pipeline_builder->Build();
   }
 
   void MainWindow::CreateVertexAndIndexBuffer() {

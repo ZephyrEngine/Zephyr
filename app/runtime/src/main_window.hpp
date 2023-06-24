@@ -18,6 +18,7 @@ namespace zephyr {
       MainWindow();
 
       void OnFrame() override;
+      void OnResize(int width, int height) override;
 
     private:
 
@@ -33,10 +34,12 @@ namespace zephyr {
       std::unique_ptr<CommandBuffer> m_render_command_buffer;
       std::shared_ptr<RenderPass> m_render_pass;
       std::unique_ptr<Fence> m_fence;
+      std::unique_ptr<GraphicsPipelineBuilder> m_pipeline_builder;
       std::unique_ptr<GraphicsPipeline> m_pipeline;
       std::shared_ptr<Buffer> m_vbo;
       std::shared_ptr<Buffer> m_ibo;
 
+      Matrix4 m_projection_matrix;
       int m_frame{0};
   };
 
