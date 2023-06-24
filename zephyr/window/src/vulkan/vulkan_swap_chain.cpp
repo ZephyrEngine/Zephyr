@@ -29,6 +29,10 @@ namespace zephyr {
     return render_targets[image_id];
   }
 
+  size_t VulkanSwapChain::GetNumberOfSwapChainImages() const {
+    return render_targets.size();
+  }
+
   void VulkanSwapChain::Present() {
     if (!current_image_id) {
       ZEPHYR_PANIC("VulkanSwapChain: called Present() without acquiring an image first");
