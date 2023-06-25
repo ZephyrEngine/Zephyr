@@ -1,4 +1,6 @@
 
+#include <zephyr/renderer/geometry/index_buffer.hpp>
+#include <zephyr/renderer/geometry/vertex_buffer.hpp>
 #include <zephyr/float.hpp>
 
 #include "main_window.hpp"
@@ -12,11 +14,13 @@ namespace zephyr {
   }
 
   void MainWindow::OnFrame() {
-    const size_t frame_index = m_frame % m_frames_in_flight;
+    const uint frame_index = m_frame % m_frames_in_flight;
     const auto& command_buffer = m_render_command_buffers[frame_index];
     const auto& fence = m_fences[frame_index];
 
     fence->Wait();
+
+    m_buffer_cache->BeginFrame();
 
     const auto& render_target = GetSwapChain()->AcquireNextRenderTarget();
 
@@ -37,11 +41,17 @@ namespace zephyr {
 
     const int cubes_per_axis = 25;
 
+    m_vbo->Write(0u, -1.0f - 0.1f + std::sin((f32)m_frame * 0.05f), 0u);
+    m_vbo->MarkAsDirty();
+
+    Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_vbo.get());
+    Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
+
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindGraphicsPipeline(m_pipeline.get());
-    command_buffer->BindVertexBuffers({{m_vbo.get()}});
-    command_buffer->BindIndexBuffer(m_ibo.get(), IndexDataType::UInt16);
+    command_buffer->BindVertexBuffers({{vbo}});
+    command_buffer->BindIndexBuffer(ibo, m_ibo->GetDataType());
     for(int z = 0; z < cubes_per_axis; z++) {
       for(int x = 0; x < cubes_per_axis; x++) {
         for(int y = 0; y < cubes_per_axis; y++) {
@@ -61,10 +71,12 @@ namespace zephyr {
     command_buffer->EndRenderPass();
     command_buffer->End();
 
+    m_buffer_cache->FinalizeFrame();
+
     // @todo: remove TmpWaitForImageFullyRead() completely and use a semaphore instead.
     GetSwapChain()->TmpWaitForImageFullyRead();
     fence->Reset();
-    m_render_device->GraphicsQueue()->Submit({{command_buffer.get()}}, fence.get());
+    m_render_device->GraphicsQueue()->Submit({{m_buffer_cache->GetCurrentCommandBuffer(), command_buffer.get()}}, fence.get());
 
     // @todo: when is the right time to submit the frame?
     GetSwapChain()->Present();
@@ -89,6 +101,7 @@ namespace zephyr {
     ZEPHYR_INFO("Renderer configured to have {} frame(s) in flight", m_frames_in_flight);
 
     CreateCommandPoolAndBuffers();
+    CreateBufferCache();
     CreateRenderPass();
     CreateFences();
     CreateGraphicsPipeline();
@@ -99,9 +112,13 @@ namespace zephyr {
     m_command_pool = m_render_device->CreateGraphicsCommandPool(
       CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-    for(size_t i = 0; i < m_frames_in_flight; i++) {
+    for(uint i = 0; i < m_frames_in_flight; i++) {
       m_render_command_buffers.push_back(m_render_device->CreateCommandBuffer(m_command_pool.get()));
     }
+  }
+
+  void MainWindow::CreateBufferCache() {
+    m_buffer_cache = std::make_shared<BufferCache>(m_render_device, m_command_pool, m_frames_in_flight);
   }
 
   void MainWindow::CreateRenderPass() {
@@ -119,7 +136,7 @@ namespace zephyr {
   }
 
   void MainWindow::CreateFences() {
-    for(size_t i = 0; i < m_frames_in_flight; i++) {
+    for(uint i = 0; i < m_frames_in_flight; i++) {
       m_fences.push_back(m_render_device->CreateFence(Fence::CreateSignalled::Yes));
     }
   }
@@ -168,7 +185,7 @@ namespace zephyr {
       /*6*/ -1.0,  1.0, -1.0,  0.0, 1.0, 1.0,
       /*7*/  1.0,  1.0, -1.0,  1.0, 1.0, 1.0
     };
-
+    
     static const u16 k_indices[] = {
       // front
       0, 1, 2,
@@ -195,34 +212,8 @@ namespace zephyr {
       6, 7, 3
     };
 
-    auto staging_vbo = m_render_device->CreateBuffer(
-      Buffer::Usage::CopySrc, Buffer::Flags::HostVisible, sizeof(k_vertices));
-
-    auto staging_ibo = m_render_device->CreateBuffer(
-      Buffer::Usage::CopySrc, Buffer::Flags::HostVisible, sizeof(k_indices));
-
-    m_vbo = m_render_device->CreateBuffer(
-      Buffer::Usage::VertexBuffer | Buffer::Usage::CopyDst, Buffer::Flags::None, sizeof(k_vertices));
-
-    m_ibo = m_render_device->CreateBuffer(
-      Buffer::Usage::IndexBuffer | Buffer::Usage::CopyDst, Buffer::Flags::None, sizeof(k_indices));
-
-    // @todo: fix the API so that we either have to Map() the buffer, or don't have to unmap it.
-    staging_vbo->Update<u8>((u8 const*)k_vertices, sizeof(k_vertices));
-    staging_vbo->Unmap();
-
-    staging_ibo->Update<u8>((u8 const*)k_indices, sizeof(k_indices));
-    staging_ibo->Unmap();
-
-    auto command_buffer = m_render_device->CreateCommandBuffer(m_command_pool.get());
-
-    command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
-    command_buffer->CopyBuffer(staging_vbo.get(), m_vbo.get(), m_vbo->Size());
-    command_buffer->CopyBuffer(staging_ibo.get(), m_ibo.get(), m_ibo->Size());
-    command_buffer->End();
-
-    m_render_device->GraphicsQueue()->Submit({{command_buffer.get()}});
-    m_render_device->GraphicsQueue()->WaitIdle();
+    m_vbo = std::make_unique<VertexBuffer>(6 * sizeof(float), std::span{(const u8*)k_vertices, sizeof(k_vertices)});
+    m_ibo = std::make_unique<IndexBuffer>(IndexDataType::UInt16, std::span{(const u8*)k_indices, sizeof(k_indices)});
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

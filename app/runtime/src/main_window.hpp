@@ -3,12 +3,16 @@
 
 #include <zephyr/logger/logger.hpp>
 #include <zephyr/math/matrix4.hpp>
+#include <zephyr/renderer/geometry/index_buffer.hpp>
+#include <zephyr/renderer/geometry/vertex_buffer.hpp>
 #include <zephyr/window/window.hpp>
 #include <chrono>
 #include <vector>
 
 #include <fmt/format.h>
 #include <zephyr/integer.hpp>
+
+#include "renderer/buffer_cache.hpp"
 
 #include "shader/mesh.vert.h"
 #include "shader/mesh.frag.h"
@@ -26,6 +30,7 @@ namespace zephyr {
 
       void Setup();
       void CreateCommandPoolAndBuffers();
+      void CreateBufferCache();
       void CreateRenderPass();
       void CreateFences();
       void CreateGraphicsPipeline();
@@ -39,12 +44,13 @@ namespace zephyr {
       std::vector<std::unique_ptr<Fence>> m_fences;
       std::unique_ptr<GraphicsPipelineBuilder> m_pipeline_builder;
       std::unique_ptr<GraphicsPipeline> m_pipeline;
-      std::shared_ptr<Buffer> m_vbo;
-      std::shared_ptr<Buffer> m_ibo;
+      std::unique_ptr<VertexBuffer> m_vbo;
+      std::unique_ptr<IndexBuffer> m_ibo;
+      std::shared_ptr<BufferCache> m_buffer_cache;
 
       Matrix4 m_projection_matrix;
-      int m_frame{0};
-      size_t m_frames_in_flight{};
+      uint m_frame{0};
+      uint m_frames_in_flight{};
 
       int m_fps_counter{};
       std::chrono::steady_clock::time_point m_time_point_last_update;

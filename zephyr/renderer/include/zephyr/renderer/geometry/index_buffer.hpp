@@ -2,7 +2,7 @@
 #pragma once
 
 #include <zephyr/gpu/enums.hpp>
-#include <zephyr/renderer/resource.hpp>
+#include <zephyr/renderer/buffer_resource.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/panic.hpp>
 #include <cstring>
@@ -10,7 +10,7 @@
 
 namespace zephyr {
 
-  class IndexBuffer : public RendererResource, public NonCopyable {
+  class IndexBuffer final : public BufferResource, public NonCopyable {
     public:
       IndexBuffer(IndexDataType data_type, size_t number_of_indices)
           : m_data_type{data_type}, m_number_of_indices{number_of_indices} {
@@ -23,7 +23,7 @@ namespace zephyr {
         m_data = new u8[m_size];
       }
 
-      IndexBuffer(IndexDataType data_type, std::span<u8> data) : m_data_type{data_type} {
+      IndexBuffer(IndexDataType data_type, std::span<const u8> data) : m_data_type{data_type} {
         switch(data_type) {
           case IndexDataType::UInt16: {
             m_number_of_indices = data.size() / sizeof(u16);
@@ -42,12 +42,16 @@ namespace zephyr {
         std::memcpy(m_data, data.data(), m_size);
       }
 
-     ~IndexBuffer() {
+     ~IndexBuffer() override {
         delete[] m_data;
       }
 
-      [[nodiscard]] size_t Size() const {
+      [[nodiscard]] size_t Size() const override {
         return m_size;
+      }
+
+      [[nodiscard]] const void* Data() const override {
+        return Data<void>();
       }
 
       template<typename T = u8>
@@ -58,6 +62,10 @@ namespace zephyr {
       template<typename T = u8>
       [[nodiscard]] T* Data() {
         return (T*)m_data;
+      }
+
+      [[nodiscard]] Buffer::Usage Usage() const override {
+        return Buffer::Usage::IndexBuffer;
       }
 
       [[nodiscard]] IndexDataType GetDataType() const {

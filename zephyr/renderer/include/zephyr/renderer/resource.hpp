@@ -15,6 +15,8 @@ namespace zephyr {
    */
   class RendererResource {
     public:
+      virtual ~RendererResource() = default;
+
       /// @returns the current version of the resource
       [[nodiscard]] u64 CurrentVersion() const {
         return m_version;

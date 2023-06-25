@@ -9,6 +9,7 @@ set(HEADERS
 set(HEADERS_PUBLIC
   include/zephyr/renderer/geometry/index_buffer.hpp
   include/zephyr/renderer/geometry/vertex_buffer.hpp
+  include/zephyr/renderer/buffer_resource.hpp
   include/zephyr/renderer/resource.hpp
 )
 

@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <zephyr/renderer/resource.hpp>
+#include <zephyr/renderer/buffer_resource.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/panic.hpp>
@@ -10,7 +10,7 @@
 
 namespace zephyr {
 
-  class VertexBuffer : public RendererResource, public NonCopyable {
+  class VertexBuffer final : public BufferResource, public NonCopyable {
     public:
       VertexBuffer(size_t stride, size_t number_of_vertices)
           : m_stride{stride}, m_number_of_vertices{number_of_vertices} {
@@ -18,19 +18,23 @@ namespace zephyr {
         m_data = new u8[m_size];
       }
 
-      VertexBuffer(size_t stride, std::span<u8> data) : m_stride{stride} {
+      VertexBuffer(size_t stride, std::span<const u8> data) : m_stride{stride} {
         m_number_of_vertices = data.size() / stride;
         m_size = m_number_of_vertices * stride;
         m_data = new u8[m_size];
         std::memcpy(m_data, data.data(), m_size);
       }
 
-     ~VertexBuffer() {
+     ~VertexBuffer() override {
         delete[] m_data;
       }
 
-      [[nodiscard]] size_t Size() const {
+      [[nodiscard]] size_t Size() const override {
         return m_size;
+      }
+
+      [[nodiscard]] const void* Data() const override {
+        return Data<void>();
       }
 
       template<typename T = u8>
@@ -41,6 +45,10 @@ namespace zephyr {
       template<typename T = u8>
       [[nodiscard]] T* Data() {
         return (T*)m_data;
+      }
+
+      [[nodiscard]] Buffer::Usage Usage() const override {
+        return Buffer::Usage::VertexBuffer;
       }
 
       [[nodiscard]] size_t GetNumberOfVertices() const {
@@ -78,7 +86,7 @@ namespace zephyr {
         }
 #endif
 
-        *(const T*)&m_data[address] = value;
+        *(T*)&m_data[address] = value;
       }
 
     private:
