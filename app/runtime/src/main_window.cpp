@@ -1,6 +1,4 @@
 
-#include <zephyr/renderer/geometry/index_buffer.hpp>
-#include <zephyr/renderer/geometry/vertex_buffer.hpp>
 #include <zephyr/float.hpp>
 
 #include "main_window.hpp"

@@ -2,7 +2,7 @@
 #pragma once
 
 #include <zephyr/gpu/render_device.hpp>
-#include <zephyr/renderer/buffer_resource.hpp>
+#include <zephyr/renderer/resource/buffer_resource.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/vector_n.hpp>

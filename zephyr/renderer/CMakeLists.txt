@@ -7,10 +7,10 @@ set(HEADERS
 )
 
 set(HEADERS_PUBLIC
-  include/zephyr/renderer/geometry/index_buffer.hpp
-  include/zephyr/renderer/geometry/vertex_buffer.hpp
-  include/zephyr/renderer/buffer_resource.hpp
-  include/zephyr/renderer/resource.hpp
+  include/zephyr/renderer/resource/buffer_resource.hpp
+  include/zephyr/renderer/resource/index_buffer.hpp
+  include/zephyr/renderer/resource/resource.hpp
+  include/zephyr/renderer/resource/vertex_buffer.hpp
 )
 
 add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
