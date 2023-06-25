@@ -50,6 +50,16 @@ namespace zephyr {
         for (auto& value : values) PushBack(value);
       }
 
+      template<class InputIt>
+      constexpr Vector_N(InputIt first, InputIt last) {
+        InputIt iterator = first;
+
+        while(iterator != last) {
+          PushBack(*iterator);
+          ++iterator;
+        }
+      }
+
       constexpr T& operator[](std::size_t index) {
         VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
         return m_data[index];
