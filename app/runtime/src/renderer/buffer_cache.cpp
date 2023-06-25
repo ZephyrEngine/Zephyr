@@ -37,7 +37,7 @@ namespace zephyr {
 
     if(!have_device_buffer) {
       entry.device_buffer = m_render_device->CreateBuffer(
-        Buffer::Usage::VertexBuffer, Buffer::Flags::None, size);
+        Buffer::Usage::CopyDst | buffer_resource->Usage(), Buffer::Flags::None, size);
     }
 
     if(!have_device_buffer || buffer_resource->CurrentVersion() != entry.current_version) {
@@ -62,8 +62,8 @@ namespace zephyr {
 
   void BufferCache::CreateStagingBuffers() {
     for(uint i = 0; i < m_frames_in_flight; i++) {
-      m_staging_buffers[i] = m_render_device->CreateBuffer(
-        Buffer::Usage::CopySrc, Buffer::Flags::HostVisible, 512_MiB);
+      m_staging_buffers.PushBack(m_render_device->CreateBuffer(
+        Buffer::Usage::CopySrc, Buffer::Flags::HostVisible, 512_MiB));
 
       m_staging_buffers[i]->Map();
     }
