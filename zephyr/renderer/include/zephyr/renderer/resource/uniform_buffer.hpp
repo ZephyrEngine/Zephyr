@@ -9,47 +9,13 @@
 
 namespace zephyr {
 
-  class UniformBuffer final : public BufferResource, public NonCopyable {
+  class UniformBuffer final : public BufferResourceImpl {
     public:
-      explicit UniformBuffer(size_t size) : m_size{size} {
-        m_data = new u8[size];
+      explicit UniformBuffer(size_t size) : BufferResourceImpl{Buffer::Usage::UniformBuffer, size} {
       }
 
-      explicit UniformBuffer(std::span<const u8> data) {
-        m_data = new u8[data.size()];
-        m_size = data.size();
-        std::memcpy(m_data, data.data(), m_size);
+      explicit UniformBuffer(std::span<const u8> data) : BufferResourceImpl{Buffer::Usage::UniformBuffer, data} {
       }
-
-     ~UniformBuffer() override {
-        delete[] m_data;
-      }
-
-      [[nodiscard]] size_t Size() const override {
-        return m_size;
-      }
-
-      [[nodiscard]] const void* Data() const override {
-        return Data<void>();
-      }
-
-      template<typename T>
-      [[nodiscard]] const T* Data() const {
-        return (const T*)m_data;
-      }
-
-      template<typename T>
-      [[nodiscard]] T* Data() {
-        return (T*)m_data;
-      }
-
-      [[nodiscard]] Buffer::Usage Usage() const override {
-        return Buffer::Usage::UniformBuffer;
-      }
-
-    private:
-      u8* m_data{};
-      size_t m_size{};
   };
 
 } // namespace zephyr
