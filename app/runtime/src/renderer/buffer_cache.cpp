@@ -28,7 +28,7 @@ namespace zephyr {
     m_current_command_buffer->End();
   }
 
-  Buffer* BufferCache::GetDeviceBuffer(const BufferResource* buffer_resource) {
+  Buffer* BufferCache::GetDeviceBuffer(const BufferResourceBase* buffer_resource) {
     const size_t size = buffer_resource->Size();
 
     Entry& entry = m_cache[buffer_resource];
@@ -75,11 +75,11 @@ namespace zephyr {
     const size_t new_free_offset = old_free_offset + size;
 
     if(new_free_offset > m_current_staging_buffer->Size()) {
-      ZEPHYR_PANIC("BufferCache: ran out of staging buffer space");
+      ZEPHYR_PANIC("Ran out of staging buffer space");
     }
 
     if(new_free_offset < old_free_offset) {
-      ZEPHYR_PANIC("BufferCache: bad allocation size: {} bytes", size);
+      ZEPHYR_PANIC("Bad allocation size: {} bytes", size);
     }
 
     m_staging_buffer_free_offset = new_free_offset;
@@ -87,7 +87,7 @@ namespace zephyr {
     return old_free_offset;
   }
 
-  void BufferCache::CopyBufferResourceToDeviceBuffer(const BufferResource* buffer_resource, Buffer* device_buffer) {
+  void BufferCache::CopyBufferResourceToDeviceBuffer(const BufferResourceBase* buffer_resource, Buffer* device_buffer) {
     const size_t size = buffer_resource->Size();
     const size_t staging_buffer_offset = AllocateStagingMemory(size);
 

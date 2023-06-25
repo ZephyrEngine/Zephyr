@@ -2,7 +2,7 @@
 #pragma once
 
 #include <zephyr/gpu/enums.hpp>
-#include <zephyr/renderer/resource/buffer_resource.hpp>
+#include <zephyr/renderer/buffer/buffer_resource.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/panic.hpp>
 #include <cstring>
@@ -10,16 +10,16 @@
 
 namespace zephyr {
 
-  class IndexBuffer final : public BufferResourceImpl {
+  class IndexBuffer final : public BufferResource {
     public:
       IndexBuffer(IndexDataType data_type, size_t number_of_indices)
-          : BufferResourceImpl{Buffer::Usage::IndexBuffer, number_of_indices * GetDataTypeSize(data_type)}
+          : BufferResource{Buffer::Usage::IndexBuffer, number_of_indices * GetDataTypeSize(data_type)}
           , m_data_type{data_type}
           , m_number_of_indices{number_of_indices} {
       }
 
       IndexBuffer(IndexDataType data_type, std::span<const u8> data)
-          : BufferResourceImpl{Buffer::Usage::IndexBuffer, data}
+          : BufferResource{Buffer::Usage::IndexBuffer, data}
           , m_data_type{data_type} {
         const size_t data_size_type = GetDataTypeSize(data_type);
 

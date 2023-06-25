@@ -3,9 +3,9 @@
 
 #include <zephyr/logger/logger.hpp>
 #include <zephyr/math/matrix4.hpp>
-#include <zephyr/renderer/resource/index_buffer.hpp>
-#include <zephyr/renderer/resource/uniform_buffer.hpp>
-#include <zephyr/renderer/resource/vertex_buffer.hpp>
+#include <zephyr/renderer/buffer/index_buffer.hpp>
+#include <zephyr/renderer/buffer/uniform_buffer.hpp>
+#include <zephyr/renderer/buffer/vertex_buffer.hpp>
 #include <zephyr/window/window.hpp>
 #include <chrono>
 #include <vector>

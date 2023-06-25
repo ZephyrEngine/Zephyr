@@ -2,7 +2,7 @@
 #pragma once
 
 #include <zephyr/gpu/render_device.hpp>
-#include <zephyr/renderer/resource/buffer_resource.hpp>
+#include <zephyr/renderer/buffer/buffer_resource_base.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/vector_n.hpp>
@@ -20,7 +20,7 @@ namespace zephyr {
 
       void BeginFrame();
       void FinalizeFrame();
-      Buffer* GetDeviceBuffer(const BufferResource* buffer_resource);
+      Buffer* GetDeviceBuffer(const BufferResourceBase* buffer_resource);
       CommandBuffer* GetCurrentCommandBuffer();
 
     private:
@@ -32,7 +32,7 @@ namespace zephyr {
       void CreateCommandBuffers();
       void CreateStagingBuffers();
       size_t AllocateStagingMemory(size_t size);
-      void CopyBufferResourceToDeviceBuffer(const BufferResource* buffer, Buffer* device_buffer);
+      void CopyBufferResourceToDeviceBuffer(const BufferResourceBase* buffer, Buffer* device_buffer);
 
       std::shared_ptr<RenderDevice> m_render_device;
       std::shared_ptr<CommandPool> m_command_pool;
@@ -45,7 +45,7 @@ namespace zephyr {
       CommandBuffer* m_current_command_buffer{};
       Buffer* m_current_staging_buffer{};
 
-      std::unordered_map<const BufferResource*, Entry> m_cache;
+      std::unordered_map<const BufferResourceBase*, Entry> m_cache;
   };
 
 } // namespace zephyr

@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <zephyr/renderer/resource/buffer_resource.hpp>
+#include <zephyr/renderer/buffer/buffer_resource.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/panic.hpp>
@@ -10,16 +10,16 @@
 
 namespace zephyr {
 
-  class VertexBuffer final : public BufferResourceImpl {
+  class VertexBuffer final : public BufferResource {
     public:
       VertexBuffer(size_t stride, size_t number_of_vertices)
-          : BufferResourceImpl{Buffer::Usage::VertexBuffer, stride * number_of_vertices}
+          : BufferResource{Buffer::Usage::VertexBuffer, stride * number_of_vertices}
           , m_stride{stride}
           , m_number_of_vertices{number_of_vertices} {
       }
 
       VertexBuffer(size_t stride, std::span<const u8> data)
-          : BufferResourceImpl{Buffer::Usage::VertexBuffer, data}
+          : BufferResource{Buffer::Usage::VertexBuffer, data}
           , m_stride{stride} {
         if(data.size() % stride != 0u) {
           ZEPHYR_PANIC("Buffer size is not divisible by the vertex stride");
