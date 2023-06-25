@@ -11,6 +11,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/resource/index_buffer.hpp
   include/zephyr/renderer/resource/resource.hpp
   include/zephyr/renderer/resource/vertex_buffer.hpp
+  include/zephyr/renderer/geometry.hpp
 )
 
 add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
