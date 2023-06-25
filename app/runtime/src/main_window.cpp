@@ -49,11 +49,14 @@ namespace zephyr {
     Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_vbo.get());
     Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
 
+    m_bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindGroupLayout::Entry::Type::UniformBuffer);
+
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindGraphicsPipeline(m_pipeline.get());
     command_buffer->BindVertexBuffers({{vbo}});
     command_buffer->BindIndexBuffer(ibo, m_ibo->GetDataType());
+    command_buffer->BindGraphicsBindGroup(0, m_pipeline->GetLayout(), m_bind_group.get());
     for(int z = 0; z < cubes_per_axis; z++) {
       for(int x = 0; x < cubes_per_axis; x++) {
         for(int y = 0; y < cubes_per_axis; y++) {
@@ -106,8 +109,10 @@ namespace zephyr {
     CreateBufferCache();
     CreateRenderPass();
     CreateFences();
+    CreateBindGroup();
     CreateGraphicsPipeline();
     CreateVertexAndIndexBuffer();
+    CreateUniformBuffer();
   }
 
   void MainWindow::CreateCommandPoolAndBuffers() {
@@ -143,6 +148,18 @@ namespace zephyr {
     }
   }
 
+  void MainWindow::CreateBindGroup() {
+    m_bind_group_layout = m_render_device->CreateBindGroupLayout({{
+      BindGroupLayout::Entry{
+        .binding = 0u,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer,
+        .stages = BindGroupLayout::Entry::ShaderStage::All
+      }
+    }});
+
+    m_bind_group = m_bind_group_layout->Instantiate();
+  }
+
   void MainWindow::CreateGraphicsPipeline() {
     std::shared_ptr<ShaderModule> vert_shader = m_render_device->CreateShaderModule(mesh_vert, sizeof(mesh_vert));
     std::shared_ptr<ShaderModule> frag_shader = m_render_device->CreateShaderModule(mesh_frag, sizeof(mesh_frag));
@@ -159,6 +176,7 @@ namespace zephyr {
     m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 6);
     m_pipeline_builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
     m_pipeline_builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 3, false);
+    m_pipeline_builder->SetPipelineLayout(m_render_device->CreatePipelineLayout({{m_bind_group_layout.get()}}));
 
     m_pipeline = m_pipeline_builder->Build();
   }
@@ -216,6 +234,12 @@ namespace zephyr {
 
     m_vbo = std::make_unique<VertexBuffer>(6 * sizeof(float), std::span{(const u8*)k_vertices, sizeof(k_vertices)});
     m_ibo = std::make_unique<IndexBuffer>(IndexDataType::UInt16, std::span{(const u8*)k_indices, sizeof(k_indices)});
+  }
+
+  void MainWindow::CreateUniformBuffer() {
+    Vector4 color{1.0f, 0.0f, 0.0f, 0.0f};
+
+    m_ubo = std::make_unique<UniformBuffer>(std::span{(const u8*)&color, sizeof(color)});
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

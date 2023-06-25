@@ -54,12 +54,12 @@ namespace zephyr {
         return Data<void>();
       }
 
-      template<typename T = u8>
+      template<typename T>
       [[nodiscard]] const T* Data() const {
         return (const T*)m_data;
       }
 
-      template<typename T = u8>
+      template<typename T>
       [[nodiscard]] T* Data() {
         return (T*)m_data;
       }

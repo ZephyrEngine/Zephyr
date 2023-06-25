@@ -4,6 +4,7 @@
 #include <zephyr/logger/logger.hpp>
 #include <zephyr/math/matrix4.hpp>
 #include <zephyr/renderer/resource/index_buffer.hpp>
+#include <zephyr/renderer/resource/uniform_buffer.hpp>
 #include <zephyr/renderer/resource/vertex_buffer.hpp>
 #include <zephyr/window/window.hpp>
 #include <chrono>
@@ -36,6 +37,8 @@ namespace zephyr {
       void CreateFences();
       void CreateGraphicsPipeline();
       void CreateVertexAndIndexBuffer();
+      void CreateUniformBuffer();
+      void CreateBindGroup();
       void UpdateFramesPerSecondCounter();
 
       std::shared_ptr<RenderDevice> m_render_device;
@@ -47,7 +50,10 @@ namespace zephyr {
       std::unique_ptr<GraphicsPipeline> m_pipeline;
       std::unique_ptr<VertexBuffer> m_vbo;
       std::unique_ptr<IndexBuffer> m_ibo;
+      std::unique_ptr<UniformBuffer> m_ubo;
       std::shared_ptr<BufferCache> m_buffer_cache;
+      std::unique_ptr<BindGroupLayout> m_bind_group_layout;
+      std::unique_ptr<BindGroup> m_bind_group;
 
       Matrix4 m_projection_matrix;
       uint m_frame{0};
