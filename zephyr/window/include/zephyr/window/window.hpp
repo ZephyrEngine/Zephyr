@@ -17,7 +17,7 @@ namespace zephyr {
     public:
       Window();
       Window(std::string_view window_title, int width, int height);
-     ~Window();
+      virtual ~Window();
 
       void SetWindowTitle(std::string_view window_title);
       auto GetWindowSize() -> Size;

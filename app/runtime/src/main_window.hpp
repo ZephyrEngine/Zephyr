@@ -22,6 +22,7 @@ namespace zephyr {
   class MainWindow final : public Window {
     public:
       MainWindow();
+     ~MainWindow() override;
 
       void OnFrame() override;
       void OnResize(int width, int height) override;

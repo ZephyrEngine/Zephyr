@@ -182,6 +182,10 @@ struct VulkanRenderDevice final : RenderDevice {
     return compute_queue.get();
   }
 
+  void WaitIdle() override {
+    vkDeviceWaitIdle(device);
+  }
+
 private:
   void CreateVmaAllocator() {
     auto info = VmaAllocatorCreateInfo{};

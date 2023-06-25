@@ -104,6 +104,8 @@ struct RenderDevice {
   virtual auto GraphicsQueue() -> Queue* = 0;
 
   virtual auto ComputeQueue() -> Queue* = 0;
+
+  virtual void WaitIdle() = 0;
 };
 
 } // namespace zephyr

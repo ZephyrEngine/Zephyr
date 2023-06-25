@@ -11,6 +11,10 @@ namespace zephyr {
     Setup();
   }
 
+  MainWindow::~MainWindow() {
+    m_render_device->WaitIdle();
+  }
+
   void MainWindow::OnFrame() {
     const uint frame_index = m_frame % m_frames_in_flight;
     const auto& command_buffer = m_render_command_buffers[frame_index];
