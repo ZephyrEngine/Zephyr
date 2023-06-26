@@ -19,6 +19,13 @@ enum class BindingType : u32 {
   UniformBuffer = 6
 };
 
+// subset of VkPipelineBindPoint:
+// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineBindPoint.html
+enum class PipelineBindPoint : u32 {
+  Graphics = 0,
+  Compute = 1
+};
+
 // subset of VkIndexType:
 // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkIndexType
 enum class IndexDataType {

@@ -57,7 +57,7 @@ namespace zephyr {
     command_buffer->BindGraphicsPipeline(m_pipeline.get());
     command_buffer->BindVertexBuffers({{vbo}});
     command_buffer->BindIndexBuffer(ibo, m_ibo->GetDataType());
-    command_buffer->BindGraphicsBindGroup(0, m_pipeline->GetLayout(), bind_group.get());
+    command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());
     for(int z = 0; z < cubes_per_axis; z++) {
       for(int x = 0; x < cubes_per_axis; x++) {
         for(int y = 0; y < cubes_per_axis; y++) {

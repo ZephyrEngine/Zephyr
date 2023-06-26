@@ -83,15 +83,10 @@ struct CommandBuffer {
 
   virtual void BindComputePipeline(ComputePipeline* pipeline) = 0;
 
-  virtual void BindGraphicsBindGroup(
-    u32 set,
+  virtual void BindBindGroup(
+    PipelineBindPoint pipeline_bind_point,
     PipelineLayout* pipeline_layout,
-    BindGroup* bind_group
-  ) = 0;
-
-  virtual void BindComputeBindGroup(
     u32 set,
-    PipelineLayout* pipeline_layout,
     BindGroup* bind_group
   ) = 0;
 

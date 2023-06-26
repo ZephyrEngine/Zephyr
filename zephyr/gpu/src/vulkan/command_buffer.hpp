@@ -188,35 +188,18 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pipeline->Handle());
   }
 
-  void BindGraphicsBindGroup(
-    u32 set,
+  void BindBindGroup(
+    PipelineBindPoint pipeline_bind_point,
     PipelineLayout* pipeline_layout,
+    u32 set,
     BindGroup* bind_group
   ) override {
-    auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
-    auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
+    const auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
+    const auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
 
     vkCmdBindDescriptorSets(
       buffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS,
-      vk_pipeline_layout,
-      set,
-      1, &vk_descriptor_set,
-      0, nullptr
-    );
-  }
-
-  void BindComputeBindGroup(
-    u32 set,
-    PipelineLayout* pipeline_layout,
-    BindGroup* bind_group
-  ) override {
-    auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
-    auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
-
-    vkCmdBindDescriptorSets(
-      buffer,
-      VK_PIPELINE_BIND_POINT_COMPUTE,
+      (VkPipelineBindPoint)pipeline_bind_point,
       vk_pipeline_layout,
       set,
       1, &vk_descriptor_set,
