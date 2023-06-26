@@ -12,7 +12,7 @@ struct VulkanBindGroup final : BindGroup {
   VulkanBindGroup(
     VkDevice device,
     VkDescriptorPool descriptor_pool,
-    std::shared_ptr<BindGroupLayout> layout
+    const std::shared_ptr<BindGroupLayout>& layout
   )   : device(device), descriptor_pool(descriptor_pool), m_layout{layout} {
     const void* layout_handle = layout->Handle();
 
