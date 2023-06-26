@@ -38,7 +38,7 @@ namespace zephyr {
       void CreateGraphicsPipeline();
       void CreateVertexAndIndexBuffer();
       void CreateUniformBuffer();
-      void CreateBindGroup();
+      void CreateBindGroups();
       void UpdateFramesPerSecondCounter();
 
       std::shared_ptr<RenderDevice> m_render_device;
@@ -53,7 +53,7 @@ namespace zephyr {
       std::unique_ptr<UniformBuffer> m_ubo;
       std::shared_ptr<BufferCache> m_buffer_cache;
       std::shared_ptr<BindGroupLayout> m_bind_group_layout;
-      std::unique_ptr<BindGroup> m_bind_group;
+      std::vector<std::unique_ptr<BindGroup>> m_bind_groups;
 
       Matrix4 m_projection_matrix;
       uint m_frame{0};

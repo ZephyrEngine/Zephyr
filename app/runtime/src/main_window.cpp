@@ -19,6 +19,7 @@ namespace zephyr {
     const uint frame_index = m_frame % m_frames_in_flight;
     const auto& command_buffer = m_render_command_buffers[frame_index];
     const auto& fence = m_fences[frame_index];
+    const auto& bind_group = m_bind_groups[frame_index];
 
     fence->Wait();
 
@@ -49,14 +50,14 @@ namespace zephyr {
     Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_vbo.get());
     Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
 
-    m_bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindGroupLayout::Entry::Type::UniformBuffer);
+    bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindGroupLayout::Entry::Type::UniformBuffer);
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindGraphicsPipeline(m_pipeline.get());
     command_buffer->BindVertexBuffers({{vbo}});
     command_buffer->BindIndexBuffer(ibo, m_ibo->GetDataType());
-    command_buffer->BindGraphicsBindGroup(0, m_pipeline->GetLayout(), m_bind_group.get());
+    command_buffer->BindGraphicsBindGroup(0, m_pipeline->GetLayout(), bind_group.get());
     for(int z = 0; z < cubes_per_axis; z++) {
       for(int x = 0; x < cubes_per_axis; x++) {
         for(int y = 0; y < cubes_per_axis; y++) {
@@ -109,7 +110,7 @@ namespace zephyr {
     CreateBufferCache();
     CreateRenderPass();
     CreateFences();
-    CreateBindGroup();
+    CreateBindGroups();
     CreateGraphicsPipeline();
     CreateVertexAndIndexBuffer();
     CreateUniformBuffer();
@@ -148,7 +149,7 @@ namespace zephyr {
     }
   }
 
-  void MainWindow::CreateBindGroup() {
+  void MainWindow::CreateBindGroups() {
     m_bind_group_layout = m_render_device->CreateBindGroupLayout({{
       BindGroupLayout::Entry{
         .binding = 0u,
@@ -157,7 +158,9 @@ namespace zephyr {
       }
     }});
 
-    m_bind_group = m_render_device->CreateBindGroup(m_bind_group_layout);
+    for(uint i = 0; i < m_frames_in_flight; i++) {
+      m_bind_groups.push_back(m_render_device->CreateBindGroup(m_bind_group_layout));
+    }
   }
 
   void MainWindow::CreateGraphicsPipeline() {
