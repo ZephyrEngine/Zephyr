@@ -16,18 +16,8 @@ struct BindGroup;
 
 struct BindGroupLayout {
   struct Entry {
-    // subset of VkDescriptorType:
-    // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkDescriptorType
-    enum class Type : u32 {
-      Sampler = 0,
-      ImageWithSampler = 1,
-      SampledImage = 2,
-      StorageImage = 3,
-      UniformBuffer = 6
-    };
-
     u32 binding;
-    Type type;
+    BindingType type;
     ShaderStage stages = ShaderStage::All;
   };
 
@@ -44,7 +34,7 @@ struct BindGroup {
   virtual void Bind(
     u32 binding,
     Buffer* buffer,
-    BindGroupLayout::Entry::Type type
+    BindingType type
   ) = 0;
 
   virtual void Bind(
@@ -67,14 +57,14 @@ struct BindGroup {
     u32 binding,
     Texture::View* texture_view,
     Texture::Layout layout,
-    BindGroupLayout::Entry::Type type
+    BindingType type
   ) = 0;
 
   void Bind(
     u32 binding,
     Texture* texture,
     Texture::Layout layout,
-    BindGroupLayout::Entry::Type type
+    BindingType type
   ) {
     Bind(binding, texture->DefaultView(), layout, type);
   }

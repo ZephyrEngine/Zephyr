@@ -9,6 +9,16 @@
 
 namespace zephyr {
 
+// subset of VkDescriptorType:
+// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkDescriptorType
+enum class BindingType : u32 {
+  Sampler = 0,
+  ImageWithSampler = 1,
+  SampledImage = 2,
+  StorageImage = 3,
+  UniformBuffer = 6
+};
+
 // subset of VkIndexType:
 // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkIndexType
 enum class IndexDataType {

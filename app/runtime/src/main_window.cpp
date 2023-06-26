@@ -50,7 +50,7 @@ namespace zephyr {
     Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_vbo.get());
     Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
 
-    bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindGroupLayout::Entry::Type::UniformBuffer);
+    bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
@@ -153,7 +153,7 @@ namespace zephyr {
     m_bind_group_layout = m_render_device->CreateBindGroupLayout({{
       BindGroupLayout::Entry{
         .binding = 0u,
-        .type = BindGroupLayout::Entry::Type::UniformBuffer,
+        .type = BindingType::UniformBuffer,
         .stages = ShaderStage::All
       }
     }});

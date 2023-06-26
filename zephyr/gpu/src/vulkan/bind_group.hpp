@@ -40,7 +40,7 @@ struct VulkanBindGroup final : BindGroup {
   void Bind(
     u32 binding,
     Buffer* buffer,
-    BindGroupLayout::Entry::Type type
+    BindingType type
   ) override {
     const auto buffer_info = VkDescriptorBufferInfo{
       .buffer = (VkBuffer)buffer->Handle(),
@@ -96,7 +96,7 @@ struct VulkanBindGroup final : BindGroup {
     u32 binding,
     Texture::View* texture_view,
     Texture::Layout layout,
-    BindGroupLayout::Entry::Type type
+    BindingType type
   ) override {
     const auto image_info = VkDescriptorImageInfo{
       .sampler = VK_NULL_HANDLE,
