@@ -180,11 +180,11 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdEndRenderPass(buffer);
   }
 
-  void BindGraphicsPipeline(GraphicsPipeline* pipeline) override {
+  void BindPipeline(GraphicsPipeline* pipeline) override {
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline->Handle());
   }
 
-  void BindComputePipeline(ComputePipeline* pipeline) override {
+  void BindPipeline(ComputePipeline* pipeline) override {
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pipeline->Handle());
   }
 

@@ -26,7 +26,7 @@ class MainWindow final : public Window {
 
       render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       render_command_buffer->BeginRenderPass(render_target.get(), render_pass.get());
-      render_command_buffer->BindGraphicsPipeline(pipeline.get());
+      render_command_buffer->BindPipeline(pipeline.get());
       render_command_buffer->BindVertexBuffers({{vbo.get()}});
       render_command_buffer->Draw(3);
       render_command_buffer->EndRenderPass();

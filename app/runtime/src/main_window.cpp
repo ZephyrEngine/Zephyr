@@ -54,7 +54,7 @@ namespace zephyr {
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
-    command_buffer->BindGraphicsPipeline(m_pipeline.get());
+    command_buffer->BindPipeline(m_pipeline.get());
     command_buffer->BindVertexBuffers({{vbo}});
     command_buffer->BindIndexBuffer(ibo, m_ibo->GetDataType());
     command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());

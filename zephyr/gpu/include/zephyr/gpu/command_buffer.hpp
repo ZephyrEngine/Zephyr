@@ -79,9 +79,8 @@ struct CommandBuffer {
   ) = 0;
   virtual void EndRenderPass() = 0;
 
-  virtual void BindGraphicsPipeline(GraphicsPipeline* pipeline) = 0;
-
-  virtual void BindComputePipeline(ComputePipeline* pipeline) = 0;
+  virtual void BindPipeline(GraphicsPipeline* pipeline) = 0;
+  virtual void BindPipeline(ComputePipeline* pipeline) = 0;
 
   virtual void BindBindGroup(
     PipelineBindPoint pipeline_bind_point,

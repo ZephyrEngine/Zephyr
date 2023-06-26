@@ -39,7 +39,7 @@ class MainWindow final : public Window {
 
         render_command_buffer->BeginRenderPass(render_target.get(), render_pass[i].get());
         render_command_buffer->PushConstants(pipeline->GetLayout(), 0, sizeof(transform[0]), &transform[i]);
-        render_command_buffer->BindGraphicsPipeline(pipeline.get());
+        render_command_buffer->BindPipeline(pipeline.get());
         render_command_buffer->BindVertexBuffers({{vbo.get()}});
         render_command_buffer->BindIndexBuffer(ibo.get(), IndexDataType::UInt16);
         render_command_buffer->DrawIndexed(36);
