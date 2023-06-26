@@ -137,8 +137,12 @@ struct VulkanRenderDevice final : RenderDevice {
 
   auto CreateBindGroupLayout(
     std::span<BindGroupLayout::Entry const> entries
-  ) -> std::unique_ptr<BindGroupLayout> override {
-    return std::make_unique<VulkanBindGroupLayout>(device, descriptor_pool, entries);
+  ) -> std::shared_ptr<BindGroupLayout> override {
+    return std::make_shared<VulkanBindGroupLayout>(device, descriptor_pool, entries);
+  }
+
+  std::unique_ptr<BindGroup> CreateBindGroup(std::shared_ptr<BindGroupLayout> layout) override {
+    return std::make_unique<VulkanBindGroup>(device, descriptor_pool, layout);
   }
 
   auto CreatePipelineLayout(

@@ -12,14 +12,16 @@ struct VulkanBindGroup final : BindGroup {
   VulkanBindGroup(
     VkDevice device,
     VkDescriptorPool descriptor_pool,
-    VkDescriptorSetLayout layout
-  )   : device(device), descriptor_pool(descriptor_pool) {
+    std::shared_ptr<BindGroupLayout> layout
+  )   : device(device), descriptor_pool(descriptor_pool), m_layout{layout} {
+    const void* layout_handle = layout->Handle();
+
     auto info = VkDescriptorSetAllocateInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
       .pNext = nullptr,
       .descriptorPool = descriptor_pool,
       .descriptorSetCount = 1,
-      .pSetLayouts = &layout
+      .pSetLayouts = (const VkDescriptorSetLayout*)&layout_handle
     };
 
     if (vkAllocateDescriptorSets(device, &info, &descriptor_set) != VK_SUCCESS) {
@@ -122,6 +124,7 @@ private:
   VkDevice device;
   VkDescriptorPool descriptor_pool;
   VkDescriptorSet descriptor_set;
+  std::shared_ptr<BindGroupLayout> m_layout;
 };
 
 struct VulkanBindGroupLayout final : BindGroupLayout {
@@ -161,10 +164,6 @@ struct VulkanBindGroupLayout final : BindGroupLayout {
 
   auto Handle() -> void* override {
    return (void*)layout;
-  }
-
-  auto Instantiate() -> std::unique_ptr<BindGroup> override {
-    return std::make_unique<VulkanBindGroup>(device, descriptor_pool, layout);
   }
 
 private:

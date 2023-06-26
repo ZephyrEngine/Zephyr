@@ -157,7 +157,7 @@ namespace zephyr {
       }
     }});
 
-    m_bind_group = m_bind_group_layout->Instantiate();
+    m_bind_group = m_render_device->CreateBindGroup(m_bind_group_layout);
   }
 
   void MainWindow::CreateGraphicsPipeline() {

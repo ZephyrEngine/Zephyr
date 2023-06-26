@@ -80,7 +80,9 @@ struct RenderDevice {
 
   virtual auto CreateBindGroupLayout(
     std::span<BindGroupLayout::Entry const> entries
-  ) -> std::unique_ptr<BindGroupLayout> = 0;
+  ) -> std::shared_ptr<BindGroupLayout> = 0;
+
+  virtual std::unique_ptr<BindGroup> CreateBindGroup(std::shared_ptr<BindGroupLayout> layout) = 0;
 
   virtual auto CreatePipelineLayout(
     std::span<BindGroupLayout* const> bind_group_layouts

@@ -41,7 +41,6 @@ struct BindGroupLayout {
   virtual ~BindGroupLayout() = default;
 
   virtual auto Handle() -> void* = 0;
-  virtual auto Instantiate() -> std::unique_ptr<BindGroup> = 0;
 };
 
 constexpr auto operator|(

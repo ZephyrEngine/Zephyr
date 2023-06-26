@@ -52,7 +52,7 @@ namespace zephyr {
       std::unique_ptr<IndexBuffer> m_ibo;
       std::unique_ptr<UniformBuffer> m_ubo;
       std::shared_ptr<BufferCache> m_buffer_cache;
-      std::unique_ptr<BindGroupLayout> m_bind_group_layout;
+      std::shared_ptr<BindGroupLayout> m_bind_group_layout;
       std::unique_ptr<BindGroup> m_bind_group;
 
       Matrix4 m_projection_matrix;
