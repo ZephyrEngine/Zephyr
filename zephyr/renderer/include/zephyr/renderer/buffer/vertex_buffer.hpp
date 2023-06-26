@@ -43,7 +43,7 @@ namespace zephyr {
 #ifndef NDEBUG
         const size_t address_hi = address + sizeof(T);
 
-        if(address_hi > m_size || address_hi < address) {
+        if(address_hi > Size() || address_hi < address) {
           ZEPHYR_PANIC("Bad out-of-bounds read!");
         }
 #endif
@@ -58,7 +58,7 @@ namespace zephyr {
 #ifndef NDEBUG
         const size_t address_hi = address + sizeof(T);
 
-        if(address_hi > m_size || address_hi < address) {
+        if(address_hi > Size() || address_hi < address) {
           ZEPHYR_PANIC("Bad out-of-bounds write!");
         }
 #endif
