@@ -82,8 +82,8 @@ class MainWindow final : public Window {
       auto builder = render_device->CreateGraphicsPipelineBuilder();
 
       builder->SetViewport(0, 0, 1600, 900);
-      builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
-      builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
+      builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
+      builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
       builder->SetRenderPass(render_pass);
       builder->AddVertexInputBinding(0, sizeof(float) * 6);
       builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);

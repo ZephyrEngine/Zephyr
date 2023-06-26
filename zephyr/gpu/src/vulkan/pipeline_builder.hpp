@@ -67,20 +67,21 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     scissor.extent.height = height;
   }
 
-  void SetShaderModule(PipelineStage stage, std::shared_ptr<ShaderModule> shader_module) override {
+  void SetShaderModule(ShaderStage stage, std::shared_ptr<ShaderModule> shader_module) override {
     switch (stage) {
-      case PipelineStage::VertexShader:
+      case ShaderStage::Vertex:
         own.shader_vert = std::move(shader_module);
         break;
-      case PipelineStage::TessellationControlShader:
+      case ShaderStage::TessellationControl:
         own.shader_tess_control = std::move(shader_module);
         break;
-      case PipelineStage::TessellationEvaluationShader:
+      case ShaderStage::TessellationEvaluation:
         own.shader_tess_evaluation = std::move(shader_module);
         break;
-      case PipelineStage::FragmentShader:
+      case ShaderStage::Fragment:
         own.shader_frag = std::move(shader_module);
         break;
+      default: ZEPHYR_PANIC("Unsupported or bad shader stage passed to SetShaderModule(): 0x{:08X}", (u32)stage);
     }
 
     pipeline_stages_dirty = true;

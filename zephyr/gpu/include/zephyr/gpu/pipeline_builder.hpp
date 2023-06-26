@@ -24,7 +24,7 @@ struct GraphicsPipelineBuilder {
 
   virtual void SetViewport(int x, int y, int width, int height) = 0;
   virtual void SetScissor(int x, int y, int width, int height) = 0;
-  virtual void SetShaderModule(PipelineStage stage, std::shared_ptr<ShaderModule> shader_module) = 0;
+  virtual void SetShaderModule(ShaderStage stage, std::shared_ptr<ShaderModule> shader_module) = 0;
   virtual void SetPipelineLayout(std::shared_ptr<PipelineLayout> layout) = 0;
   virtual void SetRenderPass(std::shared_ptr<RenderPass> render_pass) = 0;
   virtual void SetRasterizerDiscardEnable(bool enable) = 0;

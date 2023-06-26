@@ -4,6 +4,7 @@
 #pragma once
 
 #include <zephyr/gpu/buffer.hpp>
+#include <zephyr/gpu/enums.hpp>
 #include <zephyr/gpu/sampler.hpp>
 #include <zephyr/gpu/texture.hpp>
 #include <zephyr/integer.hpp>
@@ -25,14 +26,6 @@ struct BindGroupLayout {
       UniformBuffer = 6
     };
 
-    // subset of VkShaderStageFlagBits:
-    // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkShaderStageFlagBits
-    enum class ShaderStage : u32 {
-      Vertex = 0x00000001,
-      Fragment = 0x00000010,
-      All = 0x7FFFFFFF
-    };
-
     u32 binding;
     Type type;
     ShaderStage stages = ShaderStage::All;
@@ -42,13 +35,6 @@ struct BindGroupLayout {
 
   virtual auto Handle() -> void* = 0;
 };
-
-constexpr auto operator|(
-  BindGroupLayout::Entry::ShaderStage lhs,
-  BindGroupLayout::Entry::ShaderStage rhs
-) -> BindGroupLayout::Entry::ShaderStage {
-  return (BindGroupLayout::Entry::ShaderStage)((u32)lhs | (u32)rhs);
-}
 
 struct BindGroup {
   virtual ~BindGroup() = default;

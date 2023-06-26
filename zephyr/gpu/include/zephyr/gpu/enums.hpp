@@ -127,6 +127,23 @@ constexpr auto operator|(ColorComponent lhs, ColorComponent rhs) -> ColorCompone
   return static_cast<ColorComponent>(static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
+// subset of VkShaderStageFlagBits:
+// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkShaderStageFlagBits
+enum class ShaderStage : u32 {
+  Vertex = 0x00000001,
+  TessellationControl = 0x00000002,
+  TessellationEvaluation = 0x00000004,
+  Geometry = 0x00000008,
+  Fragment = 0x00000010,
+  Compute = 0x00000020,
+  AllGraphics = Vertex | TessellationControl | TessellationEvaluation | Geometry | Fragment,
+  All = AllGraphics | Compute
+};
+
+constexpr auto operator|(ShaderStage lhs, ShaderStage rhs) -> ShaderStage {
+  return (ShaderStage)((u32)lhs | (u32)rhs);
+}
+
 // subset of VkPipelineStageFlagBits:
 // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineStageFlagBits.html
 enum class PipelineStage : u32 {

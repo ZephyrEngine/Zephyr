@@ -154,7 +154,7 @@ namespace zephyr {
       BindGroupLayout::Entry{
         .binding = 0u,
         .type = BindGroupLayout::Entry::Type::UniformBuffer,
-        .stages = BindGroupLayout::Entry::ShaderStage::All
+        .stages = ShaderStage::All
       }
     }});
 
@@ -170,8 +170,8 @@ namespace zephyr {
     m_pipeline_builder = m_render_device->CreateGraphicsPipelineBuilder();
 
     m_pipeline_builder->SetViewport(0, 0, 512, 512);
-    m_pipeline_builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
-    m_pipeline_builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
+    m_pipeline_builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
+    m_pipeline_builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
     m_pipeline_builder->SetRenderPass(m_render_pass);
     m_pipeline_builder->SetDepthTestEnable(true);
     m_pipeline_builder->SetDepthWriteEnable(true);
