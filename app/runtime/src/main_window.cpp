@@ -42,7 +42,11 @@ namespace zephyr {
       jitter = std::sin(jitter + (f32)(m_frame + i) * 0.001f);
     }
 
+#ifdef __APPLE__
+    const int cubes_per_axis = 5;
+#else
     const int cubes_per_axis = 25;
+#endif
 
     m_vbo->Write(0u, -1.0f - 0.1f + std::sin((f32)m_frame * 0.05f), 0u);
     m_vbo->MarkAsDirty();
@@ -61,9 +65,9 @@ namespace zephyr {
     for(int z = 0; z < cubes_per_axis; z++) {
       for(int x = 0; x < cubes_per_axis; x++) {
         for(int y = 0; y < cubes_per_axis; y++) {
-          const float scene_x = ((f32)x / 25.0f * 2.0f - 1.0f) * 5.0f + jitter * 0.0000001f;
-          const float scene_y = ((f32)y / 25.0f * 2.0f - 1.0f) * 5.0f;
-          const float scene_z = ((f32)z / 25.0f * 2.0f) * 5.0f + 3.0f;
+          const float scene_x = ((f32)x / (f32)cubes_per_axis * 2.0f - 1.0f) * 5.0f + jitter * 0.0000001f;
+          const float scene_y = ((f32)y / (f32)cubes_per_axis * 2.0f - 1.0f) * 5.0f;
+          const float scene_z = ((f32)z / (f32)cubes_per_axis * 2.0f) * 5.0f + 3.0f;
 
           transform.model_view = Matrix4::Translation(scene_x, scene_y, -scene_z) *
                                  Matrix4::RotationX((f32)m_frame * 0.025f) *
