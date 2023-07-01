@@ -236,9 +236,10 @@ namespace zephyr {
     m_pipeline_builder->SetDepthTestEnable(true);
     m_pipeline_builder->SetDepthWriteEnable(true);
     m_pipeline_builder->SetDepthCompareOp(CompareOp::LessOrEqual);
-    m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 6);
+    m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 8);
     m_pipeline_builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
     m_pipeline_builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 3, false);
+    m_pipeline_builder->AddVertexInputAttribute(2, 0, sizeof(float) * 6, VertexDataType::Float32, 2, false);
     m_pipeline_builder->SetPipelineLayout(m_render_device->CreatePipelineLayout({{m_bind_group_layout.get()}}));
 
     m_pipeline = m_pipeline_builder->Build();
@@ -254,19 +255,19 @@ namespace zephyr {
      * 2-------3
      */
     static const float k_vertices[] = {
-      //    | POSITION       | COLOR         |
+      //    | POSITION       | COLOR         | UV
 
       // front face
-      /*0*/ -1.0, -1.0,  1.0,  1.0, 0.0, 0.0,
-      /*1*/  1.0, -1.0,  1.0,  0.0, 1.0, 0.0,
-      /*2*/ -1.0,  1.0,  1.0,  0.0, 0.0, 1.0,
-      /*3*/  1.0,  1.0,  1.0,  0.5, 0.5, 0.5,
+      /*0*/ -1.0, -1.0,  1.0,  1.0, 0.0, 0.0,  0.0, 0.0,
+      /*1*/  1.0, -1.0,  1.0,  0.0, 1.0, 0.0,  1.0, 0.0,
+      /*2*/ -1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  0.0, 1.0,
+      /*3*/  1.0,  1.0,  1.0,  0.5, 0.5, 0.5,  1.0, 1.0,
 
       // back face
-      /*4*/ -1.0, -1.0, -1.0,  1.0, 1.0, 0.0,
-      /*5*/  1.0, -1.0, -1.0,  1.0, 0.0, 1.0,
-      /*6*/ -1.0,  1.0, -1.0,  0.0, 1.0, 1.0,
-      /*7*/  1.0,  1.0, -1.0,  1.0, 1.0, 1.0
+      /*4*/ -1.0, -1.0, -1.0,  1.0, 1.0, 0.0,  0.0, 0.0,
+      /*5*/  1.0, -1.0, -1.0,  1.0, 0.0, 1.0,  1.0, 0.0,
+      /*6*/ -1.0,  1.0, -1.0,  0.0, 1.0, 1.0,  0.0, 1.0,
+      /*7*/  1.0,  1.0, -1.0,  1.0, 1.0, 1.0,  1.0, 1.0
     };
     
     static const u16 k_indices[] = {
@@ -295,7 +296,7 @@ namespace zephyr {
       6, 7, 3
     };
 
-    m_vbo = std::make_unique<VertexBuffer>(6 * sizeof(float), std::span{(const u8*)k_vertices, sizeof(k_vertices)});
+    m_vbo = std::make_unique<VertexBuffer>(8 * sizeof(float), std::span{(const u8*)k_vertices, sizeof(k_vertices)});
     m_ibo = std::make_unique<IndexBuffer>(IndexDataType::UInt16, std::span{(const u8*)k_indices, sizeof(k_indices)});
   }
 
@@ -313,7 +314,14 @@ namespace zephyr {
 
     for(int y = 0; y < 512; y++) {
       for(int x = 0; x < 512; x++) {
-        m_texture_data[y * 512 + x] = 0xFFFF00FF;
+        const int cx = x - 256;
+        const int cy = y - 256;
+
+        if(cx * cx + cy * cy < 256 * 256) {
+          m_texture_data[y * 512 + x] = 0xFF00FFFF;
+        } else {
+          m_texture_data[y * 512 + x] = 0xFFFF00FF;
+        }
       }
     }
   }
