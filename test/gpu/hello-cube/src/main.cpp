@@ -66,7 +66,7 @@ class MainWindow final : public Window {
       command_pool = render_device->CreateGraphicsCommandPool(
         CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-      render_command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      render_command_buffer = render_device->CreateCommandBuffer(command_pool);
     }
 
     void CreateRenderPass() {
@@ -177,7 +177,7 @@ class MainWindow final : public Window {
       staging_ibo->Update<u8>((u8 const*)k_indices, sizeof(k_indices));
       staging_ibo->Unmap();
 
-      auto command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      auto command_buffer = render_device->CreateCommandBuffer(command_pool);
 
       command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       command_buffer->CopyBuffer(staging_vbo.get(), vbo.get(), vbo->Size());

@@ -39,7 +39,7 @@ class MainWindow final : public Window {
       command_pool = render_device->CreateGraphicsCommandPool(
         CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-      command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      command_buffer = render_device->CreateCommandBuffer(command_pool);
 
       auto builder = render_device->CreateRenderPassBuilder();
 
