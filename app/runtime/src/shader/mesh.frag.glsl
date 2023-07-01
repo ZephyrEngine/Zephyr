@@ -8,6 +8,8 @@ layout(set = 0, binding = 0, std140) uniform Material {
   vec4 u_color;
 };
 
+layout(set = 0, binding = 1) uniform sampler2D u_texture;
+
 void main() {
   vec3 color = v_color;
 
@@ -16,5 +18,6 @@ void main() {
     color += sin(color) * 0.000001;
   }
 
-  frag_color = vec4(color * 0.5 + u_color.rgb * 0.5, 1.0);
+  frag_color = texture(u_texture, vec2(0.0));
+  //frag_color = vec4(color * 0.5 + u_color.rgb * 0.5, 1.0);
 }

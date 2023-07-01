@@ -23,7 +23,7 @@ namespace zephyr {
 
     fence->Wait();
 
-    m_buffer_cache->BeginFrame();
+    m_resource_uploader->BeginFrame();
 
     const auto& render_target = GetSwapChain()->AcquireNextRenderTarget();
 
@@ -56,6 +56,40 @@ namespace zephyr {
 
     bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
 
+    // Texture streaming test
+    // @todo: make the render device API for this not suck
+    {
+      Buffer* const staging_buffer = m_resource_uploader->GetCurrentStagingBuffer();
+
+      const size_t texture_data_size = m_texture->GetWidth() * m_texture->GetHeight() * sizeof(u32);
+
+      const size_t staging_buffer_offset = m_resource_uploader->AllocateStagingMemory(texture_data_size);
+
+      std::memcpy((u8*)staging_buffer->Data() + staging_buffer_offset, m_texture_data, texture_data_size);
+
+      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(PipelineStage::TopOfPipe, PipelineStage::Transfer, {{{m_texture.get(), Access::None, Access::TransferWrite, Texture::Layout::Undefined, Texture::Layout::CopyDst, {Texture::Aspect::Color, 0, 1, 0, 1}}}});
+
+      m_resource_uploader->GetCurrentCommandBuffer()->CopyBufferToTexture(staging_buffer, m_texture.get(), Texture::Layout::CopyDst, {{{
+        .texture = {
+          .layers = {
+            .aspect = Texture::Aspect::Color,
+            .mip_level = 0,
+            .base_layer = 0,
+            .layer_count = 1
+          },
+          .width = m_texture->GetWidth(),
+          .height = m_texture->GetHeight()
+        },
+        .buffer = {
+          .offset = (u32)staging_buffer_offset
+        }
+      }}});
+
+      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(PipelineStage::Transfer, PipelineStage::VertexShader, {{{m_texture.get(), Access::TransferWrite, Access::ShaderRead, Texture::Layout::CopyDst, Texture::Layout::ShaderReadOnly, {Texture::Aspect::Color, 0, 1, 0, 1}}}});
+
+      bind_group->Bind(1u, m_texture.get(), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
+    }
+
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindPipeline(m_pipeline.get());
@@ -81,12 +115,12 @@ namespace zephyr {
     command_buffer->EndRenderPass();
     command_buffer->End();
 
-    m_buffer_cache->FinalizeFrame();
+    m_resource_uploader->FinalizeFrame();
 
     // @todo: remove TmpWaitForImageFullyRead() completely and use a semaphore instead.
     GetSwapChain()->TmpWaitForImageFullyRead();
     fence->Reset();
-    m_render_device->GraphicsQueue()->Submit({{m_buffer_cache->GetCurrentCommandBuffer(), command_buffer.get()}}, fence.get());
+    m_render_device->GraphicsQueue()->Submit({{m_resource_uploader->GetCurrentCommandBuffer(), command_buffer.get()}}, fence.get());
 
     // @todo: when is the right time to submit the frame?
     GetSwapChain()->Present();
@@ -111,6 +145,7 @@ namespace zephyr {
     ZEPHYR_INFO("Renderer configured to have {} frame(s) in flight", m_frames_in_flight);
 
     CreateCommandPoolAndBuffers();
+    CreateResourceUploader();
     CreateBufferCache();
     CreateRenderPass();
     CreateFences();
@@ -118,6 +153,7 @@ namespace zephyr {
     CreateGraphicsPipeline();
     CreateVertexAndIndexBuffer();
     CreateUniformBuffer();
+    CreateTexture();
   }
 
   void MainWindow::CreateCommandPoolAndBuffers() {
@@ -129,8 +165,12 @@ namespace zephyr {
     }
   }
 
+  void MainWindow::CreateResourceUploader() {
+    m_resource_uploader = std::make_shared<ResourceUploader>(m_render_device, m_command_pool, m_frames_in_flight);
+  }
+
   void MainWindow::CreateBufferCache() {
-    m_buffer_cache = std::make_shared<BufferCache>(m_render_device, m_command_pool, m_frames_in_flight);
+    m_buffer_cache = std::make_shared<BufferCache>(m_render_device, m_resource_uploader);
   }
 
   void MainWindow::CreateRenderPass() {
@@ -155,11 +195,16 @@ namespace zephyr {
 
   void MainWindow::CreateBindGroups() {
     m_bind_group_layout = m_render_device->CreateBindGroupLayout({{
-      BindGroupLayout::Entry{
+      {
         .binding = 0u,
         .type = BindingType::UniformBuffer,
         .stages = ShaderStage::All
-      }
+      },
+      {
+        .binding = 1u,
+        .type = BindingType::ImageWithSampler,
+        .stages = ShaderStage::All
+      },
     }});
 
     for(uint i = 0; i < m_frames_in_flight; i++) {
@@ -247,6 +292,19 @@ namespace zephyr {
     Vector4 color{1.0f, 0.0f, 0.0f, 0.0f};
 
     m_ubo = std::make_unique<UniformBuffer>(std::span{(const u8*)&color, sizeof(color)});
+  }
+
+  void MainWindow::CreateTexture() {
+    m_texture = m_render_device->CreateTexture2D(
+      512, 512, Texture::Format::R8G8B8A8_SRGB, Texture::Usage::CopyDst | Texture::Usage::Sampled);
+
+    m_texture_data = new u32[512 * 512];
+
+    for(int y = 0; y < 512; y++) {
+      for(int x = 0; x < 512; x++) {
+        m_texture_data[y * 512 + x] = 0xFFFF00FF;
+      }
+    }
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

@@ -3,19 +3,19 @@
 
 namespace zephyr {
 
-  unsigned long long int operator""_KiB(unsigned long long int number) {
+  constexpr unsigned long long int operator""_KiB(unsigned long long int number) {
     return number * 1024ull;
   }
 
-  unsigned long long int operator""_MiB(unsigned long long int number) {
+  constexpr unsigned long long int operator""_MiB(unsigned long long int number) {
     return number * 1024ull * 1024ull;
   }
 
-  unsigned long long int operator""_GiB(unsigned long long int number) {
+  constexpr unsigned long long int operator""_GiB(unsigned long long int number) {
     return number * 1024ull * 1024ull * 1024ull;
   }
 
-  long double operator""_deg(long double angle) {
+  constexpr long double operator""_deg(long double angle) {
     return angle * 3.14159265358979323846 / 180.0;
   }
 
