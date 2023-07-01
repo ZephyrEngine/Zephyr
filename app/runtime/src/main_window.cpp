@@ -67,16 +67,22 @@ namespace zephyr {
 
       std::memcpy((u8*)staging_buffer->Data() + staging_buffer_offset, m_texture_data, texture_data_size);
 
-      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(PipelineStage::TopOfPipe, PipelineStage::Transfer, {{{m_texture.get(), Access::None, Access::TransferWrite, Texture::Layout::Undefined, Texture::Layout::CopyDst, {Texture::Aspect::Color, 0, 1, 0, 1}}}});
+      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(
+        PipelineStage::TopOfPipe,
+        PipelineStage::Transfer, {{
+          {
+            m_texture.get(),
+            Access::None,
+            Access::TransferWrite,
+            Texture::Layout::Undefined,
+            Texture::Layout::CopyDst,
+            m_texture->DefaultSubresourceRange()
+          }
+      }});
 
       m_resource_uploader->GetCurrentCommandBuffer()->CopyBufferToTexture(staging_buffer, m_texture.get(), Texture::Layout::CopyDst, {{{
         .texture = {
-          .layers = {
-            .aspect = Texture::Aspect::Color,
-            .mip_level = 0,
-            .base_layer = 0,
-            .layer_count = 1
-          },
+          .layers = m_texture->DefaultSubresourceRange().Layers(0),
           .width = m_texture->GetWidth(),
           .height = m_texture->GetHeight()
         },
@@ -85,7 +91,18 @@ namespace zephyr {
         }
       }}});
 
-      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(PipelineStage::Transfer, PipelineStage::VertexShader, {{{m_texture.get(), Access::TransferWrite, Access::ShaderRead, Texture::Layout::CopyDst, Texture::Layout::ShaderReadOnly, {Texture::Aspect::Color, 0, 1, 0, 1}}}});
+      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(
+        PipelineStage::Transfer,
+        PipelineStage::VertexShader, {{
+          {
+            m_texture.get(),
+            Access::TransferWrite,
+            Access::ShaderRead,
+            Texture::Layout::CopyDst,
+            Texture::Layout::ShaderReadOnly,
+            m_texture->DefaultSubresourceRange()
+          }
+      }});
 
       bind_group->Bind(1u, m_texture.get(), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
     }
