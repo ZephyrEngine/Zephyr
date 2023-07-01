@@ -36,10 +36,8 @@ namespace zephyr {
   }
 
   void ResourceUploader::CreateCommandBuffers() {
-    // @todo: create an utility for creating a set of command buffers?
     for(size_t i = 0; i < m_frames_in_flight; i++) {
-      // @todo: the command buffer should take ownership of the command pool.
-      m_command_buffers.PushBack(m_render_device->CreateCommandBuffer(m_command_pool.get()));
+      m_command_buffers.PushBack(m_render_device->CreateCommandBuffer(m_command_pool));
     }
   }
 

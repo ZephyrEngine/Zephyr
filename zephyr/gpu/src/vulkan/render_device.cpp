@@ -162,16 +162,16 @@ struct VulkanRenderDevice final : RenderDevice {
     return VulkanComputePipeline::Create(device, shader_module, layout);
   }
 
-  auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> override {
-    return std::make_unique<VulkanCommandPool>(device, queue_family_graphics, usage);
+  auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family_graphics, usage);
   }
 
-  auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> override {
-    return std::make_unique<VulkanCommandPool>(device, queue_family_compute, usage);
+  auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family_compute, usage);
   }
 
-  auto CreateCommandBuffer(CommandPool* pool) -> std::unique_ptr<CommandBuffer> override {
-    return std::make_unique<VulkanCommandBuffer>(device, pool);
+  auto CreateCommandBuffer(std::shared_ptr<CommandPool> pool) -> std::unique_ptr<CommandBuffer> override {
+    return std::make_unique<VulkanCommandBuffer>(device, std::move(pool));
   }
 
   auto CreateFence(Fence::CreateSignalled create_signalled) -> std::unique_ptr<Fence> override {

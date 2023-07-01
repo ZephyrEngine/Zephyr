@@ -95,11 +95,11 @@ struct RenderDevice {
     std::shared_ptr<PipelineLayout> layout
   ) -> std::unique_ptr<ComputePipeline> = 0;
 
-  virtual auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> = 0;
+  virtual auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> = 0;
 
-  virtual auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> = 0;
+  virtual auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> = 0;
 
-  virtual auto CreateCommandBuffer(CommandPool* pool) -> std::unique_ptr<CommandBuffer> = 0;
+  virtual auto CreateCommandBuffer(std::shared_ptr<CommandPool> pool) -> std::unique_ptr<CommandBuffer> = 0;
 
   virtual auto CreateFence(Fence::CreateSignalled create_signalled) -> std::unique_ptr<Fence> = 0;
 

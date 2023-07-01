@@ -12,12 +12,12 @@
 namespace zephyr {
 
 struct VulkanCommandBuffer final : CommandBuffer {
-  VulkanCommandBuffer(VkDevice device, CommandPool* pool)
-      : device(device), pool(pool) {
+  VulkanCommandBuffer(VkDevice device, std::shared_ptr<CommandPool> pool)
+      : device(device), pool(std::move(pool)) {
     auto info = VkCommandBufferAllocateInfo{
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
       .pNext = nullptr,
-      .commandPool = (VkCommandPool)pool->Handle(),
+      .commandPool = (VkCommandPool)this->pool->Handle(),
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
       .commandBufferCount = 1
     };
@@ -331,7 +331,7 @@ struct VulkanCommandBuffer final : CommandBuffer {
 private:
   VkDevice device;
   VkCommandBuffer buffer;
-  CommandPool* pool;
+  std::shared_ptr<CommandPool> pool;
 };
 
 } // namespace zephyr

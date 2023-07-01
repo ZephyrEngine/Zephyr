@@ -161,7 +161,7 @@ namespace zephyr {
       CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
     for(uint i = 0; i < m_frames_in_flight; i++) {
-      m_render_command_buffers.push_back(m_render_device->CreateCommandBuffer(m_command_pool.get()));
+      m_render_command_buffers.push_back(m_render_device->CreateCommandBuffer(m_command_pool));
     }
   }
 
