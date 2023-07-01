@@ -68,6 +68,9 @@ namespace zephyr {
 
       int m_fps_counter{};
       std::chrono::steady_clock::time_point m_time_point_last_update;
+
+      int m_width{};
+      int m_height{};
   };
 
 } // namespace zephyr

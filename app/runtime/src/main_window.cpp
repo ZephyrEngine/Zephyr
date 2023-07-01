@@ -102,6 +102,7 @@ namespace zephyr {
     }
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    command_buffer->SetViewport(0, 0, m_width, m_height);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindPipeline(m_pipeline.get());
     command_buffer->BindVertexBuffers({{vbo}});
@@ -142,9 +143,8 @@ namespace zephyr {
   }
 
   void MainWindow::OnResize(int width, int height) {
-    m_pipeline_builder->SetViewport(0, 0, width, height);
-    m_pipeline = m_pipeline_builder->Build();
-
+    m_width = width;
+    m_height = height;
     m_projection_matrix = Matrix4::PerspectiveVK(45.0f, (f32)width / (f32)height, 0.01f, 100.0f);
   }
 
@@ -229,7 +229,7 @@ namespace zephyr {
 
     m_pipeline_builder = m_render_device->CreateGraphicsPipelineBuilder();
 
-    m_pipeline_builder->SetViewport(0, 0, 512, 512);
+    m_pipeline_builder->SetDynamicViewportEnable(true);
     m_pipeline_builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
     m_pipeline_builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
     m_pipeline_builder->SetRenderPass(m_render_pass);
