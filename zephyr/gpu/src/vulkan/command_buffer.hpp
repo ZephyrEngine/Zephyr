@@ -96,47 +96,32 @@ struct VulkanCommandBuffer final : CommandBuffer {
 
   void CopyBufferToTexture(
     Buffer* buffer,
+    u32 buffer_offset,
     Texture* texture,
     Texture::Layout texture_layout,
-    std::span<BufferTextureCopyRegion const> regions
+    u32 texture_mip_level = 0u
   ) override {
-    VkBufferImageCopy vk_regions[regions.size()];
+    const VkBufferImageCopy region = {
+      .bufferOffset = buffer_offset,
+      .bufferRowLength = 0u,
+      .bufferImageHeight = 0u,
+      .imageSubresource = {
+        .aspectMask = (VkImageAspectFlagBits)texture->DefaultSubresourceRange().aspect,
+        .mipLevel = texture_mip_level,
+        .baseArrayLayer = 0,
+        .layerCount = texture->GetLayerCount()
+      },
+      .imageOffset = { .x = 0u, .y = 0u, .z = 0u },
+      .imageExtent = {
+        .width = texture->GetWidth(),
+        .height = texture->GetHeight(),
+        .depth = texture->GetDepth()
+      }
+    };
 
-    for(size_t i = 0; i < regions.size(); i++) {
-      auto& region = regions[i];
-
-      vk_regions[i] = {
-        .bufferOffset = region.buffer.offset,
-        .bufferRowLength = region.buffer.row_length,
-        .bufferImageHeight = region.buffer.image_height,
-        .imageSubresource = {
-          .aspectMask = (VkImageAspectFlagBits)region.texture.layers.aspect,
-          .mipLevel = region.texture.layers.mip_level,
-          .baseArrayLayer = region.texture.layers.base_layer,
-          .layerCount = region.texture.layers.layer_count,
-        },
-        .imageOffset = {
-          .x = region.texture.offset_x,
-          .y = region.texture.offset_y,
-          .z = region.texture.offset_z
-        },
-        .imageExtent = {
-          .width = (u32)region.texture.width,
-          .height = (u32)region.texture.height,
-          .depth = (u32)region.texture.depth
-        }
-      };
-    }
-
-    vkCmdCopyBufferToImage(
-      this->buffer,
-      (VkBuffer)buffer->Handle(),
-      (VkImage)texture->Handle(),
-      (VkImageLayout)texture_layout,
-      (u32)regions.size(),
-      vk_regions
-    );
+    vkCmdCopyBufferToImage(this->buffer, (VkBuffer)buffer->Handle(), (VkImage)texture->Handle(), (VkImageLayout)texture_layout, 1, &region);
   }
+
 
   void PushConstants(
     PipelineLayout* pipeline_layout,

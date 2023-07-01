@@ -67,7 +67,9 @@ namespace zephyr {
 
       std::memcpy((u8*)staging_buffer->Data() + staging_buffer_offset, m_texture_data, texture_data_size);
 
-      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(
+      CommandBuffer* const resource_command_buffer = m_resource_uploader->GetCurrentCommandBuffer();
+
+      resource_command_buffer->PipelineBarrier(
         PipelineStage::TopOfPipe,
         PipelineStage::Transfer, {{
           {
@@ -80,18 +82,10 @@ namespace zephyr {
           }
       }});
 
-      m_resource_uploader->GetCurrentCommandBuffer()->CopyBufferToTexture(staging_buffer, m_texture.get(), Texture::Layout::CopyDst, {{{
-        .texture = {
-          .layers = m_texture->DefaultSubresourceRange().Layers(0),
-          .width = m_texture->GetWidth(),
-          .height = m_texture->GetHeight()
-        },
-        .buffer = {
-          .offset = (u32)staging_buffer_offset
-        }
-      }}});
+      resource_command_buffer->CopyBufferToTexture(
+        staging_buffer, staging_buffer_offset, m_texture.get(), Texture::Layout::CopyDst);
 
-      m_resource_uploader->GetCurrentCommandBuffer()->PipelineBarrier(
+      resource_command_buffer->PipelineBarrier(
         PipelineStage::Transfer,
         PipelineStage::VertexShader, {{
           {

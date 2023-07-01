@@ -17,24 +17,6 @@
 
 namespace zephyr {
 
-struct BufferTextureCopyRegion {
-  struct {
-    Texture::SubresourceLayers layers;
-    u32 width;
-    u32 height;
-    u32 depth = 1;
-    s32 offset_x = 0;
-    s32 offset_y = 0;
-    s32 offset_z = 0;
-  } texture;
-
-  struct {
-    u32 offset = 0;
-    u32 row_length = 0;
-    u32 image_height = 0;
-  } buffer;
-};
-
 struct CommandBuffer {
   enum class OneTimeSubmit {
     No = 0,
@@ -61,9 +43,10 @@ struct CommandBuffer {
 
   virtual void CopyBufferToTexture(
     Buffer* buffer,
+    u32 buffer_offset,
     Texture* texture,
     Texture::Layout texture_layout,
-    std::span<BufferTextureCopyRegion const> regions
+    u32 texture_mip_level = 0u
   ) = 0;
 
   virtual void PushConstants(
