@@ -1,5 +1,6 @@
 
 #include <zephyr/float.hpp>
+#include <stb_image.h>
 
 #include "main_window.hpp"
 
@@ -346,8 +347,11 @@ namespace zephyr {
   }
 
   void MainWindow::CreateTexture() {
-    const int width = 512;
-    const int height = 512;
+    int width;
+    int height;
+    int channels_in_file;
+
+    const u8* texture_data = stbi_load("test.jpg", &width, &height, &channels_in_file, 4);
 
     const u32 mip_count = (u32)std::ceil(std::log2(std::min(width, height)));
 
@@ -356,18 +360,7 @@ namespace zephyr {
 
     m_texture_data = new u32[width * height];
 
-    for(int y = 0; y < height; y++) {
-      for(int x = 0; x < width; x++) {
-        const int cx = x - width/2;
-        const int cy = y - width/2;
-
-        if(cx * cx + cy * cy < width * width / 4) {
-          m_texture_data[y * width + x] = 0xFF00FFFF;
-        } else {
-          m_texture_data[y * width + x] = 0xFFFF00FF;
-        }
-      }
-    }
+    std::memcpy(m_texture_data, texture_data, sizeof(u32) * width * height);
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {
