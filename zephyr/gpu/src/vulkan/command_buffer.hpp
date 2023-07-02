@@ -99,7 +99,7 @@ struct VulkanCommandBuffer final : CommandBuffer {
     u32 buffer_offset,
     Texture* texture,
     Texture::Layout texture_layout,
-    u32 texture_mip_level = 0u
+    u32 texture_mip_level
   ) override {
     const VkBufferImageCopy region = {
       .bufferOffset = buffer_offset,
@@ -122,6 +122,58 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdCopyBufferToImage(this->buffer, (VkBuffer)buffer->Handle(), (VkImage)texture->Handle(), (VkImageLayout)texture_layout, 1, &region);
   }
 
+  void BlitTexture2D(
+    Texture* src_texture,
+    Texture* dst_texture,
+    const Rect2D& src_rect,
+    const Rect2D& dst_rect,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 src_mip_level,
+    u32 dst_mip_level,
+    Sampler::FilterMode filter
+  ) override {
+    const VkImageBlit region = {
+      .srcSubresource = {
+        .aspectMask = (VkImageAspectFlagBits)src_texture->DefaultSubresourceRange().aspect,
+        .mipLevel = src_mip_level,
+        .baseArrayLayer = 0u,
+        .layerCount = src_texture->GetLayerCount()
+      },
+      .srcOffsets = {
+        {
+          .x = (int32_t)src_rect.x,
+          .y = (int32_t)src_rect.y,
+          .z = 0
+        },
+        {
+          .x = (int32_t)(src_rect.x + src_rect.width),
+          .y = (int32_t)(src_rect.y + src_rect.height),
+          .z = 1
+        }
+      },
+      .dstSubresource = {
+        .aspectMask = (VkImageAspectFlagBits)dst_texture->DefaultSubresourceRange().aspect,
+        .mipLevel = dst_mip_level,
+        .baseArrayLayer = 0u,
+        .layerCount = dst_texture->GetLayerCount()
+      },
+      .dstOffsets = {
+        {
+          .x = (int32_t)dst_rect.x,
+          .y = (int32_t)dst_rect.y,
+          .z = 0
+        },
+        {
+          .x = (int32_t)(dst_rect.x + dst_rect.width),
+          .y = (int32_t)(dst_rect.y + dst_rect.height),
+          .z = 1
+        }
+      }
+    };
+
+    vkCmdBlitImage(buffer, (VkImage)src_texture->Handle(), (VkImageLayout)src_layout, (VkImage)dst_texture->Handle(), (VkImageLayout)dst_layout, 1, &region, (VkFilter)filter);
+  }
 
   void PushConstants(
     PipelineLayout* pipeline_layout,
@@ -250,7 +302,8 @@ struct VulkanCommandBuffer final : CommandBuffer {
     Access dst_access,
     Texture::Layout src_layout,
     Texture::Layout dst_layout,
-    u32 mip_level
+    u32 mip_level,
+    u32 mip_count
   ) override {
     const VkImageMemoryBarrier barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -265,7 +318,7 @@ struct VulkanCommandBuffer final : CommandBuffer {
       .subresourceRange = {
         .aspectMask = (VkImageAspectFlagBits)texture->DefaultSubresourceRange().aspect,
         .baseMipLevel = mip_level,
-        .levelCount = 1u, // UGH
+        .levelCount = mip_count,
         .baseArrayLayer = 0u,
         .layerCount = texture->GetLayerCount()
       }

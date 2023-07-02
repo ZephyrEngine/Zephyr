@@ -46,7 +46,19 @@ struct CommandBuffer {
     u32 buffer_offset,
     Texture* texture,
     Texture::Layout texture_layout,
-    u32 texture_mip_level = 0u
+    u32 texture_mip_level
+  ) = 0;
+
+  virtual void BlitTexture2D(
+    Texture* src_texture,
+    Texture* dst_texture,
+    const Rect2D& src_rect,
+    const Rect2D& dst_rect,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 src_mip_level,
+    u32 dst_mip_level,
+    Sampler::FilterMode filter
   ) = 0;
 
   virtual void PushConstants(
@@ -108,7 +120,8 @@ struct CommandBuffer {
     Access dst_access,
     Texture::Layout src_layout,
     Texture::Layout dst_layout,
-    u32 mip_level = 0u
+    u32 mip_level,
+    u32 mip_count
   ) = 0;
 };
 

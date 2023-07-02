@@ -69,25 +69,76 @@ namespace zephyr {
 
       CommandBuffer* const resource_command_buffer = m_resource_uploader->GetCurrentCommandBuffer();
 
+      const u32 mip_count = m_texture->GetMipCount();
+
+      int width = (int)m_texture->GetWidth();
+      int height = (int)m_texture->GetHeight();
+
+      /**
+       * TODO: calculating mip maps via vkCmdBlitImage() on the resource upload command buffer
+       * is bad news for eventually submitting that command buffer to a transfer only queue
+       * because vkCmdBlitImage() requires a queue with graphics capabilities.
+       *
+       * Either do mip map generation on a separate command buffer or use a compute shader (that still requires a queue with transfer and compute capabilities though).
+       */
+
       resource_command_buffer->Barrier(
         m_texture.get(),
         PipelineStage::TopOfPipe, PipelineStage::Transfer,
         Access::None, Access::TransferWrite,
-        Texture::Layout::Undefined, Texture::Layout::CopyDst
+        Texture::Layout::Undefined, Texture::Layout::CopyDst,
+        0u, mip_count
       );
 
       resource_command_buffer->CopyBufferToTexture(
-        staging_buffer, staging_buffer_offset, m_texture.get(), Texture::Layout::CopyDst);
+        staging_buffer, staging_buffer_offset, m_texture.get(), Texture::Layout::CopyDst, 0u);
+
+      for(u32 mip_level = 1u; mip_level < mip_count; mip_level++) {
+        const int current_width = width / 2;
+        const int current_height = height / 2;
+
+        resource_command_buffer->Barrier(
+          m_texture.get(),
+          PipelineStage::Transfer, PipelineStage::Transfer,
+          Access::TransferWrite, Access::TransferRead,
+          Texture::Layout::CopyDst, Texture::Layout::CopySrc,
+          mip_level - 1u, 1u
+        );
+
+        resource_command_buffer->BlitTexture2D(
+          m_texture.get(),
+          m_texture.get(),
+          {0, 0, width, height},
+          {0, 0, current_width, current_height},
+          Texture::Layout::CopySrc,
+          Texture::Layout::CopyDst,
+          mip_level - 1u,
+          mip_level,
+          Sampler::FilterMode::Linear
+        );
+
+        width = current_width;
+        height = current_height;
+      }
 
       resource_command_buffer->Barrier(
         m_texture.get(),
         PipelineStage::Transfer, PipelineStage::VertexShader,
+        Access::TransferRead, Access::ShaderRead,
+        Texture::Layout::CopySrc, Texture::Layout::ShaderReadOnly,
+        0u, mip_count - 1u
+      );
+      resource_command_buffer->Barrier(
+        m_texture.get(),
+        PipelineStage::Transfer, PipelineStage::VertexShader,
         Access::TransferWrite, Access::ShaderRead,
-        Texture::Layout::CopyDst, Texture::Layout::ShaderReadOnly
+        Texture::Layout::CopyDst, Texture::Layout::ShaderReadOnly,
+        mip_count - 1u, 1u
       );
 
       bind_group->Bind(1u, m_texture.get(), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
     }
+
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->SetViewport(0, 0, m_width, m_height);
@@ -295,20 +346,25 @@ namespace zephyr {
   }
 
   void MainWindow::CreateTexture() {
+    const int width = 512;
+    const int height = 512;
+
+    const u32 mip_count = (u32)std::ceil(std::log2(std::min(width, height)));
+
     m_texture = m_render_device->CreateTexture2D(
-      512, 512, Texture::Format::R8G8B8A8_SRGB, Texture::Usage::CopyDst | Texture::Usage::Sampled);
+      width, height, Texture::Format::R8G8B8A8_SRGB, Texture::Usage::CopySrc | Texture::Usage::CopyDst | Texture::Usage::Sampled, mip_count);
 
-    m_texture_data = new u32[512 * 512];
+    m_texture_data = new u32[width * height];
 
-    for(int y = 0; y < 512; y++) {
-      for(int x = 0; x < 512; x++) {
-        const int cx = x - 256;
-        const int cy = y - 256;
+    for(int y = 0; y < height; y++) {
+      for(int x = 0; x < width; x++) {
+        const int cx = x - width/2;
+        const int cy = y - width/2;
 
-        if(cx * cx + cy * cy < 256 * 256) {
-          m_texture_data[y * 512 + x] = 0xFF00FFFF;
+        if(cx * cx + cy * cy < width * width / 4) {
+          m_texture_data[y * width + x] = 0xFF00FFFF;
         } else {
-          m_texture_data[y * 512 + x] = 0xFFFF00FF;
+          m_texture_data[y * width + x] = 0xFFFF00FF;
         }
       }
     }

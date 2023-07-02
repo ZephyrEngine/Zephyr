@@ -215,4 +215,11 @@ constexpr auto operator|(Access lhs, Access rhs) -> Access {
   return static_cast<Access>(static_cast<int>(lhs) | static_cast<u32>(rhs));
 }
 
+struct Rect2D {
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
 } // namespace zephyr
