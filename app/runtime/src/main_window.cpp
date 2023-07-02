@@ -69,34 +69,22 @@ namespace zephyr {
 
       CommandBuffer* const resource_command_buffer = m_resource_uploader->GetCurrentCommandBuffer();
 
-      resource_command_buffer->PipelineBarrier(
-        PipelineStage::TopOfPipe,
-        PipelineStage::Transfer, {{
-          {
-            m_texture.get(),
-            Access::None,
-            Access::TransferWrite,
-            Texture::Layout::Undefined,
-            Texture::Layout::CopyDst,
-            m_texture->DefaultSubresourceRange()
-          }
-      }});
+      resource_command_buffer->Barrier(
+        m_texture.get(),
+        PipelineStage::TopOfPipe, PipelineStage::Transfer,
+        Access::None, Access::TransferWrite,
+        Texture::Layout::Undefined, Texture::Layout::CopyDst
+      );
 
       resource_command_buffer->CopyBufferToTexture(
         staging_buffer, staging_buffer_offset, m_texture.get(), Texture::Layout::CopyDst);
 
-      resource_command_buffer->PipelineBarrier(
-        PipelineStage::Transfer,
-        PipelineStage::VertexShader, {{
-          {
-            m_texture.get(),
-            Access::TransferWrite,
-            Access::ShaderRead,
-            Texture::Layout::CopyDst,
-            Texture::Layout::ShaderReadOnly,
-            m_texture->DefaultSubresourceRange()
-          }
-      }});
+      resource_command_buffer->Barrier(
+        m_texture.get(),
+        PipelineStage::Transfer, PipelineStage::VertexShader,
+        Access::TransferWrite, Access::ShaderRead,
+        Texture::Layout::CopyDst, Texture::Layout::ShaderReadOnly
+      );
 
       bind_group->Bind(1u, m_texture.get(), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
     }

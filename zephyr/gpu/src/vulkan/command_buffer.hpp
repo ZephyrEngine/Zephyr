@@ -241,76 +241,37 @@ struct VulkanCommandBuffer final : CommandBuffer {
   void DispatchCompute(u32 group_count_x, u32 group_count_y, u32 group_count_z) override {
     vkCmdDispatch(buffer, group_count_x, group_count_y, group_count_z);
   }
-
-  void PipelineBarrier(
+  
+  void Barrier(
+    Texture* texture,
     PipelineStage src_stage,
     PipelineStage dst_stage,
-    std::span<MemoryBarrier const> memory_barriers
+    Access src_access,
+    Access dst_access,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 mip_level
   ) override {
-    const auto barrier_count = memory_barriers.size();
-
-    VkImageMemoryBarrier vk_image_barriers[barrier_count];
-    VkBufferMemoryBarrier vk_buffer_barriers[barrier_count];
-    VkMemoryBarrier vk_memory_barriers[barrier_count];
-
-    u32 image_barrier_count = 0;
-    u32 buffer_barrier_count = 0;
-    u32 memory_barrier_count = 0;
-
-    for (auto& barrier : memory_barriers) {
-      if (barrier.type == MemoryBarrier::Type::Texture) {
-        auto& texture_info = barrier.texture_info;
-
-        vk_image_barriers[image_barrier_count++] = {
-          .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-          .pNext = nullptr,
-          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
-          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask,
-          .oldLayout = (VkImageLayout)texture_info.src_layout,
-          .newLayout = (VkImageLayout)texture_info.dst_layout,
-          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .image = (VkImage)texture_info.texture->Handle(),
-          .subresourceRange = {
-            .aspectMask = (VkImageAspectFlags)texture_info.range.aspect,
-            .baseMipLevel = texture_info.range.base_mip,
-            .levelCount = texture_info.range.mip_count,
-            .baseArrayLayer = texture_info.range.base_layer,
-            .layerCount = texture_info.range.layer_count
-          }
-        };
-      } else if (barrier.type == MemoryBarrier::Type::Buffer) {
-        auto& buffer_info = barrier.buffer_info;
-
-        vk_buffer_barriers[buffer_barrier_count++] = {
-          .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-          .pNext = nullptr,
-          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
-          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask,
-          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .buffer = (VkBuffer)buffer_info.buffer->Handle(),
-          .offset = buffer_info.offset,
-          .size = buffer_info.size
-        };
-      } else {
-        vk_memory_barriers[memory_barrier_count++] = {
-          .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-          .pNext = nullptr,
-          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
-          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask
-        };
+    const VkImageMemoryBarrier barrier = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      .pNext = nullptr,
+      .srcAccessMask = (VkAccessFlags)src_access,
+      .dstAccessMask = (VkAccessFlags)dst_access,
+      .oldLayout = (VkImageLayout)src_layout,
+      .newLayout = (VkImageLayout)dst_layout,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = (VkImage)texture->Handle(),
+      .subresourceRange = {
+        .aspectMask = (VkImageAspectFlagBits)texture->DefaultSubresourceRange().aspect,
+        .baseMipLevel = mip_level,
+        .levelCount = 1u, // UGH
+        .baseArrayLayer = 0u,
+        .layerCount = texture->GetLayerCount()
       }
-    }
+    };
 
-    vkCmdPipelineBarrier(
-      buffer,
-      (VkPipelineStageFlags)src_stage,
-      (VkPipelineStageFlags)dst_stage, 0,
-      memory_barrier_count, vk_memory_barriers,
-      buffer_barrier_count, vk_buffer_barriers,
-      image_barrier_count, vk_image_barriers
-    );
+    vkCmdPipelineBarrier(buffer, (VkPipelineStageFlags)src_stage, (VkPipelineStageFlags)dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
   }
 
 private:

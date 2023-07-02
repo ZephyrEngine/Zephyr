@@ -100,10 +100,15 @@ struct CommandBuffer {
 
   virtual void DispatchCompute(u32 group_count_x, u32 group_count_y = 1, u32 group_count_z = 1) = 0;
 
-  virtual void PipelineBarrier(
+  virtual void Barrier(
+    Texture* texture,
     PipelineStage src_stage,
     PipelineStage dst_stage,
-    std::span<MemoryBarrier const> memory_barriers = {}
+    Access src_access,
+    Access dst_access,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 mip_level = 0u
   ) = 0;
 };
 
