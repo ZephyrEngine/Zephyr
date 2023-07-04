@@ -56,90 +56,17 @@ namespace zephyr {
     Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
 
     bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
+    bind_group->Bind(1u, m_texture_cache->GetDeviceTexture(m_texture.get()), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
 
-    // Texture streaming test
-    // @todo: make the render device API for this not suck
-    {
-      Buffer* const staging_buffer = m_resource_uploader->GetCurrentStagingBuffer();
-
-      const size_t texture_data_size = m_texture->GetWidth() * m_texture->GetHeight() * sizeof(u32);
-
-      const size_t staging_buffer_offset = m_resource_uploader->AllocateStagingMemory(texture_data_size);
-
-      std::memcpy((u8*)staging_buffer->Data() + staging_buffer_offset, m_texture_data, texture_data_size);
-
-      CommandBuffer* const resource_command_buffer = m_resource_uploader->GetCurrentCommandBuffer();
-
-      const u32 mip_count = m_texture->GetMipCount();
-
-      int width = (int)m_texture->GetWidth();
-      int height = (int)m_texture->GetHeight();
-
-      /**
-       * TODO: calculating mip maps via vkCmdBlitImage() on the resource upload command buffer
-       * is bad news for eventually submitting that command buffer to a transfer only queue
-       * because vkCmdBlitImage() requires a queue with graphics capabilities.
-       *
-       * Either do mip map generation on a separate command buffer or use a compute shader (that still requires a queue with transfer and compute capabilities though).
-       */
-
-      resource_command_buffer->Barrier(
-        m_texture.get(),
-        PipelineStage::TopOfPipe, PipelineStage::Transfer,
-        Access::None, Access::TransferWrite,
-        Texture::Layout::Undefined, Texture::Layout::CopyDst,
-        0u, mip_count
-      );
-
-      resource_command_buffer->CopyBufferToTexture(
-        staging_buffer, staging_buffer_offset, m_texture.get(), Texture::Layout::CopyDst, 0u);
-
-      for(u32 mip_level = 1u; mip_level < mip_count; mip_level++) {
-        const int current_width = width / 2;
-        const int current_height = height / 2;
-
-        resource_command_buffer->Barrier(
-          m_texture.get(),
-          PipelineStage::Transfer, PipelineStage::Transfer,
-          Access::TransferWrite, Access::TransferRead,
-          Texture::Layout::CopyDst, Texture::Layout::CopySrc,
-          mip_level - 1u, 1u
-        );
-
-        resource_command_buffer->BlitTexture2D(
-          m_texture.get(),
-          m_texture.get(),
-          {0, 0, width, height},
-          {0, 0, current_width, current_height},
-          Texture::Layout::CopySrc,
-          Texture::Layout::CopyDst,
-          mip_level - 1u,
-          mip_level,
-          Sampler::FilterMode::Linear
-        );
-
-        width = current_width;
-        height = current_height;
+    static int frame = 0;
+    if(++frame == 1000) {
+      for(int y = 0; y < m_texture->GetHeight(); y++) {
+        for(int x = 0; x < m_texture->GetWidth(); x++) {
+          m_texture->Data<u32>()[y * m_texture->GetWidth() + x] |= 0xFFFF0000;
+        }
       }
-
-      resource_command_buffer->Barrier(
-        m_texture.get(),
-        PipelineStage::Transfer, PipelineStage::VertexShader,
-        Access::TransferRead, Access::ShaderRead,
-        Texture::Layout::CopySrc, Texture::Layout::ShaderReadOnly,
-        0u, mip_count - 1u
-      );
-      resource_command_buffer->Barrier(
-        m_texture.get(),
-        PipelineStage::Transfer, PipelineStage::VertexShader,
-        Access::TransferWrite, Access::ShaderRead,
-        Texture::Layout::CopyDst, Texture::Layout::ShaderReadOnly,
-        mip_count - 1u, 1u
-      );
-
-      bind_group->Bind(1u, m_texture.get(), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
+      m_texture->MarkAsDirty();
     }
-
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->SetViewport(0, 0, m_width, m_height);
@@ -198,6 +125,7 @@ namespace zephyr {
     CreateCommandPoolAndBuffers();
     CreateResourceUploader();
     CreateBufferCache();
+    CreateTextureCache();
     CreateRenderPass();
     CreateFences();
     CreateBindGroups();
@@ -222,6 +150,10 @@ namespace zephyr {
 
   void MainWindow::CreateBufferCache() {
     m_buffer_cache = std::make_shared<BufferCache>(m_render_device, m_resource_uploader);
+  }
+
+  void MainWindow::CreateTextureCache() {
+    m_texture_cache = std::make_shared<TextureCache>(m_render_device, m_resource_uploader);
   }
 
   void MainWindow::CreateRenderPass() {
@@ -353,14 +285,9 @@ namespace zephyr {
 
     const u8* texture_data = stbi_load("test.jpg", &width, &height, &channels_in_file, 4);
 
-    const u32 mip_count = (u32)std::ceil(std::log2(std::min(width, height)));
+    m_texture = std::make_unique<Texture2D>(width, height, Texture2D::Format::RGBA, Texture2D::DataType::UnsignedByte, Texture2D::ColorSpace::SRGB);
 
-    m_texture = m_render_device->CreateTexture2D(
-      width, height, Texture::Format::R8G8B8A8_SRGB, Texture::Usage::CopySrc | Texture::Usage::CopyDst | Texture::Usage::Sampled, mip_count);
-
-    m_texture_data = new u32[width * height];
-
-    std::memcpy(m_texture_data, texture_data, sizeof(u32) * width * height);
+    std::memcpy(m_texture->Data(), texture_data, m_texture->Size());
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

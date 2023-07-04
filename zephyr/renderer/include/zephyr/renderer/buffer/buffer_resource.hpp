@@ -3,12 +3,11 @@
 
 #include <zephyr/renderer/buffer/buffer_resource_base.hpp>
 #include <zephyr/integer.hpp>
-#include <zephyr/non_copyable.hpp>
 #include <span>
 
 namespace zephyr {
 
-  class BufferResource : public BufferResourceBase, public NonCopyable {
+  class BufferResource : public BufferResourceBase {
     public:
       explicit BufferResource(Buffer::Usage usage, size_t size) : m_usage{usage}, m_size{size} {
         m_data = new u8[size];

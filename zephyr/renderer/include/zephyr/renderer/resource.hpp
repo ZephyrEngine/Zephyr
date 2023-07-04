@@ -3,6 +3,8 @@
 
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
+#include <zephyr/non_copyable.hpp>
+#include <zephyr/non_moveable.hpp>
 #include <limits>
 
 namespace zephyr {
@@ -13,7 +15,7 @@ namespace zephyr {
    * current version of the resource, as well as bumping the resource version to
    * invalidate any caches.
    */
-  class Resource {
+  class Resource : public NonCopyable, public NonMoveable {
     public:
       virtual ~Resource() = default;
 

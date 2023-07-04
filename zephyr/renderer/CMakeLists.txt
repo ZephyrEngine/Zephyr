@@ -12,9 +12,12 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/buffer/index_buffer.hpp
   include/zephyr/renderer/buffer/uniform_buffer.hpp
   include/zephyr/renderer/buffer/vertex_buffer.hpp
+  include/zephyr/renderer/texture/texture_2D.hpp
+  include/zephyr/renderer/texture/texture_cube.hpp
+  include/zephyr/renderer/texture/texture_resource.hpp
   include/zephyr/renderer/geometry.hpp
   include/zephyr/renderer/resource.hpp
-  )
+)
 
 add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 

@@ -6,6 +6,7 @@
 #include <zephyr/renderer/buffer/index_buffer.hpp>
 #include <zephyr/renderer/buffer/uniform_buffer.hpp>
 #include <zephyr/renderer/buffer/vertex_buffer.hpp>
+#include <zephyr/renderer/texture/texture_2D.hpp>
 #include <zephyr/window/window.hpp>
 #include <chrono>
 #include <vector>
@@ -15,6 +16,7 @@
 
 #include "renderer/buffer_cache.hpp"
 #include "renderer/resource_uploader.hpp"
+#include "renderer/texture_cache.hpp"
 
 #include "shader/mesh.vert.h"
 #include "shader/mesh.frag.h"
@@ -35,6 +37,7 @@ namespace zephyr {
       void CreateCommandPoolAndBuffers();
       void CreateResourceUploader();
       void CreateBufferCache();
+      void CreateTextureCache();
       void CreateRenderPass();
       void CreateFences();
       void CreateGraphicsPipeline();
@@ -56,11 +59,11 @@ namespace zephyr {
       std::unique_ptr<UniformBuffer> m_ubo;
       std::shared_ptr<ResourceUploader> m_resource_uploader;
       std::shared_ptr<BufferCache> m_buffer_cache;
+      std::shared_ptr<TextureCache> m_texture_cache;
       std::shared_ptr<BindGroupLayout> m_bind_group_layout;
       std::vector<std::unique_ptr<BindGroup>> m_bind_groups;
 
-      std::unique_ptr<Texture> m_texture;
-      u32* m_texture_data{};
+      std::unique_ptr<Texture2D> m_texture;
 
       Matrix4 m_projection_matrix;
       uint m_frame{0};

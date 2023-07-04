@@ -1,41 +1,75 @@
 
 #pragma once
 
-#include <zephyr/gpu/sampler.hpp>
 #include <zephyr/renderer/resource.hpp>
+#include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/non_moveable.hpp>
+#include <zephyr/panic.hpp>
 
 namespace zephyr {
 
-//  class SamplerResource : public Resource, public NonCopyable, public NonMoveable {
-//    public:
-//  };
-//
-//  class Texture2DResource : public Resource, public NonCopyable, public NonMoveable {
-//    public:
-//
-//  };
-
-  class Texture2D : public Resource, public NonCopyable, public NonMoveable {
+  class TextureResource : public Resource {
     public:
       enum class Format {
-        RGBA
+        RGBA,
+        Limit
       };
 
       enum class DataType {
-        UnsignedByte
+        UnsignedByte,
+        Limit
       };
 
       enum class ColorSpace {
-        LinearColorSpace,
-        SRGBColorSpace
+        Linear,
+        SRGB,
+        Limit
       };
 
+      [[nodiscard]] Format GetFormat() const {
+        return m_format;
+      }
 
+      [[nodiscard]] DataType GetDataType() const {
+        return m_data_type;
+      }
 
+      [[nodiscard]] ColorSpace GetColorSpace() const {
+        return m_color_space;
+      }
+
+      [[nodiscard]] size_t GetNumberOfComponents() const {
+        switch(GetFormat()) {
+          case Format::RGBA: return 4u;
+          default: ZEPHYR_PANIC("Unimplemented texture format: {}", (int)GetFormat());
+        }
+      }
+
+      [[nodiscard]] size_t GetComponentSize() const {
+        switch(GetDataType()) {
+          case DataType::UnsignedByte: return 1u;
+          default: ZEPHYR_PANIC("Unimplemented texture data type: {}", (int)GetDataType());
+        }
+      }
+
+      [[nodiscard]] size_t GetTexelSize() const {
+        return GetNumberOfComponents() * GetComponentSize();
+      }
+
+      [[nodiscard]] virtual size_t Size() const = 0;
+      [[nodiscard]] virtual const void* Data() const = 0;
+      [[nodiscard]] virtual void* Data() = 0;
+
+    protected:
+      TextureResource(Format format, DataType data_type, ColorSpace color_space)
+          : m_format{format}, m_data_type{data_type}, m_color_space{color_space} {
+      }
 
     private:
+      Format m_format{};
+      DataType m_data_type{};
+      ColorSpace m_color_space{};
   };
 
 } // namespace zephyr
