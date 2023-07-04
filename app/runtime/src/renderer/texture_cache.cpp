@@ -163,9 +163,9 @@ namespace zephyr {
     TextureResource::DataType data_type,
     TextureResource::ColorSpace color_space
   ) {
-    static_assert((size_t)TextureResource::Format::Limit < 256);
-    static_assert((size_t)TextureResource::DataType::Limit < 256);
-    static_assert((size_t)TextureResource::ColorSpace::Limit < 256);
+    static_assert((size_t)TextureResource::Format::Limit <= 256);
+    static_assert((size_t)TextureResource::DataType::Limit <= 256);
+    static_assert((size_t)TextureResource::ColorSpace::Limit <= 256);
 
     return (u8)format | (u8)data_type << 8 | (u8)color_space << 16;
   }
