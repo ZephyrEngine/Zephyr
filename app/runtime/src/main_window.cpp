@@ -66,6 +66,13 @@ namespace zephyr {
       Texture::Layout::ShaderReadOnly
     );
 
+    bind_group->Bind(
+      2u,
+      m_texture_cache->GetDeviceTexture(m_texture_cube.get()),
+      (bool)sampler ? m_sampler_cache->GetDeviceSampler(m_texture_cube->GetSampler().get()) : m_render_device->DefaultLinearSampler(),
+      Texture::Layout::ShaderReadOnly
+    );
+
     static int frame = 0;
     if(++frame == 1000) {
       for(int y = 0; y < m_texture->GetHeight(); y++) {
@@ -142,6 +149,7 @@ namespace zephyr {
     CreateVertexAndIndexBuffer();
     CreateUniformBuffer();
     CreateTexture();
+    CreateTextureCube();
   }
 
   void MainWindow::CreateCommandPoolAndBuffers() {
@@ -201,6 +209,11 @@ namespace zephyr {
         .type = BindingType::ImageWithSampler,
         .stages = ShaderStage::All
       },
+      {
+        .binding = 2u,
+        .type = BindingType::ImageWithSampler,
+        .stages = ShaderStage::All
+      }
     }});
 
     for(uint i = 0; i < m_frames_in_flight; i++) {
@@ -306,6 +319,41 @@ namespace zephyr {
 //    m_texture->SetSampler(std::move(sampler));
 
     std::memcpy(m_texture->Data(), texture_data, m_texture->Size());
+  }
+
+  void MainWindow::CreateTextureCube() {
+    int face_size;
+
+    const u8* face_data[6];
+
+    const char* paths[6] { "env/px.png", "env/nx.png", "env/py.png", "env/ny.png", "env/pz.png", "env/nz.png" };
+
+    for(int i = 0; i < 6; i++) {
+      int width;
+      int height;
+      int channels_in_file;
+
+      face_data[i] = stbi_load(paths[i], &width, &height, &channels_in_file, 4);
+
+      if(face_data[i] == nullptr) {
+        ZEPHYR_PANIC("Failed to load cube map face: {}", paths[i])
+      }
+
+      if(i == 0) {
+        face_size = width;
+      }
+
+      if(width != height || width != face_size) {
+        ZEPHYR_PANIC("Bad cube map texture size");
+      }
+    }
+
+    m_texture_cube = std::make_unique<TextureCube>(
+      face_size, TextureCube::Format::RGBA, TextureCube::DataType::UnsignedByte, TextureCube::ColorSpace::SRGB);
+
+    for(int i = 0; i < 6; i++) {
+      std::memcpy(m_texture_cube->Data<u8>((TextureCube::Face)i), face_data[i], m_texture_cube->Size()/6);
+    }
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

@@ -7,6 +7,7 @@
 #include <zephyr/renderer/buffer/uniform_buffer.hpp>
 #include <zephyr/renderer/buffer/vertex_buffer.hpp>
 #include <zephyr/renderer/texture/texture_2D.hpp>
+#include <zephyr/renderer/texture/texture_cube.hpp>
 #include <zephyr/window/window.hpp>
 #include <chrono>
 #include <vector>
@@ -47,6 +48,7 @@ namespace zephyr {
       void CreateUniformBuffer();
       void CreateBindGroups();
       void CreateTexture();
+      void CreateTextureCube();
       void UpdateFramesPerSecondCounter();
 
       std::shared_ptr<RenderDevice> m_render_device;
@@ -67,6 +69,7 @@ namespace zephyr {
       std::vector<std::unique_ptr<BindGroup>> m_bind_groups;
 
       std::unique_ptr<Texture2D> m_texture;
+      std::unique_ptr<TextureCube> m_texture_cube;
 
       Matrix4 m_projection_matrix;
       uint m_frame{0};
