@@ -1,11 +1,13 @@
 
 #pragma once
 
+#include <zephyr/renderer/texture/sampler_resource.hpp>
 #include <zephyr/renderer/resource.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/non_moveable.hpp>
 #include <zephyr/panic.hpp>
+#include <memory>
 
 namespace zephyr {
 
@@ -61,6 +63,14 @@ namespace zephyr {
       [[nodiscard]] virtual const void* Data() const = 0;
       [[nodiscard]] virtual void* Data() = 0;
 
+      [[nodiscard]] const std::shared_ptr<SamplerResource>& GetSampler() const {
+        return m_sampler;
+      }
+
+      void SetSampler(std::shared_ptr<SamplerResource> sampler) {
+        m_sampler = std::move(sampler);
+      }
+
     protected:
       TextureResource(Format format, DataType data_type, ColorSpace color_space)
           : m_format{format}, m_data_type{data_type}, m_color_space{color_space} {
@@ -70,6 +80,7 @@ namespace zephyr {
       Format m_format{};
       DataType m_data_type{};
       ColorSpace m_color_space{};
+      std::shared_ptr<SamplerResource> m_sampler;
   };
 
 } // namespace zephyr

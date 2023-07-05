@@ -16,6 +16,7 @@
 
 #include "renderer/buffer_cache.hpp"
 #include "renderer/resource_uploader.hpp"
+#include "renderer/sampler_cache.hpp"
 #include "renderer/texture_cache.hpp"
 
 #include "shader/mesh.vert.h"
@@ -38,6 +39,7 @@ namespace zephyr {
       void CreateResourceUploader();
       void CreateBufferCache();
       void CreateTextureCache();
+      void CreateSamplerCache();
       void CreateRenderPass();
       void CreateFences();
       void CreateGraphicsPipeline();
@@ -60,6 +62,7 @@ namespace zephyr {
       std::shared_ptr<ResourceUploader> m_resource_uploader;
       std::shared_ptr<BufferCache> m_buffer_cache;
       std::shared_ptr<TextureCache> m_texture_cache;
+      std::shared_ptr<SamplerCache> m_sampler_cache;
       std::shared_ptr<BindGroupLayout> m_bind_group_layout;
       std::vector<std::unique_ptr<BindGroup>> m_bind_groups;
 

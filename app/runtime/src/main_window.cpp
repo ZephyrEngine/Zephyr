@@ -37,11 +37,11 @@ namespace zephyr {
 
     m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
 
-    // Do some non-sense calculations to cause load on the CPU side
+//    // Do some non-sense calculations to cause load on the CPU side
     f32 jitter = 0.0f;
-    for(int i = 0; i < 150000; i++) {
-      jitter = std::sin(jitter + (f32)(m_frame + i) * 0.001f);
-    }
+//    for(int i = 0; i < 150000; i++) {
+//      jitter = std::sin(jitter + (f32)(m_frame + i) * 0.001f);
+//    }
 
 #ifdef __APPLE__
     const int cubes_per_axis = 5;
@@ -56,7 +56,15 @@ namespace zephyr {
     Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
 
     bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
-    bind_group->Bind(1u, m_texture_cache->GetDeviceTexture(m_texture.get()), m_render_device->DefaultLinearSampler(), Texture::Layout::ShaderReadOnly);
+
+    auto& sampler = m_texture->GetSampler();
+
+    bind_group->Bind(
+      1u,
+      m_texture_cache->GetDeviceTexture(m_texture.get()),
+      (bool)sampler ? m_sampler_cache->GetDeviceSampler(m_texture->GetSampler().get()) : m_render_device->DefaultLinearSampler(),
+      Texture::Layout::ShaderReadOnly
+    );
 
     static int frame = 0;
     if(++frame == 1000) {
@@ -126,6 +134,7 @@ namespace zephyr {
     CreateResourceUploader();
     CreateBufferCache();
     CreateTextureCache();
+    CreateSamplerCache();
     CreateRenderPass();
     CreateFences();
     CreateBindGroups();
@@ -154,6 +163,10 @@ namespace zephyr {
 
   void MainWindow::CreateTextureCache() {
     m_texture_cache = std::make_shared<TextureCache>(m_render_device, m_resource_uploader);
+  }
+
+  void MainWindow::CreateSamplerCache() {
+    m_sampler_cache = std::make_shared<SamplerCache>(m_render_device);
   }
 
   void MainWindow::CreateRenderPass() {
@@ -286,6 +299,11 @@ namespace zephyr {
     const u8* texture_data = stbi_load("test.jpg", &width, &height, &channels_in_file, 4);
 
     m_texture = std::make_unique<Texture2D>(width, height, Texture2D::Format::RGBA, Texture2D::DataType::UnsignedByte, Texture2D::ColorSpace::SRGB);
+
+//    std::shared_ptr<SamplerResource> sampler = std::make_shared<SamplerResource>();
+//    sampler->SetMagFilter(Sampler::FilterMode::Nearest);
+//    sampler->SetMinFilter(Sampler::FilterMode::Nearest);
+//    m_texture->SetSampler(std::move(sampler));
 
     std::memcpy(m_texture->Data(), texture_data, m_texture->Size());
   }

@@ -2,6 +2,7 @@
 set(SOURCES
   src/renderer/buffer_cache.cpp
   src/renderer/resource_uploader.cpp
+  src/renderer/sampler_cache.cpp
   src/renderer/texture_cache.cpp
   src/application.cpp
   src/main.cpp
@@ -11,6 +12,7 @@ set(SOURCES
 set(HEADERS
   src/renderer/buffer_cache.hpp
   src/renderer/resource_uploader.hpp
+  src/renderer/sampler_cache.hpp
   src/renderer/texture_cache.hpp
   src/shader/mesh.frag.h
   src/shader/mesh.vert.h
