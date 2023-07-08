@@ -4,12 +4,41 @@
 
 #include "main_window.hpp"
 
+#include "renderer/std430_buffer_layout.hpp"
+
 namespace zephyr {
 
   MainWindow::MainWindow() {
     SetWindowSize(1600, 900);
     SetWindowTitle("Zephyr Runtime");
     Setup();
+
+    {
+      STD430BufferLayout layout{};
+
+      layout.Add<f32>("some_float");
+      layout.Add<bool>("some_bool");
+      layout.Add<Vector2>("some_vec2");
+      layout.Add<int>("some_int");
+      layout.Add<Vector3>("some_vec3");
+      layout.Add<Vector3>("some_vec3_2");
+      layout.Add<Vector4>("some_vec4");
+      layout.Add<uint>("some_uint");
+      layout.Add<uint>("some_uint_2");
+      layout.Add<Matrix4>("some_mat4");
+      layout.Add<Matrix4>("some_mat4_2");
+      layout.Add<int>("int_array_1", 16);
+      layout.Add<Matrix4>("mat4_array_1", 16);
+      layout.Build();
+
+      for(auto& variable : layout.GetVariables()) {
+        if(variable.array_size != 0u) {
+          ZEPHYR_INFO("[{}, \t{}]\t{} {}[{}]", variable.buffer_offset, variable.data_size, (std::string)variable.type, variable.name, variable.array_size);
+        } else {
+          ZEPHYR_INFO("[{}, \t{}]\t{} {}", variable.buffer_offset, variable.data_size, (std::string)variable.type, variable.name);
+        }
+      }
+    }
   }
 
   MainWindow::~MainWindow() {
