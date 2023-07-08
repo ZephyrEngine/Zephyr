@@ -10,6 +10,7 @@
 #include <string>
 #include <span>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 namespace zephyr {
@@ -32,19 +33,39 @@ namespace zephyr {
         Mat4
       };
 
-      constexpr GLSLType(ScalarType scalar_type, Grade grade)
+      GLSLType(ScalarType scalar_type, Grade grade)
         : m_scalar_type{scalar_type}, m_grade{grade} {
       }
 
-      [[nodiscard]] constexpr ScalarType GetScalarType() const {
+      [[nodiscard]] ScalarType GetScalarType() const {
         return m_scalar_type;
       }
 
-      [[nodiscard]] constexpr Grade GetGrade() const {
+      [[nodiscard]] Grade GetGrade() const {
         return m_grade;
       }
 
-      [[nodiscard]] explicit constexpr operator std::string() const;
+      [[nodiscard]] bool operator==(const GLSLType& other) const {
+        return m_scalar_type == other.m_scalar_type && m_grade == other.m_grade;
+      }
+
+      [[nodiscard]] explicit operator std::string() const;
+
+      template<typename T>
+      [[nodiscard]] static GLSLType FromCPPType() {
+        if constexpr(std::is_same_v<T, bool>) return {GLSLType::ScalarType::Bool, GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<T,  int>) return {GLSLType::ScalarType::Sint, GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<T, uint>) return {GLSLType::ScalarType::Uint, GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<T,  f32>) return {GLSLType::ScalarType::F32,  GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<T,  f64>) return {GLSLType::ScalarType::F64,  GLSLType::Grade::Scalar};
+
+        if constexpr(std::is_same_v<T, Vector2>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec2};
+        if constexpr(std::is_same_v<T, Vector3>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec3};
+        if constexpr(std::is_same_v<T, Vector4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec4};
+        if constexpr(std::is_same_v<T, Matrix4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Mat4};
+
+        ZEPHYR_PANIC("Unsupported C++ type: {}", typeid(T).name());
+      }
 
     private:
       ScalarType m_scalar_type{};
@@ -62,21 +83,38 @@ namespace zephyr {
         size_t data_alignment;
       };
 
-      [[nodiscard]] constexpr std::span<const Variable> GetVariables() const {
+      [[nodiscard]] std::span<const Variable> GetVariables() const {
         return m_variables;
       }
 
+      [[nodiscard]] size_t Size() const {
+        return m_size;
+      }
+
       template<typename T>
-      constexpr void Add(std::string name) {
+      void Add(std::string name) {
         Add<T>(name, 0u);
       }
 
       template<typename T>
-      constexpr void Add(std::string name, size_t array_size) {
-        m_variables.push_back({GetGLSLTypeFromCPPType<T>(), name, array_size});
+      void Add(std::string name, size_t array_size) {
+        if(m_variable_map.find(name) != m_variable_map.end()) {
+          ZEPHYR_PANIC("Duplicate variable name in std430 buffer layout: {}", name);
+        }
+
+        m_variables.push_back({GLSLType::FromCPPType<T>(), name, array_size});
+        m_variable_map[name] = &m_variables.back();
       }
 
-      constexpr void Build() {
+      const Variable& GetVariable(const std::string& name) const {
+        if(auto match = m_variable_map.find(name); match != m_variable_map.end()) {
+          return *match->second;
+        }
+
+        ZEPHYR_PANIC("No variable named '{}' found in std430 buffer layout", name);
+      }
+
+      void Build() {
         for(auto& variable : m_variables) {
           const bool is_array = variable.array_size != 0u;
 
@@ -104,27 +142,29 @@ namespace zephyr {
           variable.buffer_offset = buffer_offset;
           buffer_offset += variable.data_size;
         }
+
+        m_size = buffer_offset;
       }
 
     private:
 
-      [[nodiscard]] static constexpr size_t GLSLTypeToSize(const GLSLType& type, bool is_inside_array) {
+      [[nodiscard]] static size_t GLSLTypeToSize(const GLSLType& type, bool is_inside_array) {
         return GetNumberOfComponentsFromGrade(type.GetGrade(), is_inside_array) *
           GetScalarTypeSizeInBytes(type.GetScalarType());
       }
 
-      [[nodiscard]] static constexpr size_t GLSLTypeToAlignment(const GLSLType& type, bool is_inside_array) {
+      [[nodiscard]] static size_t GLSLTypeToAlignment(const GLSLType& type, bool is_inside_array) {
         if(type.GetGrade() == GLSLType::Grade::Mat4) {
           return 4u * GetScalarTypeSizeInBytes(type.GetScalarType());
         }
         return GLSLTypeToSize(type, is_inside_array);
       }
 
-      [[nodiscard]] static constexpr size_t GetScalarTypeSizeInBytes(GLSLType::ScalarType type) {
+      [[nodiscard]] static size_t GetScalarTypeSizeInBytes(GLSLType::ScalarType type) {
         return type == GLSLType::ScalarType::F64 ? 8u : 4u;
       }
 
-      [[nodiscard]] static constexpr size_t GetNumberOfComponentsFromGrade(GLSLType::Grade grade, bool is_inside_array) {
+      [[nodiscard]] static size_t GetNumberOfComponentsFromGrade(GLSLType::Grade grade, bool is_inside_array) {
         switch(grade) {
           case GLSLType::Grade::Scalar: return 1u;
           case GLSLType::Grade::Vec2:   return 2u;
@@ -135,26 +175,12 @@ namespace zephyr {
         }
       }
 
-      template<typename T>
-      [[nodiscard]] static constexpr GLSLType GetGLSLTypeFromCPPType() {
-        if constexpr(std::is_same_v<T, bool>) return {GLSLType::ScalarType::Bool, GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T,  int>) return {GLSLType::ScalarType::Sint, GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T, uint>) return {GLSLType::ScalarType::Uint, GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T,  f32>) return {GLSLType::ScalarType::F32,  GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T,  f64>) return {GLSLType::ScalarType::F64,  GLSLType::Grade::Scalar};
-
-        if constexpr(std::is_same_v<T, Vector2>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec2};
-        if constexpr(std::is_same_v<T, Vector3>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec3};
-        if constexpr(std::is_same_v<T, Vector4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec4};
-        if constexpr(std::is_same_v<T, Matrix4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Mat4};
-
-        ZEPHYR_PANIC("Unsupported C++ type: {}", typeid(T).name());
-      }
-
       std::vector<Variable> m_variables;
+      std::unordered_map<std::string, Variable*> m_variable_map;
+      std::size_t m_size{};
   };
 
-  constexpr GLSLType::operator std::string() const {
+  inline GLSLType::operator std::string() const {
     if(GetGrade() == Grade::Scalar) {
       switch(GetScalarType()) {
         case ScalarType::Bool: return "bool";

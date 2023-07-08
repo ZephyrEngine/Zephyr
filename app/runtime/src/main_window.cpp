@@ -5,6 +5,7 @@
 #include "main_window.hpp"
 
 #include "renderer/std430_buffer_layout.hpp"
+#include "renderer/material.hpp"
 
 namespace zephyr {
 
@@ -38,6 +39,8 @@ namespace zephyr {
           ZEPHYR_INFO("[{}, \t{}]\t{} {}", variable.buffer_offset, variable.data_size, (std::string)variable.type, variable.name);
         }
       }
+
+      PBRMaterialShader pbr_material_shader{};
     }
   }
 

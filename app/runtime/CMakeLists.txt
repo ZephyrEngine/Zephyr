@@ -11,6 +11,7 @@ set(SOURCES
 
 set(HEADERS
   src/renderer/buffer_cache.hpp
+  src/renderer/material.hpp
   src/renderer/resource_uploader.hpp
   src/renderer/sampler_cache.hpp
   src/renderer/std430_buffer_layout.hpp
