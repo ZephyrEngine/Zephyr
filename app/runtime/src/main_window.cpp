@@ -40,7 +40,17 @@ namespace zephyr {
         }
       }
 
-      PBRMaterialShader pbr_material_shader{};
+//      PBRMaterialShader pbr_material_shader{};
+      std::shared_ptr<PBRMaterialShader> pbr_material_shader = std::make_shared<PBRMaterialShader>();
+
+      std::unique_ptr<Material> pbr_material = std::make_unique<Material>(pbr_material_shader);
+
+      pbr_material->SetParameter<f32>("roughness", 0.25);
+      pbr_material->SetParameter<f32>("metalness", 0.33);
+
+      ZEPHYR_INFO("metalness={}", pbr_material->GetParameter<f32>("metalness"));
+      ZEPHYR_INFO("roughness={}", pbr_material->GetParameter<f32>("roughness"));
+
     }
   }
 

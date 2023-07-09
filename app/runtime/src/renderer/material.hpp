@@ -75,12 +75,12 @@ namespace zephyr {
 
       template<typename T>
       [[nodiscard]] const T& GetParameter(const std::string& name) const {
-        return *GetPointerToVariable<T>(name);
+        return *const_cast<Material*>(this)->GetPointerToVariable<const T>(name);
       }
 
       template<typename T>
       void SetParameter(const std::string& name, const T& value) {
-        *GetPointerToVariable<T>() = value;
+        *GetPointerToVariable<T>(name) = value;
         m_ubo->MarkAsDirty();
       }
 
@@ -127,6 +127,7 @@ namespace zephyr {
       PBRMaterialShader() {
         m_buffer_layout.Add<f32>("roughness");
         m_buffer_layout.Add<f32>("metalness");
+        m_buffer_layout.Build(); // TODO: rework setup so that this is an enforced step.
       }
 
       [[nodiscard]] const STD430BufferLayout& GetParameterBufferLayout() const override {

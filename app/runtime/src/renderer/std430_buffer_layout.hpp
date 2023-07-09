@@ -53,16 +53,18 @@ namespace zephyr {
 
       template<typename T>
       [[nodiscard]] static GLSLType FromCPPType() {
-        if constexpr(std::is_same_v<T, bool>) return {GLSLType::ScalarType::Bool, GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T,  int>) return {GLSLType::ScalarType::Sint, GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T, uint>) return {GLSLType::ScalarType::Uint, GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T,  f32>) return {GLSLType::ScalarType::F32,  GLSLType::Grade::Scalar};
-        if constexpr(std::is_same_v<T,  f64>) return {GLSLType::ScalarType::F64,  GLSLType::Grade::Scalar};
+        using U = std::remove_const<T>::type;
 
-        if constexpr(std::is_same_v<T, Vector2>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec2};
-        if constexpr(std::is_same_v<T, Vector3>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec3};
-        if constexpr(std::is_same_v<T, Vector4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec4};
-        if constexpr(std::is_same_v<T, Matrix4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Mat4};
+        if constexpr(std::is_same_v<U, bool>) return {GLSLType::ScalarType::Bool, GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<U,  int>) return {GLSLType::ScalarType::Sint, GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<U, uint>) return {GLSLType::ScalarType::Uint, GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<U,  f32>) return {GLSLType::ScalarType::F32,  GLSLType::Grade::Scalar};
+        if constexpr(std::is_same_v<U,  f64>) return {GLSLType::ScalarType::F64,  GLSLType::Grade::Scalar};
+
+        if constexpr(std::is_same_v<U, Vector2>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec2};
+        if constexpr(std::is_same_v<U, Vector3>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec3};
+        if constexpr(std::is_same_v<U, Vector4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Vec4};
+        if constexpr(std::is_same_v<U, Matrix4>) return {GLSLType::ScalarType::F32, GLSLType::Grade::Mat4};
 
         ZEPHYR_PANIC("Unsupported C++ type: {}", typeid(T).name());
       }
