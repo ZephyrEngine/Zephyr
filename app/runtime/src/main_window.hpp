@@ -45,7 +45,8 @@ namespace zephyr {
       void CreateFences();
       void CreateBindGroups();
       void CreateComputePipeline();
-      void CreateVertexSSBO();
+      void CreateVertexAndIndexSSBOs();
+      void CreateUBO();
       void UpdateFramesPerSecondCounter();
 
       std::shared_ptr<RenderDevice> m_render_device;
@@ -59,7 +60,9 @@ namespace zephyr {
       std::shared_ptr<BindGroupLayout> m_bind_group_layout;
       std::vector<std::unique_ptr<BindGroup>> m_bind_groups;
       std::unique_ptr<ComputePipeline> m_compute_pipeline;
+      std::unique_ptr<BufferResource> m_index_ssbo;
       std::unique_ptr<BufferResource> m_vertex_ssbo;
+      std::unique_ptr<BufferResource> m_ubo;
 
       uint m_frame{0};
       uint m_frames_in_flight{};

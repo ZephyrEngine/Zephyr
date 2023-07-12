@@ -10,8 +10,16 @@ struct VertexIn {
 
 layout(set = 0, binding = 0, rgba32f) uniform writeonly highp image2D u_output_map;
 
-layout(set = 0, binding = 1) buffer VertexData {
-  VertexIn vertices[];
+layout(set = 0, binding = 1) buffer VertexBuffer {
+  VertexIn a_vertices[];
+};
+
+layout(set = 0, binding = 2) buffer IndexBuffer {
+  uint a_indices[];
+};
+
+layout(set = 0, binding = 3, std140) uniform UniformBuffer {
+  mat4 u_transform;
 };
 
 struct Vertex {
@@ -35,20 +43,27 @@ void main() {
   vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
 
   // @todo: Make this more flexible:
-  const int triangle_count = 2;
+  const int triangle_count = 12;
 
   for(int i = 0; i < triangle_count; i++) {
     int base = i * 3;
 
-    Vertex v0 = Vertex(vertices[base + 0].position.xy, vertices[base + 0].color.rgb);
-    Vertex v1 = Vertex(vertices[base + 1].position.xy, vertices[base + 1].color.rgb);
-    Vertex v2 = Vertex(vertices[base + 2].position.xy, vertices[base + 2].color.rgb);
+    Vertex v[3];
 
-    vec3 bary = get_barycentric_coordinates(v0.position, v1.position, v2.position, ndc);
+    for(int j = 0; j < 3; j++) {
+      VertexIn vertex_in = a_vertices[a_indices[base + j]];
 
-    // @todo: for some reason an epsilon is needed... why?
-    if (bary.x >= 0.0 && bary.y >= 0.0 && bary.z >= 0.0 && bary.x + bary.y + bary.z <= 1.0000001) {
-      color.rgb = v0.color * bary.x + v1.color * bary.y + v2.color * bary.z;
+      vec4 position = u_transform * vertex_in.position;
+
+      v[j] = Vertex(position.xy / position.w, vertex_in.color.rgb);
+    }
+
+    // @todo: do vertex clipping (maybe just do it per-pixel?)
+
+    vec3 bary = get_barycentric_coordinates(v[0].position, v[1].position, v[2].position, ndc);
+
+    if (bary.x >= 0.0 && bary.y >= 0.0 && bary.z >= 0.0) {
+      color.rgb = v[0].color * bary.x + v[1].color * bary.y + v[2].color * bary.z;
     }
   }
 

@@ -27,8 +27,16 @@ namespace zephyr {
 
     Texture* texture = render_target->GetColorAttachments()[0]->GetTexture();
 
+    static f32 rotation = 0;
+
+    *m_ubo->Data<Matrix4>() = Matrix4::PerspectiveVK(45.0f, (f32)m_width / (f32)m_height, 0.01f, 100.0f) * Matrix4::Translation(0.0f, 0.0f, -5.0f) * Matrix4::RotationY(rotation);
+    m_ubo->MarkAsDirty();
+    rotation += 0.01;
+
     bind_group->Bind(0u, texture, Texture::Layout::General, BindingType::StorageImage);
     bind_group->Bind(1u, m_buffer_cache->GetDeviceBuffer(m_vertex_ssbo.get()), BindingType::StorageBuffer);
+    bind_group->Bind(2u, m_buffer_cache->GetDeviceBuffer(m_index_ssbo.get()), BindingType::StorageBuffer);
+    bind_group->Bind(3u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     {
@@ -75,7 +83,8 @@ namespace zephyr {
     CreateFences();
     CreateBindGroups();
     CreateComputePipeline();
-    CreateVertexSSBO();
+    CreateVertexAndIndexSSBOs();
+    CreateUBO();
   }
 
   void MainWindow::CreateCommandPoolAndBuffers() {
@@ -115,6 +124,14 @@ namespace zephyr {
       {
         .binding = 1u,
         .type = BindingType::StorageBuffer
+      },
+      {
+        .binding = 2u,
+        .type = BindingType::StorageBuffer
+      },
+      {
+        .binding = 3u,
+        .type = BindingType::UniformBuffer
       }
     }});
 
@@ -132,23 +149,78 @@ namespace zephyr {
     m_compute_pipeline = m_render_device->CreateComputePipeline(shader_module.get(), pipeline_layout);
   }
 
-  void MainWindow::CreateVertexSSBO() {
+  void MainWindow::CreateVertexAndIndexSSBOs() {
     struct Vertex {
       f32 position[4];
       f32 color[4];
     };
 
-    Vertex vertices[] {
-      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 0.0f, 1.0f}},
-      {.position = {-0.75f,  1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 0.0f, 1.0f}},
-      {.position = { 0.75f,  0.5f,  0.0f,  1.0f}, .color = {0.0f, 0.0f, 1.0f, 1.0f}},
+    /**
+     *   4-------5
+     *  /|      /|
+     * 0-------1 |
+     * | 6-----|-7
+     * |/      |/
+     * 2-------3
+     */
 
-      {.position = {-1.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 1.0f, 0.0f, 1.0f}},
-      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 1.0f, 1.0f}},
-      {.position = {-1.00f,  1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 1.0f, 1.0f}}
+    Vertex vertices[] {
+//      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 0.0f, 1.0f}},
+//      {.position = {-0.75f,  1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 0.0f, 1.0f}},
+//      {.position = { 0.75f,  0.5f,  0.0f,  1.0f}, .color = {0.0f, 0.0f, 1.0f, 1.0f}},
+//
+//      {.position = {-1.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 1.0f, 0.0f, 1.0f}},
+//      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 1.0f, 1.0f}},
+//      {.position = {-1.00f,  1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 1.0f, 1.0f}}
+
+      // front face
+      {.position = {-1.0, -1.0,  1.0, 1.0f}, .color = {1.0, 0.0, 0.0, 1.0}},
+      {.position = { 1.0, -1.0,  1.0, 1.0f}, .color = {0.0, 1.0, 0.0, 1.0}},
+      {.position = {-1.0,  1.0,  1.0, 1.0f}, .color = {1.0, 0.0, 1.0, 1.0}},
+      {.position = { 1.0,  1.0,  1.0, 1.0f}, .color = {0.5, 0.5, 0.5, 1.0}},
+
+      // back face
+      {.position = {-1.0, -1.0, -1.0, 1.0f}, .color = {1.0, 1.0, 0.0, 1.0}},
+      {.position = { 1.0, -1.0, -1.0, 1.0f}, .color = {1.0, 0.0, 1.0, 1.0}},
+      {.position = {-1.0,  1.0, -1.0, 1.0f}, .color = {0.0, 1.0, 1.0, 1.0}},
+      {.position = { 1.0,  1.0, -1.0, 1.0f}, .color = {1.0, 1.0, 1.0, 1.0}}
+    };
+
+    u32 indices[] {
+//      0, 1, 2,
+//      3, 4, 1
+
+      // front
+      0, 1, 2,
+      1, 3, 2,
+
+      // back
+      4, 5, 6,
+      5, 7, 6,
+
+      // left
+      0, 4, 6,
+      0, 6, 2,
+
+      // right
+      1, 5, 7,
+      1, 7, 3,
+
+      // top
+      4, 1, 0,
+      4, 5, 1,
+
+      // bottom
+      6, 3, 2,
+      6, 7, 3
     };
 
     m_vertex_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)vertices, sizeof(vertices)});
+    m_index_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)indices, sizeof(indices)});
+  }
+
+  void MainWindow::CreateUBO() {
+    m_ubo = std::make_unique<BufferResource>(Buffer::Usage::UniformBuffer, sizeof(Matrix4));
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {
