@@ -112,7 +112,7 @@ struct VulkanTexture final : Texture {
     texture->image = image;
     texture->grade = Grade::_2D;
     texture->format = format;
-    texture->usage = Usage::ColorAttachment;
+    texture->usage = Usage::ColorAttachment | Usage::Storage;
     texture->width = width;
     texture->height = height;
     texture->depth = 1;

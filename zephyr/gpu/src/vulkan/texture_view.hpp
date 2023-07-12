@@ -19,7 +19,7 @@ struct VulkanTextureView final : Texture::View {
     u32 height,
     Texture::SubresourceRange const& range,
     ComponentMapping const& mapping
-  )   : device(device), type(type), format(format), width(width), height(height), range(range), mapping(mapping) {
+  )   : device(device), type(type), format(format), width(width), height(height), range(range), mapping(mapping), texture(texture) {
     auto info = VkImageViewCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
       .pNext = nullptr,
@@ -99,6 +99,10 @@ struct VulkanTextureView final : Texture::View {
     return mapping;
   }
 
+  Texture* GetTexture() override {
+    return texture;
+  }
+
 private:
   VkDevice device;
   VkImageView image_view;
@@ -108,6 +112,7 @@ private:
   u32 height;
   Texture::SubresourceRange range;
   ComponentMapping mapping;
+  Texture* texture;
 };
 
 } // namespace zephyr

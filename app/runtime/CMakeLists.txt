@@ -20,6 +20,7 @@ set(HEADERS
   src/renderer/texture_cache.hpp
   src/shader/mesh.frag.h
   src/shader/mesh.vert.h
+  src/shader/rasterize.comp.h
   src/application.hpp
   src/main_window.hpp
 )

@@ -70,6 +70,10 @@ struct VulkanRenderTarget final : RenderTarget {
   auto GetWidth() -> u32 override { return width; }
   auto GetHeight() -> u32 override { return height; }
 
+  std::span<Texture::View* const> GetColorAttachments() override {
+    return color_attachments;
+  }
+
 private:
   auto CreateRenderPass() -> std::unique_ptr<RenderPass> {
     auto color_attachment_count = color_attachments.size();

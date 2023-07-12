@@ -151,6 +151,7 @@ struct Texture {
     virtual auto GetLayerCount() const -> u32 = 0;
     virtual auto GetSubresourceRange() const -> Texture::SubresourceRange const& = 0;
     virtual auto GetComponentMapping() const -> ComponentMapping const& = 0;
+    virtual Texture* GetTexture() = 0;
   };
 
   virtual ~Texture() = default;
