@@ -16,6 +16,7 @@
 #include <zephyr/integer.hpp>
 
 #include "renderer/buffer_cache.hpp"
+#include "renderer/material_pipeline_cache.hpp"
 #include "renderer/resource_uploader.hpp"
 #include "renderer/sampler_cache.hpp"
 #include "renderer/texture_cache.hpp"
@@ -41,6 +42,7 @@ namespace zephyr {
       void CreateBufferCache();
       void CreateTextureCache();
       void CreateSamplerCache();
+      void CreateMaterialPipelineCache();
       void CreateRenderPass();
       void CreateFences();
       void CreateGraphicsPipeline();
@@ -50,6 +52,7 @@ namespace zephyr {
       void CreateTexture();
       void CreateTextureCube();
       void UpdateFramesPerSecondCounter();
+      void TestShaderCompilation();
 
       std::shared_ptr<RenderDevice> m_render_device;
       std::shared_ptr<CommandPool> m_command_pool;
@@ -65,6 +68,7 @@ namespace zephyr {
       std::shared_ptr<BufferCache> m_buffer_cache;
       std::shared_ptr<TextureCache> m_texture_cache;
       std::shared_ptr<SamplerCache> m_sampler_cache;
+      std::shared_ptr<MaterialPipelineCache> m_material_pipeline_cache;
       std::shared_ptr<BindGroupLayout> m_bind_group_layout;
       std::vector<std::unique_ptr<BindGroup>> m_bind_groups;
 

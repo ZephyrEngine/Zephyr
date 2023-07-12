@@ -141,7 +141,7 @@ namespace zephyr {
       [[nodiscard]] std::optional<std::reference_wrapper<const TechniquePass>> GetTechniquePass(Technique technique) const override {
         switch(technique) {
           case Technique::GBuffer: {
-            const TechniquePass pass{"pbr/gbuffer.vert.glsl", "pbr/gbuffer.frag.glsl"};
+            static const TechniquePass pass{"shader/gbuffer.vert.glsl", "shader/gbuffer.frag.glsl"};
             return {pass};
           }
           default: {

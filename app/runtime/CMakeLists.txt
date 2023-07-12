@@ -1,6 +1,7 @@
 
 set(SOURCES
   src/renderer/buffer_cache.cpp
+  src/renderer/material_pipeline_cache.cpp
   src/renderer/resource_uploader.cpp
   src/renderer/sampler_cache.cpp
   src/renderer/texture_cache.cpp
@@ -12,6 +13,7 @@ set(SOURCES
 set(HEADERS
   src/renderer/buffer_cache.hpp
   src/renderer/material.hpp
+  src/renderer/material_pipeline_cache.hpp
   src/renderer/resource_uploader.hpp
   src/renderer/sampler_cache.hpp
   src/renderer/std430_buffer_layout.hpp
@@ -25,4 +27,4 @@ set(HEADERS
 add_executable(zephyr-runtime ${SOURCES} ${HEADERS})
 
 target_include_directories(zephyr-runtime PRIVATE src)
-target_link_libraries(zephyr-runtime PRIVATE zephyr zephyr-cxx-opts stb glslang)
+target_link_libraries(zephyr-runtime PRIVATE zephyr zephyr-cxx-opts stb glslang glslang-default-resource-limits SPIRV)

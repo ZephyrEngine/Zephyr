@@ -7,6 +7,12 @@
 #include "renderer/std430_buffer_layout.hpp"
 #include "renderer/material.hpp"
 
+// Shader compilation test
+#include <fstream>
+#include <glslang/Include/glslang_c_shader_types.h>
+#include <glslang/Public/resource_limits_c.h>
+#include <string>
+
 namespace zephyr {
 
   MainWindow::MainWindow() {
@@ -40,7 +46,6 @@ namespace zephyr {
         }
       }
 
-//      PBRMaterialShader pbr_material_shader{};
       std::shared_ptr<PBRMaterialShader> pbr_material_shader = std::make_shared<PBRMaterialShader>();
 
       std::unique_ptr<Material> pbr_material = std::make_unique<Material>(pbr_material_shader);
@@ -50,7 +55,6 @@ namespace zephyr {
 
       ZEPHYR_INFO("metalness={}", pbr_material->GetParameter<f32>("metalness"));
       ZEPHYR_INFO("roughness={}", pbr_material->GetParameter<f32>("roughness"));
-
     }
   }
 
@@ -187,6 +191,7 @@ namespace zephyr {
     CreateRenderPass();
     CreateFences();
     CreateBindGroups();
+    TestShaderCompilation();
     CreateGraphicsPipeline();
     CreateVertexAndIndexBuffer();
     CreateUniformBuffer();
@@ -231,6 +236,10 @@ namespace zephyr {
     builder->SetDepthAttachmentDstLayout(Texture::Layout::DepthStencilAttachment, std::nullopt);
 
     m_render_pass = builder->Build();
+  }
+
+  void MainWindow::CreateMaterialPipelineCache() {
+    m_material_pipeline_cache = std::make_shared<MaterialPipelineCache>(m_render_device);
   }
 
   void MainWindow::CreateFences() {
@@ -412,6 +421,127 @@ namespace zephyr {
       m_fps_counter = 0;
       m_time_point_last_update = std::chrono::steady_clock::now();
     }
+  }
+
+  static glsl_include_result_t* glslang_system_includer(void* ctx, const char* header_name, const char* includer_name, size_t include_depth) {
+    static const std::string header = R"(
+void foo() {
+}
+)";
+
+    glsl_include_result_t* result = new glsl_include_result_t();
+    result->header_name = header_name; // @todo: is that valid? what is this used for? avoiding multiple includes?
+    result->header_data = header.data();
+    result->header_length = header.size();
+    return result;
+  }
+
+  static int glslang_free_include_result(void* ctx, glsl_include_result_t* result) {
+    // @todo
+    return 0; // @todo: should this return 0 or 1?
+  }
+
+  void MainWindow::TestShaderCompilation() {
+    const auto ReadAsString = [](const std::string& path) {
+      std::ifstream file{path, std::ios::binary};
+
+      if(!file.is_open()) {
+        ZEPHYR_PANIC("Failed to open file for reading: {}", path);
+      }
+
+      size_t file_size;
+      file.seekg(0, std::ios::end);
+      file_size = file.tellg();
+      file.seekg(0, std::ios::beg);
+
+      std::string text;
+      text.reserve(file_size);
+      text.assign(std::istreambuf_iterator<char>{file}, {});
+      file.close();
+      return text;
+    };
+
+    const auto CompileShader = [](const std::string& shader_code, glslang_stage_t shader_stage) {
+      const glslang_input_t input = {
+        .language = GLSLANG_SOURCE_GLSL,
+        .stage = shader_stage,
+        .client = GLSLANG_CLIENT_VULKAN,
+        .client_version = GLSLANG_TARGET_VULKAN_1_2,
+        .target_language = GLSLANG_TARGET_SPV,
+        .target_language_version = GLSLANG_TARGET_SPV_1_5,
+        .code = shader_code.data(),
+        .default_version = 450,
+        .default_profile = GLSLANG_CORE_PROFILE,
+        .force_default_version_and_profile = false,
+        .forward_compatible = false,
+        .messages = GLSLANG_MSG_DEFAULT_BIT,
+        .resource = glslang_default_resource(),
+        .callbacks = {
+          .include_system = &glslang_system_includer,
+          .include_local = nullptr,
+          .free_include_result = &glslang_free_include_result
+        }
+      };
+
+      glslang_initialize_process();
+
+      glslang_shader_t* shader = glslang_shader_create(&input);
+
+      if(!glslang_shader_preprocess(shader, &input)) {
+        ZEPHYR_PANIC("GLSL preprocessing failed:\n{}\n{}\n{}",
+          glslang_shader_get_info_log(shader), glslang_shader_get_info_debug_log(shader), shader_code);
+        //glslang_shader_delete(shader);
+      }
+
+      if(!glslang_shader_parse(shader, &input)) {
+        ZEPHYR_PANIC("GLSL parsing failed:\n{}\n{}\n{}",
+          glslang_shader_get_info_log(shader), glslang_shader_get_info_debug_log(shader),
+          glslang_shader_get_preprocessed_code(shader));
+        //glslang_shader_delete(shader);
+      }
+
+      glslang_program_t* program = glslang_program_create();
+
+      glslang_program_add_shader(program, shader);
+
+      if(!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT)) {
+        ZEPHYR_PANIC("GLSL linking failed:\n{}\n{}",
+          glslang_program_get_info_log(program), glslang_program_get_info_debug_log(program));
+        //glslang_program_delete(program);
+        //glslang_shader_delete(shader);
+      }
+
+      glslang_program_SPIRV_generate(program, shader_stage);
+    };
+
+    std::unique_ptr<Material> pbr_material = std::make_unique<Material>(std::make_shared<PBRMaterialShader>());
+
+    const std::string uniform_block_template = R"(
+// TODO: apparently this extension is required to use std430 layout with uniform buffers:
+// https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GL_EXT_scalar_block_layout.txt
+#extension GL_EXT_scalar_block_layout : require
+
+layout(set = 0, binding = 0, std430) uniform MaterialParams {{
+{}
+}};
+)";
+
+    std::string uniform_declarations{};
+
+    const MaterialShader& shader = pbr_material->GetShader();
+
+    for(auto variable : shader.GetParameterBufferLayout().GetVariables()) {
+      uniform_declarations += fmt::format("  {} {};\n", (std::string)variable.type, variable.name);
+    }
+
+    const std::string uniform_block = fmt::format(fmt::runtime(uniform_block_template), uniform_declarations);
+
+    // @todo: think how we want to treat material parameters for different technique, some of which may be generic
+
+    const TechniquePass& technique_pass = shader.GetTechniquePass(Technique::GBuffer).value();
+
+    CompileShader(uniform_block + ReadAsString(technique_pass.frag_shader_path), GLSLANG_STAGE_FRAGMENT);
+
   }
 
 } // namespace zephyr
