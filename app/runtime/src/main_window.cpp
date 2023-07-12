@@ -28,13 +28,18 @@ namespace zephyr {
     Texture* texture = render_target->GetColorAttachments()[0]->GetTexture();
 
     bind_group->Bind(0u, texture, Texture::Layout::General, BindingType::StorageImage);
+    bind_group->Bind(1u, m_buffer_cache->GetDeviceBuffer(m_vertex_ssbo.get()), BindingType::StorageBuffer);
 
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     {
+      // @todo: round the thread group sizes up
+      const size_t k_tile_size = 16u;
+      const size_t thread_group_size_x = m_width / k_tile_size;
+      const size_t thread_group_size_y = m_height / k_tile_size;
       command_buffer->Barrier(texture, PipelineStage::TopOfPipe, PipelineStage::ComputeShader, Access::None, Access::ShaderWrite, Texture::Layout::Undefined, Texture::Layout::General, 0u, 1u);
       command_buffer->BindPipeline(m_compute_pipeline.get());
       command_buffer->BindBindGroup(PipelineBindPoint::Compute, m_compute_pipeline->GetLayout(), 0u, bind_group.get());
-      command_buffer->DispatchCompute(32, 32); // @todo: base this on the actual image dimensions
+      command_buffer->DispatchCompute(thread_group_size_x, thread_group_size_y);
       command_buffer->Barrier(texture, PipelineStage::ComputeShader, PipelineStage::BottomOfPipe, Access::ShaderWrite, Access::None, Texture::Layout::General, Texture::Layout::PresentSrc, 0u, 1u);
     }
     command_buffer->End();
@@ -70,6 +75,7 @@ namespace zephyr {
     CreateFences();
     CreateBindGroups();
     CreateComputePipeline();
+    CreateVertexSSBO();
   }
 
   void MainWindow::CreateCommandPoolAndBuffers() {
@@ -105,6 +111,10 @@ namespace zephyr {
         .binding = 0u,
         .type = BindingType::StorageImage,
         .stages = ShaderStage::Compute
+      },
+      {
+        .binding = 1u,
+        .type = BindingType::StorageBuffer
       }
     }});
 
@@ -120,6 +130,25 @@ namespace zephyr {
 
     // @todo: CreateComputePipeline() probably should take a std::shared_ptr
     m_compute_pipeline = m_render_device->CreateComputePipeline(shader_module.get(), pipeline_layout);
+  }
+
+  void MainWindow::CreateVertexSSBO() {
+    struct Vertex {
+      f32 position[4];
+      f32 color[4];
+    };
+
+    Vertex vertices[] {
+      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 0.0f, 1.0f}},
+      {.position = {-0.75f,  1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 0.0f, 1.0f}},
+      {.position = { 0.75f,  0.5f,  0.0f,  1.0f}, .color = {0.0f, 0.0f, 1.0f, 1.0f}},
+
+      {.position = {-1.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 1.0f, 0.0f, 1.0f}},
+      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 1.0f, 1.0f}},
+      {.position = {-1.00f,  1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 1.0f, 1.0f}}
+    };
+
+    m_vertex_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)vertices, sizeof(vertices)});
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

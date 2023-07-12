@@ -16,7 +16,8 @@ enum class BindingType : u32 {
   ImageWithSampler = 1,
   SampledImage = 2,
   StorageImage = 3,
-  UniformBuffer = 6
+  UniformBuffer = 6,
+  StorageBuffer = 7
 };
 
 // subset of VkPipelineBindPoint:
