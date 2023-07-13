@@ -23,7 +23,7 @@ layout(set = 0, binding = 3, std140) uniform UniformBuffer {
 };
 
 struct Vertex {
-  vec2 position;
+  vec3 position;
   vec3 color;
 };
 
@@ -41,6 +41,7 @@ void main() {
   vec2 ndc = vec2(gl_GlobalInvocationID.xy) / vec2(imageSize(u_output_map)) * 2.0 - 1.0;
 
   vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
+  float current_depth = 1.0;
 
   // @todo: Make this more flexible:
   const int triangle_count = 12;
@@ -54,16 +55,22 @@ void main() {
       VertexIn vertex_in = a_vertices[a_indices[base + j]];
 
       vec4 position = u_transform * vertex_in.position;
+      vec3 clip = position.xyz / position.w;
 
-      v[j] = Vertex(position.xy / position.w, vertex_in.color.rgb);
+      v[j] = Vertex(clip, vertex_in.color.rgb);
     }
 
     // @todo: do vertex clipping (maybe just do it per-pixel?)
 
-    vec3 bary = get_barycentric_coordinates(v[0].position, v[1].position, v[2].position, ndc);
+    vec3 bary = get_barycentric_coordinates(v[0].position.xy, v[1].position.xy, v[2].position.xy, ndc);
 
     if (bary.x >= 0.0 && bary.y >= 0.0 && bary.z >= 0.0) {
-      color.rgb = v[0].color * bary.x + v[1].color * bary.y + v[2].color * bary.z;
+      float depth = v[0].position.z * bary.x + v[1].position.z * bary.y + v[2].position.z * bary.z;
+
+      if(depth <= current_depth) {
+        current_depth = depth;
+        color.rgb = v[0].color * bary.x + v[1].color * bary.y + v[2].color * bary.z;
+      }
     }
   }
 
