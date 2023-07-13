@@ -12,3 +12,5 @@ add_subdirectory(glslang)
 
 add_library(stb stb.cpp stb/stb_image.h)
 target_include_directories(stb PUBLIC stb)
+
+add_subdirectory(tinyobjloader)
