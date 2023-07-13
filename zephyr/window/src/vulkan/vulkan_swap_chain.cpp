@@ -76,6 +76,8 @@ namespace zephyr {
       .height = (u32)height
     };
 
+    ZEPHYR_INFO("Swapchain size: {}, {}", width, height);
+
     const VkSwapchainCreateInfoKHR create_info{
       .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
       .pNext = nullptr,

@@ -9,7 +9,7 @@
 namespace zephyr {
 
   MainWindow::MainWindow() {
-    SetWindowSize(128, 128);
+    SetWindowSize(1600, 900);
     SetWindowTitle("C(omp)ute rasterization");
     Setup();
   }
@@ -34,7 +34,7 @@ namespace zephyr {
 
     static f32 rotation = 0;
 
-    *m_ubo->Data<Matrix4>() = Matrix4::PerspectiveVK(45.0f, (f32)m_width / (f32)m_height, 0.01f, 100.0f) * Matrix4::Translation(0.0f, 0.0f, -5.0f) * Matrix4::RotationY(rotation);
+    *m_ubo->Data<Matrix4>() = Matrix4::PerspectiveVK(45.0f, (f32)m_width / (f32)m_height, 0.01f, 100.0f) * Matrix4::Translation(0.0f, 0.0f, -2(have.0f) * Matrix4::RotationY(rotation);
     m_ubo->MarkAsDirty();
     rotation += 0.01;
 
