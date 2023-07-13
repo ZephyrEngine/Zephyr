@@ -22,6 +22,10 @@ layout(set = 0, binding = 3, std140) uniform UniformBuffer {
   mat4 u_transform;
 };
 
+layout(push_constant) uniform constants {
+  int u_triangle_count;
+};
+
 struct Vertex {
   vec3 position;
   vec3 color;
@@ -43,10 +47,7 @@ void main() {
   vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
   float current_depth = 1.0;
 
-  // @todo: Make this more flexible:
-  const int triangle_count = 12;
-
-  for(int i = 0; i < triangle_count; i++) {
+  for(int i = 0; i < u_triangle_count; i++) {
     int base = i * 3;
 
     Vertex v[3];

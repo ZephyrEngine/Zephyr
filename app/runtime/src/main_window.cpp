@@ -1,10 +1,15 @@
 
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+// Optional. define TINYOBJLOADER_USE_MAPBOX_EARCUT gives robust trinagulation. Requires C++11
+//#define TINYOBJLOADER_USE_MAPBOX_EARCUT
+#include "tiny_obj_loader.h"
+
 #include "main_window.hpp"
 
 namespace zephyr {
 
   MainWindow::MainWindow() {
-    SetWindowSize(1600, 900);
+    SetWindowSize(128, 128);
     SetWindowTitle("C(omp)ute rasterization");
     Setup();
   }
@@ -44,9 +49,13 @@ namespace zephyr {
       const size_t k_tile_size = 16u;
       const size_t thread_group_size_x = m_width / k_tile_size;
       const size_t thread_group_size_y = m_height / k_tile_size;
+
+      u32 triangle_count = m_index_ssbo->Size() / sizeof(u32) / 3;
+
       command_buffer->Barrier(texture, PipelineStage::TopOfPipe, PipelineStage::ComputeShader, Access::None, Access::ShaderWrite, Texture::Layout::Undefined, Texture::Layout::General, 0u, 1u);
       command_buffer->BindPipeline(m_compute_pipeline.get());
       command_buffer->BindBindGroup(PipelineBindPoint::Compute, m_compute_pipeline->GetLayout(), 0u, bind_group.get());
+      command_buffer->PushConstants(m_compute_pipeline->GetLayout(), 0u, sizeof(u32), &triangle_count);
       command_buffer->DispatchCompute(thread_group_size_x, thread_group_size_y);
       command_buffer->Barrier(texture, PipelineStage::ComputeShader, PipelineStage::BottomOfPipe, Access::ShaderWrite, Access::None, Texture::Layout::General, Texture::Layout::PresentSrc, 0u, 1u);
     }
@@ -164,15 +173,8 @@ namespace zephyr {
      * 2-------3
      */
 
+    /*
     Vertex vertices[] {
-//      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 0.0f, 1.0f}},
-//      {.position = {-0.75f,  1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 0.0f, 1.0f}},
-//      {.position = { 0.75f,  0.5f,  0.0f,  1.0f}, .color = {0.0f, 0.0f, 1.0f, 1.0f}},
-//
-//      {.position = {-1.00f, -1.0f,  0.0f,  1.0f}, .color = {1.0f, 1.0f, 0.0f, 1.0f}},
-//      {.position = { 0.00f, -1.0f,  0.0f,  1.0f}, .color = {0.0f, 1.0f, 1.0f, 1.0f}},
-//      {.position = {-1.00f,  1.0f,  0.0f,  1.0f}, .color = {1.0f, 0.0f, 1.0f, 1.0f}}
-
       // front face
       {.position = {-1.0, -1.0,  1.0, 1.0f}, .color = {1.0, 0.0, 0.0, 1.0}},
       {.position = { 1.0, -1.0,  1.0, 1.0f}, .color = {0.0, 1.0, 0.0, 1.0}},
@@ -187,9 +189,6 @@ namespace zephyr {
     };
 
     u32 indices[] {
-//      0, 1, 2,
-//      3, 4, 1
-
       // front
       0, 1, 2,
       1, 3, 2,
@@ -217,6 +216,64 @@ namespace zephyr {
 
     m_vertex_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)vertices, sizeof(vertices)});
     m_index_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)indices, sizeof(indices)});
+    */
+
+    const std::string input_file = "damaged_helmet.obj";
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn;
+    std::string err;
+
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, input_file.c_str());
+
+    if(!warn.empty()) {
+      ZEPHYR_WARN("{}", warn);
+    }
+    if(!err.empty()) {
+      ZEPHYR_ERROR("{}", err);
+    }
+    if(!ret) {
+      ZEPHYR_PANIC("Unknown error during OBJ loading");
+    }
+
+    if(shapes.empty()) {
+      ZEPHYR_PANIC("No shapes found in the OBJ file");
+    }
+
+    std::vector<Vertex> vertices2;
+    std::vector<u32> indices2;
+
+    tinyobj::shape_t& shape = shapes[0];
+
+    // Loop over faces (polygon)
+    size_t index_offset = 0;
+    for(size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+      size_t fv = (size_t)shape.mesh.num_face_vertices[f];
+
+      // Loop over vertices in the face
+      for(size_t v = 0; v < fv; v++) {
+        tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+
+        const f32 vx = attrib.vertices[3 * (size_t)idx.vertex_index + 0];
+        const f32 vy = -attrib.vertices[3 * (size_t)idx.vertex_index + 1];
+        const f32 vz = attrib.vertices[3 * (size_t)idx.vertex_index + 2];
+
+        vertices2.push_back(Vertex{.position = {vx, vy, vz, 1.0f}, .color={std::rand()/(f32)RAND_MAX, std::rand()/(f32)RAND_MAX, std::rand()/(f32)RAND_MAX, 1.0}});
+        indices2.push_back(indices2.size());
+      }
+
+      if(fv != 3) {
+        ZEPHYR_PANIC("Polygon must be a triangle");
+      }
+
+      index_offset += fv;
+    }
+
+
+
+    m_vertex_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)vertices2.data(), vertices2.size() * sizeof(Vertex)});
+    m_index_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)indices2.data(), indices2.size() * sizeof(u32)});
   }
 
   void MainWindow::CreateUBO() {

@@ -28,4 +28,4 @@ set(HEADERS
 add_executable(zephyr-runtime ${SOURCES} ${HEADERS})
 
 target_include_directories(zephyr-runtime PRIVATE src)
-target_link_libraries(zephyr-runtime PRIVATE zephyr zephyr-cxx-opts stb glslang glslang-default-resource-limits SPIRV)
+target_link_libraries(zephyr-runtime PRIVATE zephyr zephyr-cxx-opts stb glslang glslang-default-resource-limits SPIRV tinyobjloader)
