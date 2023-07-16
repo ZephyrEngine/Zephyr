@@ -62,6 +62,7 @@ struct Texture {
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkFormat
   // TODO: find a subset of formats that work on all targeted platforms.
   enum class Format {
+    R8G8B8A8_UNORM = 37,
     R8G8B8A8_SRGB = 43,
     B8G8R8A8_SRGB = 50,
     R32G32B32A32_SFLOAT = 109,

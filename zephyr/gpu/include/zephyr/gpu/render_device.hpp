@@ -80,7 +80,9 @@ struct RenderDevice {
 
   virtual auto CreateBindGroupLayout(
     std::span<BindGroupLayout::Entry const> entries
-  ) -> std::unique_ptr<BindGroupLayout> = 0;
+  ) -> std::shared_ptr<BindGroupLayout> = 0;
+
+  virtual std::unique_ptr<BindGroup> CreateBindGroup(std::shared_ptr<BindGroupLayout> layout) = 0;
 
   virtual auto CreatePipelineLayout(
     std::span<BindGroupLayout* const> bind_group_layouts
@@ -93,17 +95,19 @@ struct RenderDevice {
     std::shared_ptr<PipelineLayout> layout
   ) -> std::unique_ptr<ComputePipeline> = 0;
 
-  virtual auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> = 0;
+  virtual auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> = 0;
 
-  virtual auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> = 0;
+  virtual auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> = 0;
 
-  virtual auto CreateCommandBuffer(CommandPool* pool) -> std::unique_ptr<CommandBuffer> = 0;
+  virtual auto CreateCommandBuffer(std::shared_ptr<CommandPool> pool) -> std::unique_ptr<CommandBuffer> = 0;
 
-  virtual auto CreateFence() -> std::unique_ptr<Fence> = 0;
+  virtual auto CreateFence(Fence::CreateSignalled create_signalled) -> std::unique_ptr<Fence> = 0;
 
   virtual auto GraphicsQueue() -> Queue* = 0;
 
   virtual auto ComputeQueue() -> Queue* = 0;
+
+  virtual void WaitIdle() = 0;
 };
 
 } // namespace zephyr

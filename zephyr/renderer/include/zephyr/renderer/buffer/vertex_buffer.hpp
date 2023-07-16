@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <zephyr/renderer/resource.hpp>
+#include <zephyr/renderer/buffer/buffer_resource.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/panic.hpp>
@@ -10,37 +10,22 @@
 
 namespace zephyr {
 
-  class VertexBuffer : public RendererResource, public NonCopyable {
+  class VertexBuffer final : public BufferResource {
     public:
       VertexBuffer(size_t stride, size_t number_of_vertices)
-          : m_stride{stride}, m_number_of_vertices{number_of_vertices} {
-        m_size = number_of_vertices * stride;
-        m_data = new u8[m_size];
+          : BufferResource{Buffer::Usage::VertexBuffer, stride * number_of_vertices}
+          , m_stride{stride}
+          , m_number_of_vertices{number_of_vertices} {
       }
 
-      VertexBuffer(size_t stride, std::span<u8> data) : m_stride{stride} {
+      VertexBuffer(size_t stride, std::span<const u8> data)
+          : BufferResource{Buffer::Usage::VertexBuffer, data}
+          , m_stride{stride} {
+        if(data.size() % stride != 0u) {
+          ZEPHYR_PANIC("Buffer size is not divisible by the vertex stride");
+        }
+
         m_number_of_vertices = data.size() / stride;
-        m_size = m_number_of_vertices * stride;
-        m_data = new u8[m_size];
-        std::memcpy(m_data, data.data(), m_size);
-      }
-
-     ~VertexBuffer() {
-        delete[] m_data;
-      }
-
-      [[nodiscard]] size_t Size() const {
-        return m_size;
-      }
-
-      template<typename T = u8>
-      [[nodiscard]] const T* Data() const {
-        return (const T*)m_data;
-      }
-
-      template<typename T = u8>
-      [[nodiscard]] T* Data() {
-        return (T*)m_data;
       }
 
       [[nodiscard]] size_t GetNumberOfVertices() const {
@@ -58,12 +43,12 @@ namespace zephyr {
 #ifndef NDEBUG
         const size_t address_hi = address + sizeof(T);
 
-        if(address_hi > m_size || address_hi < address) {
+        if(address_hi > Size() || address_hi < address) {
           ZEPHYR_PANIC("Bad out-of-bounds read!");
         }
 #endif
 
-        return *(const T*)&m_data[address];
+        return *(const T*)(Data<u8>() + address);
       }
 
       template<typename T>
@@ -73,17 +58,15 @@ namespace zephyr {
 #ifndef NDEBUG
         const size_t address_hi = address + sizeof(T);
 
-        if(address_hi > m_size || address_hi < address) {
+        if(address_hi > Size() || address_hi < address) {
           ZEPHYR_PANIC("Bad out-of-bounds write!");
         }
 #endif
 
-        *(const T*)&m_data[address] = value;
+        *(T*)(Data<u8>() + address) = value;
       }
 
     private:
-      u8* m_data{};
-      size_t m_size{};
       size_t m_stride{};
       size_t m_number_of_vertices{};
   };

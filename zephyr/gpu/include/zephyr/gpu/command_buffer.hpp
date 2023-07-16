@@ -17,24 +17,6 @@
 
 namespace zephyr {
 
-struct BufferTextureCopyRegion {
-  struct {
-    Texture::SubresourceLayers layers;
-    u32 width;
-    u32 height;
-    u32 depth = 1;
-    s32 offset_x = 0;
-    s32 offset_y = 0;
-    s32 offset_z = 0;
-  } texture;
-
-  struct {
-    u32 offset = 0;
-    u32 row_length = 0;
-    u32 image_height = 0;
-  } buffer;
-};
-
 struct CommandBuffer {
   enum class OneTimeSubmit {
     No = 0,
@@ -61,9 +43,22 @@ struct CommandBuffer {
 
   virtual void CopyBufferToTexture(
     Buffer* buffer,
+    u32 buffer_offset,
     Texture* texture,
     Texture::Layout texture_layout,
-    std::span<BufferTextureCopyRegion const> regions
+    u32 texture_mip_level
+  ) = 0;
+
+  virtual void BlitTexture2D(
+    Texture* src_texture,
+    Texture* dst_texture,
+    const Rect2D& src_rect,
+    const Rect2D& dst_rect,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 src_mip_level,
+    u32 dst_mip_level,
+    Sampler::FilterMode filter
   ) = 0;
 
   virtual void PushConstants(
@@ -79,19 +74,13 @@ struct CommandBuffer {
   ) = 0;
   virtual void EndRenderPass() = 0;
 
-  virtual void BindGraphicsPipeline(GraphicsPipeline* pipeline) = 0;
+  virtual void BindPipeline(GraphicsPipeline* pipeline) = 0;
+  virtual void BindPipeline(ComputePipeline* pipeline) = 0;
 
-  virtual void BindComputePipeline(ComputePipeline* pipeline) = 0;
-
-  virtual void BindGraphicsBindGroup(
-    u32 set,
+  virtual void BindBindGroup(
+    PipelineBindPoint pipeline_bind_point,
     PipelineLayout* pipeline_layout,
-    BindGroup* bind_group
-  ) = 0;
-
-  virtual void BindComputeBindGroup(
     u32 set,
-    PipelineLayout* pipeline_layout,
     BindGroup* bind_group
   ) = 0;
 
@@ -123,10 +112,16 @@ struct CommandBuffer {
 
   virtual void DispatchCompute(u32 group_count_x, u32 group_count_y = 1, u32 group_count_z = 1) = 0;
 
-  virtual void PipelineBarrier(
+  virtual void Barrier(
+    Texture* texture,
     PipelineStage src_stage,
     PipelineStage dst_stage,
-    std::span<MemoryBarrier const> memory_barriers = {}
+    Access src_access,
+    Access dst_access,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 mip_level,
+    u32 mip_count
   ) = 0;
 };
 

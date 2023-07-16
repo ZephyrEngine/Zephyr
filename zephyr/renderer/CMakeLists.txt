@@ -7,8 +7,16 @@ set(HEADERS
 )
 
 set(HEADERS_PUBLIC
-  include/zephyr/renderer/geometry/index_buffer.hpp
-  include/zephyr/renderer/geometry/vertex_buffer.hpp
+  include/zephyr/renderer/buffer/buffer_resource.hpp
+  include/zephyr/renderer/buffer/buffer_resource_base.hpp
+  include/zephyr/renderer/buffer/index_buffer.hpp
+  include/zephyr/renderer/buffer/uniform_buffer.hpp
+  include/zephyr/renderer/buffer/vertex_buffer.hpp
+  include/zephyr/renderer/texture/sampler_resource.hpp
+  include/zephyr/renderer/texture/texture_2D.hpp
+  include/zephyr/renderer/texture/texture_cube.hpp
+  include/zephyr/renderer/texture/texture_resource.hpp
+  include/zephyr/renderer/geometry.hpp
   include/zephyr/renderer/resource.hpp
 )
 

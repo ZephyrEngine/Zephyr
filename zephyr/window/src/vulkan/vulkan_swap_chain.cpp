@@ -13,7 +13,7 @@ namespace zephyr {
     int height
   )   : render_device{std::move(render_device)}, surface{surface} {
     SetSize(width, height);
-    fence = this->render_device->CreateFence();
+    fence = this->render_device->CreateFence(Fence::CreateSignalled::No);
   }
 
   std::shared_ptr<RenderTarget>& VulkanSwapChain::AcquireNextRenderTarget() {
@@ -22,11 +22,18 @@ namespace zephyr {
     u32 image_id; // current_image_id is std::optional<u32>
     fence->Reset();
     vkAcquireNextImageKHR(device, swap_chain, ~0ULL, VK_NULL_HANDLE, (VkFence)fence->Handle(), &image_id);
-    fence->Wait();
 
     current_image_id = image_id;
 
     return render_targets[image_id];
+  }
+
+  size_t VulkanSwapChain::GetNumberOfSwapChainImages() const {
+    return render_targets.size();
+  }
+
+  void VulkanSwapChain::TmpWaitForImageFullyRead() {
+    fence->Wait();
   }
 
   void VulkanSwapChain::Present() {

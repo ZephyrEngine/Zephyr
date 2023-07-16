@@ -26,7 +26,7 @@ class MainWindow final : public Window {
 
       render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       render_command_buffer->BeginRenderPass(render_target.get(), render_pass.get());
-      render_command_buffer->BindGraphicsPipeline(pipeline.get());
+      render_command_buffer->BindPipeline(pipeline.get());
       render_command_buffer->BindVertexBuffers({{vbo.get()}});
       render_command_buffer->Draw(3);
       render_command_buffer->EndRenderPass();
@@ -54,7 +54,7 @@ class MainWindow final : public Window {
       command_pool = render_device->CreateGraphicsCommandPool(
         CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-      render_command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      render_command_buffer = render_device->CreateCommandBuffer(command_pool);
     }
 
     void CreateRenderPass() {
@@ -72,7 +72,7 @@ class MainWindow final : public Window {
     }
 
     void CreateFence() {
-      fence = render_device->CreateFence();
+      fence = render_device->CreateFence(Fence::CreateSignalled::No);
     }
 
     void CreateGraphicsPipeline() {
@@ -82,8 +82,8 @@ class MainWindow final : public Window {
       auto builder = render_device->CreateGraphicsPipelineBuilder();
 
       builder->SetViewport(0, 0, 1600, 900);
-      builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
-      builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
+      builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
+      builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
       builder->SetRenderPass(render_pass);
       builder->AddVertexInputBinding(0, sizeof(float) * 6);
       builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
@@ -109,7 +109,7 @@ class MainWindow final : public Window {
       staging_buffer->Update<u8>((u8 const*)k_vertices, sizeof(k_vertices));
       staging_buffer->Unmap();
 
-      auto command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      auto command_buffer = render_device->CreateCommandBuffer(command_pool);
 
       command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       command_buffer->CopyBuffer(staging_buffer.get(), vbo.get(), vbo->Size());

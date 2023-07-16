@@ -137,8 +137,12 @@ struct VulkanRenderDevice final : RenderDevice {
 
   auto CreateBindGroupLayout(
     std::span<BindGroupLayout::Entry const> entries
-  ) -> std::unique_ptr<BindGroupLayout> override {
-    return std::make_unique<VulkanBindGroupLayout>(device, descriptor_pool, entries);
+  ) -> std::shared_ptr<BindGroupLayout> override {
+    return std::make_shared<VulkanBindGroupLayout>(device, descriptor_pool, entries);
+  }
+
+  std::unique_ptr<BindGroup> CreateBindGroup(std::shared_ptr<BindGroupLayout> layout) override {
+    return std::make_unique<VulkanBindGroup>(device, descriptor_pool, std::move(layout));
   }
 
   auto CreatePipelineLayout(
@@ -158,20 +162,20 @@ struct VulkanRenderDevice final : RenderDevice {
     return VulkanComputePipeline::Create(device, shader_module, layout);
   }
 
-  auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> override {
-    return std::make_unique<VulkanCommandPool>(device, queue_family_graphics, usage);
+  auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family_graphics, usage);
   }
 
-  auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::unique_ptr<CommandPool> override {
-    return std::make_unique<VulkanCommandPool>(device, queue_family_compute, usage);
+  auto CreateComputeCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family_compute, usage);
   }
 
-  auto CreateCommandBuffer(CommandPool* pool) -> std::unique_ptr<CommandBuffer> override {
-    return std::make_unique<VulkanCommandBuffer>(device, pool);
+  auto CreateCommandBuffer(std::shared_ptr<CommandPool> pool) -> std::unique_ptr<CommandBuffer> override {
+    return std::make_unique<VulkanCommandBuffer>(device, std::move(pool));
   }
 
-  auto CreateFence() -> std::unique_ptr<Fence> override {
-    return std::make_unique<VulkanFence>(device);
+  auto CreateFence(Fence::CreateSignalled create_signalled) -> std::unique_ptr<Fence> override {
+    return std::make_unique<VulkanFence>(device, create_signalled);
   }
 
   auto GraphicsQueue() -> Queue* override {
@@ -180,6 +184,10 @@ struct VulkanRenderDevice final : RenderDevice {
 
   auto ComputeQueue() -> Queue* override {
     return compute_queue.get();
+  }
+
+  void WaitIdle() override {
+    vkDeviceWaitIdle(device);
   }
 
 private:

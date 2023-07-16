@@ -37,7 +37,7 @@ class MainWindow final : public Window {
       render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       render_command_buffer->PushConstants(pipeline->GetLayout(), 0, sizeof(transform), &transform);
       render_command_buffer->BeginRenderPass(render_target.get(), render_pass.get());
-      render_command_buffer->BindGraphicsPipeline(pipeline.get());
+      render_command_buffer->BindPipeline(pipeline.get());
       render_command_buffer->BindVertexBuffers({{vbo.get()}});
       render_command_buffer->Draw(6);
       render_command_buffer->EndRenderPass();
@@ -67,7 +67,7 @@ class MainWindow final : public Window {
       command_pool = render_device->CreateGraphicsCommandPool(
         CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-      render_command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      render_command_buffer = render_device->CreateCommandBuffer(command_pool);
     }
 
     void CreateRenderPass() {
@@ -85,7 +85,7 @@ class MainWindow final : public Window {
     }
 
     void CreateFence() {
-      fence = render_device->CreateFence();
+      fence = render_device->CreateFence(Fence::CreateSignalled::No);
     }
 
     void CreateGraphicsPipeline() {
@@ -97,10 +97,10 @@ class MainWindow final : public Window {
       auto builder = render_device->CreateGraphicsPipelineBuilder();
 
       builder->SetViewport(0, 0, 1600, 900);
-      builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
-      builder->SetShaderModule(PipelineStage::TessellationControlShader, tesc_shader);
-      builder->SetShaderModule(PipelineStage::TessellationEvaluationShader, tese_shader);
-      builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
+      builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
+      builder->SetShaderModule(ShaderStage::TessellationControl, tesc_shader);
+      builder->SetShaderModule(ShaderStage::TessellationEvaluation, tese_shader);
+      builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
       builder->SetRenderPass(render_pass);
       builder->SetDepthTestEnable(true);
       builder->SetDepthWriteEnable(true);
@@ -137,7 +137,7 @@ class MainWindow final : public Window {
       staging_vbo->Update<u8>((u8 const*)k_vertices, sizeof(k_vertices));
       staging_vbo->Unmap();
 
-      auto command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      auto command_buffer = render_device->CreateCommandBuffer(command_pool);
 
       command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       command_buffer->CopyBuffer(staging_vbo.get(), vbo.get(), vbo->Size());

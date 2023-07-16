@@ -12,12 +12,12 @@
 namespace zephyr {
 
 struct VulkanCommandBuffer final : CommandBuffer {
-  VulkanCommandBuffer(VkDevice device, CommandPool* pool)
-      : device(device), pool(pool) {
+  VulkanCommandBuffer(VkDevice device, std::shared_ptr<CommandPool> pool)
+      : device(device), pool(std::move(pool)) {
     auto info = VkCommandBufferAllocateInfo{
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
       .pNext = nullptr,
-      .commandPool = (VkCommandPool)pool->Handle(),
+      .commandPool = (VkCommandPool)this->pool->Handle(),
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
       .commandBufferCount = 1
     };
@@ -96,46 +96,83 @@ struct VulkanCommandBuffer final : CommandBuffer {
 
   void CopyBufferToTexture(
     Buffer* buffer,
+    u32 buffer_offset,
     Texture* texture,
     Texture::Layout texture_layout,
-    std::span<BufferTextureCopyRegion const> regions
+    u32 texture_mip_level
   ) override {
-    VkBufferImageCopy vk_regions[regions.size()];
+    const VkBufferImageCopy region = {
+      .bufferOffset = buffer_offset,
+      .bufferRowLength = 0u,
+      .bufferImageHeight = 0u,
+      .imageSubresource = {
+        .aspectMask = (VkImageAspectFlagBits)texture->DefaultSubresourceRange().aspect,
+        .mipLevel = texture_mip_level,
+        .baseArrayLayer = 0,
+        .layerCount = texture->GetLayerCount()
+      },
+      .imageOffset = { .x = 0u, .y = 0u, .z = 0u },
+      .imageExtent = {
+        .width = texture->GetWidth(),
+        .height = texture->GetHeight(),
+        .depth = texture->GetDepth()
+      }
+    };
 
-    for(size_t i = 0; i < regions.size(); i++) {
-      auto& region = regions[i];
+    vkCmdCopyBufferToImage(this->buffer, (VkBuffer)buffer->Handle(), (VkImage)texture->Handle(), (VkImageLayout)texture_layout, 1, &region);
+  }
 
-      vk_regions[i] = {
-        .bufferOffset = region.buffer.offset,
-        .bufferRowLength = region.buffer.row_length,
-        .bufferImageHeight = region.buffer.image_height,
-        .imageSubresource = {
-          .aspectMask = (VkImageAspectFlagBits)region.texture.layers.aspect,
-          .mipLevel = region.texture.layers.mip_level,
-          .baseArrayLayer = region.texture.layers.base_layer,
-          .layerCount = region.texture.layers.layer_count,
+  void BlitTexture2D(
+    Texture* src_texture,
+    Texture* dst_texture,
+    const Rect2D& src_rect,
+    const Rect2D& dst_rect,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 src_mip_level,
+    u32 dst_mip_level,
+    Sampler::FilterMode filter
+  ) override {
+    const VkImageBlit region = {
+      .srcSubresource = {
+        .aspectMask = (VkImageAspectFlagBits)src_texture->DefaultSubresourceRange().aspect,
+        .mipLevel = src_mip_level,
+        .baseArrayLayer = 0u,
+        .layerCount = src_texture->GetLayerCount()
+      },
+      .srcOffsets = {
+        {
+          .x = (int32_t)src_rect.x,
+          .y = (int32_t)src_rect.y,
+          .z = 0
         },
-        .imageOffset = {
-          .x = region.texture.offset_x,
-          .y = region.texture.offset_y,
-          .z = region.texture.offset_z
-        },
-        .imageExtent = {
-          .width = (u32)region.texture.width,
-          .height = (u32)region.texture.height,
-          .depth = (u32)region.texture.depth
+        {
+          .x = (int32_t)(src_rect.x + src_rect.width),
+          .y = (int32_t)(src_rect.y + src_rect.height),
+          .z = 1
         }
-      };
-    }
+      },
+      .dstSubresource = {
+        .aspectMask = (VkImageAspectFlagBits)dst_texture->DefaultSubresourceRange().aspect,
+        .mipLevel = dst_mip_level,
+        .baseArrayLayer = 0u,
+        .layerCount = dst_texture->GetLayerCount()
+      },
+      .dstOffsets = {
+        {
+          .x = (int32_t)dst_rect.x,
+          .y = (int32_t)dst_rect.y,
+          .z = 0
+        },
+        {
+          .x = (int32_t)(dst_rect.x + dst_rect.width),
+          .y = (int32_t)(dst_rect.y + dst_rect.height),
+          .z = 1
+        }
+      }
+    };
 
-    vkCmdCopyBufferToImage(
-      this->buffer,
-      (VkBuffer)buffer->Handle(),
-      (VkImage)texture->Handle(),
-      (VkImageLayout)texture_layout,
-      (u32)regions.size(),
-      vk_regions
-    );
+    vkCmdBlitImage(buffer, (VkImage)src_texture->Handle(), (VkImageLayout)src_layout, (VkImage)dst_texture->Handle(), (VkImageLayout)dst_layout, 1, &region, (VkFilter)filter);
   }
 
   void PushConstants(
@@ -180,43 +217,26 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdEndRenderPass(buffer);
   }
 
-  void BindGraphicsPipeline(GraphicsPipeline* pipeline) override {
+  void BindPipeline(GraphicsPipeline* pipeline) override {
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline->Handle());
   }
 
-  void BindComputePipeline(ComputePipeline* pipeline) override {
+  void BindPipeline(ComputePipeline* pipeline) override {
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pipeline->Handle());
   }
 
-  void BindGraphicsBindGroup(
-    u32 set,
+  void BindBindGroup(
+    PipelineBindPoint pipeline_bind_point,
     PipelineLayout* pipeline_layout,
+    u32 set,
     BindGroup* bind_group
   ) override {
-    auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
-    auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
+    const auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
+    const auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
 
     vkCmdBindDescriptorSets(
       buffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS,
-      vk_pipeline_layout,
-      set,
-      1, &vk_descriptor_set,
-      0, nullptr
-    );
-  }
-
-  void BindComputeBindGroup(
-    u32 set,
-    PipelineLayout* pipeline_layout,
-    BindGroup* bind_group
-  ) override {
-    auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
-    auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
-
-    vkCmdBindDescriptorSets(
-      buffer,
-      VK_PIPELINE_BIND_POINT_COMPUTE,
+      (VkPipelineBindPoint)pipeline_bind_point,
       vk_pipeline_layout,
       set,
       1, &vk_descriptor_set,
@@ -273,82 +293,44 @@ struct VulkanCommandBuffer final : CommandBuffer {
   void DispatchCompute(u32 group_count_x, u32 group_count_y, u32 group_count_z) override {
     vkCmdDispatch(buffer, group_count_x, group_count_y, group_count_z);
   }
-
-  void PipelineBarrier(
+  
+  void Barrier(
+    Texture* texture,
     PipelineStage src_stage,
     PipelineStage dst_stage,
-    std::span<MemoryBarrier const> memory_barriers
+    Access src_access,
+    Access dst_access,
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    u32 mip_level,
+    u32 mip_count
   ) override {
-    const auto barrier_count = memory_barriers.size();
-
-    VkImageMemoryBarrier vk_image_barriers[barrier_count];
-    VkBufferMemoryBarrier vk_buffer_barriers[barrier_count];
-    VkMemoryBarrier vk_memory_barriers[barrier_count];
-
-    u32 image_barrier_count = 0;
-    u32 buffer_barrier_count = 0;
-    u32 memory_barrier_count = 0;
-
-    for (auto& barrier : memory_barriers) {
-      if (barrier.type == MemoryBarrier::Type::Texture) {
-        auto& texture_info = barrier.texture_info;
-
-        vk_image_barriers[image_barrier_count++] = {
-          .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-          .pNext = nullptr,
-          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
-          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask,
-          .oldLayout = (VkImageLayout)texture_info.src_layout,
-          .newLayout = (VkImageLayout)texture_info.dst_layout,
-          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .image = (VkImage)texture_info.texture->Handle(),
-          .subresourceRange = {
-            .aspectMask = (VkImageAspectFlags)texture_info.range.aspect,
-            .baseMipLevel = texture_info.range.base_mip,
-            .levelCount = texture_info.range.mip_count,
-            .baseArrayLayer = texture_info.range.base_layer,
-            .layerCount = texture_info.range.layer_count
-          }
-        };
-      } else if (barrier.type == MemoryBarrier::Type::Buffer) {
-        auto& buffer_info = barrier.buffer_info;
-
-        vk_buffer_barriers[buffer_barrier_count++] = {
-          .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-          .pNext = nullptr,
-          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
-          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask,
-          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .buffer = (VkBuffer)buffer_info.buffer->Handle(),
-          .offset = buffer_info.offset,
-          .size = buffer_info.size
-        };
-      } else {
-        vk_memory_barriers[memory_barrier_count++] = {
-          .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-          .pNext = nullptr,
-          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
-          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask
-        };
+    const VkImageMemoryBarrier barrier = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      .pNext = nullptr,
+      .srcAccessMask = (VkAccessFlags)src_access,
+      .dstAccessMask = (VkAccessFlags)dst_access,
+      .oldLayout = (VkImageLayout)src_layout,
+      .newLayout = (VkImageLayout)dst_layout,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = (VkImage)texture->Handle(),
+      .subresourceRange = {
+        .aspectMask = (VkImageAspectFlagBits)texture->DefaultSubresourceRange().aspect,
+        .baseMipLevel = mip_level,
+        .levelCount = mip_count,
+        .baseArrayLayer = 0u,
+        .layerCount = texture->GetLayerCount()
       }
-    }
+    };
 
-    vkCmdPipelineBarrier(
-      buffer,
-      (VkPipelineStageFlags)src_stage,
-      (VkPipelineStageFlags)dst_stage, 0,
-      memory_barrier_count, vk_memory_barriers,
-      buffer_barrier_count, vk_buffer_barriers,
-      image_barrier_count, vk_image_barriers
-    );
+    vkCmdPipelineBarrier(buffer, (VkPipelineStageFlags)src_stage, (VkPipelineStageFlags)dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
   }
 
 private:
   VkDevice device;
   VkCommandBuffer buffer;
-  CommandPool* pool;
+  std::shared_ptr<CommandPool> pool;
 };
 
 } // namespace zephyr

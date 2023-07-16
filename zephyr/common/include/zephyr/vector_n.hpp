@@ -47,7 +47,17 @@ namespace zephyr {
       constexpr Vector_N() = default;
 
       constexpr Vector_N(std::initializer_list<T> values) {
-        for (auto& value : values) push_back(value);
+        for (auto& value : values) PushBack(value);
+      }
+
+      template<class InputIt>
+      constexpr Vector_N(InputIt first, InputIt last) {
+        InputIt iterator = first;
+
+        while(iterator != last) {
+          PushBack(*iterator);
+          ++iterator;
+        }
       }
 
       constexpr T& operator[](std::size_t index) {

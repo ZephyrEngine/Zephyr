@@ -9,6 +9,23 @@
 
 namespace zephyr {
 
+// subset of VkDescriptorType:
+// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkDescriptorType
+enum class BindingType : u32 {
+  Sampler = 0,
+  ImageWithSampler = 1,
+  SampledImage = 2,
+  StorageImage = 3,
+  UniformBuffer = 6
+};
+
+// subset of VkPipelineBindPoint:
+// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineBindPoint.html
+enum class PipelineBindPoint : u32 {
+  Graphics = 0,
+  Compute = 1
+};
+
 // subset of VkIndexType:
 // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkIndexType
 enum class IndexDataType {
@@ -127,6 +144,23 @@ constexpr auto operator|(ColorComponent lhs, ColorComponent rhs) -> ColorCompone
   return static_cast<ColorComponent>(static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
+// subset of VkShaderStageFlagBits:
+// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkShaderStageFlagBits
+enum class ShaderStage : u32 {
+  Vertex = 0x00000001,
+  TessellationControl = 0x00000002,
+  TessellationEvaluation = 0x00000004,
+  Geometry = 0x00000008,
+  Fragment = 0x00000010,
+  Compute = 0x00000020,
+  AllGraphics = Vertex | TessellationControl | TessellationEvaluation | Geometry | Fragment,
+  All = AllGraphics | Compute
+};
+
+constexpr auto operator|(ShaderStage lhs, ShaderStage rhs) -> ShaderStage {
+  return (ShaderStage)((u32)lhs | (u32)rhs);
+}
+
 // subset of VkPipelineStageFlagBits:
 // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineStageFlagBits.html
 enum class PipelineStage : u32 {
@@ -181,60 +215,11 @@ constexpr auto operator|(Access lhs, Access rhs) -> Access {
   return static_cast<Access>(static_cast<int>(lhs) | static_cast<u32>(rhs));
 }
 
-struct MemoryBarrier {
-  enum class Type {
-    Memory,
-    Texture,
-    Buffer
-  } type;
-
-  Access src_access_mask;
-  Access dst_access_mask;
-
-  struct {
-    mutable Texture* texture;
-    Texture::SubresourceRange range;
-    Texture::Layout src_layout;
-    Texture::Layout dst_layout;
-  } texture_info;
-
-  struct {
-    mutable Buffer* buffer;
-    u64 offset = 0;
-    u64 size = ~0ULL;
-  } buffer_info;
-
-  MemoryBarrier() = default;
-
-  MemoryBarrier(Access src_access_mask, Access dst_access_mask)
-    : type(Type::Memory)
-    , src_access_mask(src_access_mask)
-    , dst_access_mask(dst_access_mask) {}
-
-  MemoryBarrier(
-    Texture* texture,
-    Access src_access_mask,
-    Access dst_access_mask,
-    Texture::Layout src_layout,
-    Texture::Layout dst_layout,
-    Texture::SubresourceRange range
-  )   : type(Type::Texture)
-      , src_access_mask(src_access_mask)
-      , dst_access_mask(dst_access_mask)
-      , texture_info({texture, range, src_layout, dst_layout}) {
-  }
-
-  MemoryBarrier(
-    Buffer* buffer,
-    Access src_access_mask,
-    Access dst_access_mask,
-    u64 offset = 0,
-    u64 size = ~0ULL
-  )   : type(Type::Buffer)
-      , src_access_mask(src_access_mask)
-      , dst_access_mask(dst_access_mask)
-      , buffer_info({buffer, offset, size}) {
-  }
+struct Rect2D {
+  int x;
+  int y;
+  int width;
+  int height;
 };
 
 } // namespace zephyr

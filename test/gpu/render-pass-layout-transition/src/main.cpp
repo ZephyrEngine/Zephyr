@@ -39,7 +39,7 @@ class MainWindow final : public Window {
 
         render_command_buffer->BeginRenderPass(render_target.get(), render_pass[i].get());
         render_command_buffer->PushConstants(pipeline->GetLayout(), 0, sizeof(transform[0]), &transform[i]);
-        render_command_buffer->BindGraphicsPipeline(pipeline.get());
+        render_command_buffer->BindPipeline(pipeline.get());
         render_command_buffer->BindVertexBuffers({{vbo.get()}});
         render_command_buffer->BindIndexBuffer(ibo.get(), IndexDataType::UInt16);
         render_command_buffer->DrawIndexed(36);
@@ -71,7 +71,7 @@ class MainWindow final : public Window {
       command_pool = render_device->CreateGraphicsCommandPool(
         CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
-      render_command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      render_command_buffer = render_device->CreateCommandBuffer(command_pool);
     }
 
     void CreateRenderPass() {
@@ -95,7 +95,7 @@ class MainWindow final : public Window {
     }
 
     void CreateFence() {
-      fence = render_device->CreateFence();
+      fence = render_device->CreateFence(Fence::CreateSignalled::No);
     }
 
     void CreateGraphicsPipeline() {
@@ -105,8 +105,8 @@ class MainWindow final : public Window {
       auto builder = render_device->CreateGraphicsPipelineBuilder();
 
       builder->SetViewport(0, 0, 1600, 900);
-      builder->SetShaderModule(PipelineStage::VertexShader, vert_shader);
-      builder->SetShaderModule(PipelineStage::FragmentShader, frag_shader);
+      builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
+      builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
       builder->SetRenderPass(render_pass[0]);
       builder->SetDepthTestEnable(true);
       builder->SetDepthWriteEnable(true);
@@ -164,7 +164,7 @@ class MainWindow final : public Window {
         4, 1, 0,
         4, 5, 1,
 
-        // bottom
+        // bottom<
         6, 3, 2,
         6, 7, 3
       };
@@ -188,7 +188,7 @@ class MainWindow final : public Window {
       staging_ibo->Update<u8>((u8 const*)k_indices, sizeof(k_indices));
       staging_ibo->Unmap();
 
-      auto command_buffer = render_device->CreateCommandBuffer(command_pool.get());
+      auto command_buffer = render_device->CreateCommandBuffer(command_pool);
 
       command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
       command_buffer->CopyBuffer(staging_vbo.get(), vbo.get(), vbo->Size());
