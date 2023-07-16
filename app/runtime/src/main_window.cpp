@@ -34,7 +34,8 @@ namespace zephyr {
 
     static f32 rotation = 0;
 
-    *m_ubo->Data<Matrix4>() = Matrix4::PerspectiveVK(45.0f, (f32)m_width / (f32)m_height, 0.01f, 100.0f) * Matrix4::Translation(0.0f, 0.0f, -2(have.0f) * Matrix4::RotationY(rotation);
+    m_ubo->Data<Matrix4>()[0] = Matrix4::Translation(0.0f, 0.0f, -30.0f) * Matrix4::RotationY(rotation);
+    m_ubo->Data<Matrix4>()[1] = Matrix4::PerspectiveVK(45.0f, (f32)m_width / (f32)m_height, 0.01f, 100.0f);
     m_ubo->MarkAsDirty();
     rotation += 0.01;
 
@@ -47,8 +48,9 @@ namespace zephyr {
     {
       // @todo: round the thread group sizes up
       const size_t k_tile_size = 16u;
-      const size_t thread_group_size_x = m_width / k_tile_size;
-      const size_t thread_group_size_y = m_height / k_tile_size;
+      const size_t k_pixels_per_tile = 4;
+      const size_t thread_group_size_x = m_width / k_tile_size /k_pixels_per_tile;
+      const size_t thread_group_size_y = m_height / k_tile_size /k_pixels_per_tile;
 
       u32 triangle_count = m_index_ssbo->Size() / sizeof(u32) / 3;
 
@@ -218,7 +220,7 @@ namespace zephyr {
     m_index_ssbo = std::make_unique<BufferResource>(Buffer::Usage::StorageBuffer, std::span{(u8*)indices, sizeof(indices)});
     */
 
-    const std::string input_file = "damaged_helmet.obj";
+    const std::string input_file = "sponza.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -277,7 +279,7 @@ namespace zephyr {
   }
 
   void MainWindow::CreateUBO() {
-    m_ubo = std::make_unique<BufferResource>(Buffer::Usage::UniformBuffer, sizeof(Matrix4));
+    m_ubo = std::make_unique<BufferResource>(Buffer::Usage::UniformBuffer, sizeof(Matrix4) * 2);
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

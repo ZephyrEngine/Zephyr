@@ -19,7 +19,8 @@ layout(set = 0, binding = 2) buffer IndexBuffer {
 };
 
 layout(set = 0, binding = 3, std140) uniform UniformBuffer {
-  mat4 u_transform;
+  mat4 u_view;
+  mat4 u_projection;
 };
 
 layout(push_constant) uniform constants {
@@ -33,7 +34,7 @@ struct Vertex {
 
 struct CulledTriangleList {
   int count;
-  int list[16384];
+  int list[8192];
 };
 
 shared CulledTriangleList s_culled_triangle_list;
@@ -47,6 +48,8 @@ vec3 get_barycentric_coordinates(vec2 v1, vec2 v2, vec2 v3, vec2 point) {
 
   return vec3(x, y, z);
 }
+
+#define pixels 4
 
 void main() {
   vec2 output_size = vec2(imageSize(u_output_map));
@@ -68,8 +71,8 @@ void main() {
   // @todo: optimize this
   vec2 tile_aabb_min = vec2(gl_WorkGroupID.xy * gl_WorkGroupSize.xy) / output_size;
   vec2 tile_aabb_max = tile_aabb_min + vec2(gl_WorkGroupSize) / output_size;
-  tile_aabb_min = tile_aabb_min * 2.0 - 1.0;
-  tile_aabb_max = tile_aabb_max * 2.0 - 1.0;
+  tile_aabb_min = tile_aabb_min * pixels * 2.0 - 1.0;
+  tile_aabb_max = tile_aabb_max * pixels * 2.0 - 1.0;
 
   for(int i = triangle0; i < triangle1; i++) {
     bool inside = false;
@@ -77,27 +80,35 @@ void main() {
     vec2 tri_aabb_min = vec2(1.0, 1.0);
     vec2 tri_aabb_max = vec2(-1.0, -1.0);
 
+    vec4 view_position[3];
+    vec3 ndc_position[3];
+
     for(int j = 0; j < 3; j++) {
       VertexIn vertex_in = a_vertices[a_indices[i * 3 + j]];
 
-      // @todo: projection multiple times is *not cool*
-      vec4 position = u_transform * vertex_in.position;
-      vec2 clip = position.xy / position.w;
+      view_position[j] = u_view * vertex_in.position;
 
-      tri_aabb_min = min(tri_aabb_min, clip);
-      tri_aabb_max = max(tri_aabb_max, clip);
+      // @todo: projection multiple times is *not cool*
+      vec4 position = u_projection * view_position[j];
+      ndc_position[j] = position.xyz / position.w;
+
+      tri_aabb_min = min(tri_aabb_min, ndc_position[j].xy);
+      tri_aabb_max = max(tri_aabb_max, ndc_position[j].xy);
     }
+
+    float facedness = dot(cross(view_position[1].xyz - view_position[0].xyz, view_position[2].xyz - view_position[0].xyz), view_position[0].xyz);
 
     // @todo: ensure that this really always is correct
     bool outside = tile_aabb_max.x < tri_aabb_min.x ||
                    tile_aabb_max.y < tri_aabb_min.y ||
                    tile_aabb_min.x > tri_aabb_max.x ||
-                   tile_aabb_min.y > tri_aabb_max.y;
+                   tile_aabb_min.y > tri_aabb_max.y ||
+                   facedness < 0.0;
 
     if(!outside) {
       int list_index = atomicAdd(s_culled_triangle_list.count, 1);
 
-      if(list_index < 16384) {
+      if(list_index < 8192) {
         s_culled_triangle_list.list[list_index] = i;
       }
     }
@@ -109,12 +120,19 @@ void main() {
   // # Rasterization                                                 # //
   // ################################################################# //
 
-  vec2 ndc = vec2(gl_GlobalInvocationID.xy) / output_size * 2.0 - 1.0;
-
-  vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
-  float current_depth = 1.0;
-
   int triangle_count = s_culled_triangle_list.count;
+
+  float current_depth[pixels][pixels];
+
+  for(int x = 0; x < pixels; x++) {
+    for(int y = 0; y < pixels; y++) {
+      uvec2 pixel_position = gl_GlobalInvocationID.xy * pixels + uvec2(x, y);
+
+      imageStore(u_output_map, ivec2(pixel_position), vec4(1.0));
+
+      current_depth[x][y] = 1.0;
+    }
+  }
 
   for(int i = 0; i < triangle_count; i++) {
     int base = s_culled_triangle_list.list[i] * 3;
@@ -124,25 +142,31 @@ void main() {
     for(int j = 0; j < 3; j++) {
       VertexIn vertex_in = a_vertices[a_indices[base + j]];
 
-      vec4 position = u_transform * vertex_in.position;
+      vec4 position = u_projection * u_view * vertex_in.position;
       vec3 clip = position.xyz / position.w;
 
       v[j] = Vertex(clip, vertex_in.color.rgb);
     }
 
-    // @todo: do vertex clipping (maybe just do it per-pixel?)
+    for(int x = 0; x < pixels; x++) {
+      for(int y = 0; y < pixels; y++) {
+        uvec2 pixel_position = gl_GlobalInvocationID.xy * pixels + uvec2(x, y);
+        vec2 ndc = vec2(pixel_position) / output_size * 2.0 - 1.0;
 
-    vec3 bary = get_barycentric_coordinates(v[0].position.xy, v[1].position.xy, v[2].position.xy, ndc);
+        vec3 bary = get_barycentric_coordinates(v[0].position.xy, v[1].position.xy, v[2].position.xy, ndc);
 
-    if (bary.x >= 0.0 && bary.y >= 0.0 && bary.z >= 0.0) {
-      float depth = v[0].position.z * bary.x + v[1].position.z * bary.y + v[2].position.z * bary.z;
+        if(bary.x >= 0.0 && bary.y >= 0.0 && bary.z >= 0.0) {
+          float depth = v[0].position.z * bary.x + v[1].position.z * bary.y + v[2].position.z * bary.z;
 
-      if(depth <= current_depth) {
-        current_depth = depth;
-        color.rgb = v[0].color * bary.x + v[1].color * bary.y + v[2].color * bary.z;
+          if(depth <= current_depth[x][y]) {
+            current_depth[x][y] = depth;
+
+            vec3 color = v[0].color * bary.x + v[1].color * bary.y + v[2].color * bary.z;
+
+            imageStore(u_output_map, ivec2(pixel_position), vec4(color, 1.0));
+          }
+        }
       }
     }
   }
-
-  imageStore(u_output_map, ivec2(gl_GlobalInvocationID.xy), color);
 }
