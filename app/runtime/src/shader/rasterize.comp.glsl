@@ -1,6 +1,5 @@
 #version 450
 
-// @todo: how to pick this ideally? and how exactly do we use workgroup-local memory?
 layout (local_size_x = 16, local_size_y = 16) in;
 
 struct VertexIn {
@@ -74,6 +73,8 @@ void main() {
   tile_aabb_min = tile_aabb_min * pixels * 2.0 - 1.0;
   tile_aabb_max = tile_aabb_max * pixels * 2.0 - 1.0;
 
+  float max_passing_depth = 10000.0; // @todo: reduce once clipping has been implemented
+
   for(int i = triangle0; i < triangle1; i++) {
     bool inside = false;
 
@@ -98,18 +99,53 @@ void main() {
 
     float facedness = dot(cross(view_position[1].xyz - view_position[0].xyz, view_position[2].xyz - view_position[0].xyz), view_position[0].xyz);
 
+    float min_depth = min(ndc_position[0].z, min(ndc_position[1].z, ndc_position[2].z));
+
     // @todo: ensure that this really always is correct
     bool outside = tile_aabb_max.x < tri_aabb_min.x ||
                    tile_aabb_max.y < tri_aabb_min.y ||
                    tile_aabb_min.x > tri_aabb_max.x ||
                    tile_aabb_min.y > tri_aabb_max.y ||
-                   facedness < 0.0;
+                   facedness < 0.0 ||
+                   min_depth > max_passing_depth;
 
     if(!outside) {
       int list_index = atomicAdd(s_culled_triangle_list.count, 1);
 
       if(list_index < 8192) {
         s_culled_triangle_list.list[list_index] = i;
+      }
+
+      // Heuristic: if tri AABB area is larger than the tile AABB area,
+      // then attempt to update our "farthest away possible depth value that can pass":
+      float tri_aabb_area = (tri_aabb_max.x - tri_aabb_min.x) * (tri_aabb_max.y - tri_aabb_min.y);
+      float tile_aabb_area = (tile_aabb_max.x - tile_aabb_min.x) * (tile_aabb_max.y - tile_aabb_min.y); // @todo: this can be a constant really
+
+      if(tri_aabb_area > tile_aabb_area) {
+        // @todo: some recomputation can probably be saved here:
+        vec3 bary0 = get_barycentric_coordinates(ndc_position[0].xy, ndc_position[1].xy, ndc_position[2].xy, vec2(tile_aabb_min.x, tile_aabb_min.y));
+        vec3 bary1 = get_barycentric_coordinates(ndc_position[0].xy, ndc_position[1].xy, ndc_position[2].xy, vec2(tile_aabb_max.x, tile_aabb_min.y));
+        vec3 bary2 = get_barycentric_coordinates(ndc_position[0].xy, ndc_position[1].xy, ndc_position[2].xy, vec2(tile_aabb_min.x, tile_aabb_max.y));
+        vec3 bary3 = get_barycentric_coordinates(ndc_position[0].xy, ndc_position[1].xy, ndc_position[2].xy, vec2(tile_aabb_max.x, tile_aabb_max.y));
+
+        // @todo: can this be optimize somehow?
+        if(
+          bary0.x >= 0.0 && bary0.y >= 0.0 && bary0.z >= 0.0 &&
+          bary1.x >= 0.0 && bary1.y >= 0.0 && bary1.z >= 0.0 &&
+          bary2.x >= 0.0 && bary2.y >= 0.0 && bary2.z >= 0.0 &&
+          bary3.x >= 0.0 && bary3.y >= 0.0 && bary3.z >= 0.0
+        ) {
+          float depth0 = bary0.x * ndc_position[0].z + bary0.y * ndc_position[1].z + bary0.z * ndc_position[2].z;
+          float depth1 = bary1.x * ndc_position[0].z + bary1.y * ndc_position[1].z + bary1.z * ndc_position[2].z;
+          float depth2 = bary2.x * ndc_position[0].z + bary2.y * ndc_position[1].z + bary2.z * ndc_position[2].z;
+          float depth3 = bary3.x * ndc_position[0].z + bary3.y * ndc_position[1].z + bary3.z * ndc_position[2].z;
+
+          float max_depth = max(depth0, max(depth1, max(depth2, depth3)));
+
+          if(max_depth < max_passing_depth) {
+            max_passing_depth = max_depth;
+          }
+        }
       }
     }
   }
