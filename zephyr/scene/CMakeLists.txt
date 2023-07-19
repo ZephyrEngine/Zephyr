@@ -7,7 +7,7 @@ set(HEADERS
 )
 
 set(HEADERS_PUBLIC
-  include/zephyr/scene/scene.hpp
+  include/zephyr/scene/node.hpp
   include/zephyr/scene/transform.hpp
 )
 

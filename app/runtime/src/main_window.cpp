@@ -1,5 +1,5 @@
 
-#include <zephyr/scene/scene.hpp>
+#include <zephyr/scene/node.hpp>
 #include <zephyr/float.hpp>
 #include <stb_image.h>
 
