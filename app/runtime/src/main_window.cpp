@@ -1,4 +1,5 @@
 
+#include <zephyr/scene/scene.hpp>
 #include <zephyr/float.hpp>
 #include <stb_image.h>
 
@@ -19,6 +20,22 @@ namespace zephyr {
     SetWindowSize(1600, 900);
     SetWindowTitle("Zephyr Runtime");
     Setup();
+
+    {
+      std::unique_ptr<SceneNode> scene = std::make_unique<SceneNode>("SceneRoot");
+
+      SceneNode* child_a = scene->CreateChild("ChildA");
+      SceneNode* child_b = scene->CreateChild("ChildB");
+      SceneNode* child_c = child_b->CreateChild("ChildC");
+      SceneNode* child_d = child_b->CreateChild("ChildD");
+      SceneNode* child_e = child_d->CreateChild("ChildE");
+
+      scene->Traverse([](SceneNode* node) {
+        ZEPHYR_INFO("node: {}", node->GetName());
+        node->GetTransform().UpdateLocal();
+        return node->IsVisible();
+      });
+    }
 
     {
       STD430BufferLayout layout{};
