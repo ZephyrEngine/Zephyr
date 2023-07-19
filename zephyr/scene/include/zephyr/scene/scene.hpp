@@ -1,9 +1,7 @@
 
 #pragma once
 
-#include <zephyr/math/matrix4.hpp>
-#include <zephyr/math/rotation.hpp>
-#include <zephyr/math/vector.hpp>
+#include <zephyr/scene/transform.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/non_moveable.hpp>
 #include <zephyr/panic.hpp>
@@ -14,61 +12,6 @@
 #include <vector>
 
 namespace zephyr {
-
-  class Transform3D {
-    public:
-      [[nodiscard]] const Vector3& GetPosition() const {
-        return m_position;
-      }
-
-      [[nodiscard]] Vector3& GetPosition() {
-        return m_position;
-      }
-
-      [[nodiscard]] const Vector3& GetScale() const {
-        return m_scale;
-      }
-
-      [[nodiscard]] Vector3& GetScale() {
-        return m_scale;
-      }
-
-      [[nodiscard]] const Rotation& GetRotation() const {
-        return m_rotation;
-      }
-
-      [[nodiscard]] Rotation& GetRotation() {
-        return m_rotation;
-      }
-
-      [[nodiscard]] const Matrix4& GetLocal() const {
-        return m_local_matrix;
-      }
-
-      [[nodiscard]] const Matrix4& GetWorld() const {
-        return m_world_matrix;
-      }
-
-      void UpdateLocal() {
-        m_local_matrix = m_rotation.GetAsMatrix4();
-        m_local_matrix.X() *= m_scale.X();
-        m_local_matrix.Y() *= m_scale.Y();
-        m_local_matrix.Z() *= m_scale.Z();
-        m_local_matrix.W() = Vector4{m_position, 0.0f};
-      }
-
-      // @todo: this is not really a good solution
-      void UpdateWorld(const Transform3D& parent) {
-        m_world_matrix = parent.GetWorld() * m_local_matrix;
-      }
-
-    private:
-      Vector3 m_position;
-      Vector3 m_scale;
-      Rotation m_rotation;
-      Matrix4 m_local_matrix;
-      Matrix4 m_world_matrix;
-  };
 
   class SceneNode : public NonCopyable, NonMoveable {
     public:
@@ -157,7 +100,7 @@ namespace zephyr {
       std::vector<std::unique_ptr<SceneNode>> m_children;
       std::string m_name;
       bool m_visible{true};
-      Transform3D m_transform;
+      Transform3D m_transform{this};
   };
 
 } // namespace zephyr
