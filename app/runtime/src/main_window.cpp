@@ -34,7 +34,7 @@ namespace zephyr {
 
     static f32 rotation = 0;
 
-    m_ubo->Data<Matrix4>()[0] = Matrix4::Translation(0.0f, 0.0f, -30.0f) * Matrix4::RotationY(rotation);
+    m_ubo->Data<Matrix4>()[0] = Matrix4::Translation(0.0f, 0.0f, -3.0f) * Matrix4::RotationY(rotation);
     m_ubo->Data<Matrix4>()[1] = Matrix4::PerspectiveVK(45.0f, (f32)m_width / (f32)m_height, 0.01f, 100.0f);
     m_ubo->MarkAsDirty();
     rotation += 0.01;

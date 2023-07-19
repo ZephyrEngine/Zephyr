@@ -106,7 +106,7 @@ void main() {
                    tile_aabb_max.y < tri_aabb_min.y ||
                    tile_aabb_min.x > tri_aabb_max.x ||
                    tile_aabb_min.y > tri_aabb_max.y ||
-                   facedness < 0.0 ||
+                   facedness < 0.0;// ||
                    min_depth > max_passing_depth;
 
     if(!outside) {
@@ -128,7 +128,7 @@ void main() {
         vec3 bary2 = get_barycentric_coordinates(ndc_position[0].xy, ndc_position[1].xy, ndc_position[2].xy, vec2(tile_aabb_min.x, tile_aabb_max.y));
         vec3 bary3 = get_barycentric_coordinates(ndc_position[0].xy, ndc_position[1].xy, ndc_position[2].xy, vec2(tile_aabb_max.x, tile_aabb_max.y));
 
-        // @todo: can this be optimize somehow?
+        // @todo: can this be optimized somehow?
         if(
           bary0.x >= 0.0 && bary0.y >= 0.0 && bary0.z >= 0.0 &&
           bary1.x >= 0.0 && bary1.y >= 0.0 && bary1.z >= 0.0 &&
@@ -183,6 +183,12 @@ void main() {
 
       v[j] = Vertex(clip, vertex_in.color.rgb);
     }
+
+    float min_depth = min(v[0].position.z, min(v[1].position.z, v[2].position.z));
+
+//    if(min_depth > max_passing_depth) {
+//      continue;
+//    }
 
     for(int x = 0; x < pixels; x++) {
       for(int y = 0; y < pixels; y++) {
