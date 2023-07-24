@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <zephyr/scene/component.hpp>
 #include <zephyr/scene/transform.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/non_moveable.hpp>
@@ -9,11 +10,13 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <typeindex>
+#include <unordered_map>
 #include <vector>
 
 namespace zephyr {
 
-  class SceneNode : public NonCopyable, NonMoveable {
+  class SceneNode : public NonCopyable, public NonMoveable {
     public:
       SceneNode() = default;
 
@@ -95,12 +98,54 @@ namespace zephyr {
         }
       }
 
+      template<typename T>
+      bool HasComponent() const {
+        return m_components.find(std::type_index{typeid(T)}) != m_components.end();
+      }
+
+      template<typename T>
+      const T* GetComponent() const {
+        return (const T*)const_cast<SceneNode*>(this)->GetComponent<T>();
+      }
+
+      template<typename T>
+      T* GetComponent() {
+        if(!HasComponent<T>()) {
+          ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
+        }
+
+        return m_components[std::type_index{typeid(T)}].get();
+      }
+
+      template<typename T, typename... Args>
+      T* CreateComponent(Args&&... args) {
+        if(HasComponent<T>()) {
+          ZEPHYR_PANIC("Node already has a component of the type: '{}'", typeid(T).name());
+        }
+
+        std::unique_ptr<T> component = std::make_unique<T>(std::forward(args)...);
+
+        T* component_raw_ptr = component.get();
+        m_components[std::type_index{typeid(T)}] = std::move(component);
+        return component_raw_ptr;
+      }
+
+      template<typename T>
+      void RemoveComponent() {
+        if(!HasComponent<T>()) {
+          ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
+        }
+
+        m_components.erase(m_components.find(std::type_index{typeid(T)}));
+      }
+
     private:
       SceneNode* m_parent{};
       std::vector<std::unique_ptr<SceneNode>> m_children;
       std::string m_name;
       bool m_visible{true};
       Transform3D m_transform{this};
+      std::unordered_map<std::type_index, std::unique_ptr<Component>> m_components;
   };
 
 } // namespace zephyr

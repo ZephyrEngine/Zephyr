@@ -33,6 +33,7 @@ namespace zephyr {
       scene->Traverse([](SceneNode* node) {
         ZEPHYR_INFO("node: {}", node->GetName());
         node->GetTransform().UpdateLocal();
+        node->GetTransform().UpdateWorld();
         return node->IsVisible();
       });
     }
