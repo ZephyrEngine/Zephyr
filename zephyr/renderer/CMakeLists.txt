@@ -16,7 +16,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/texture/texture_2D.hpp
   include/zephyr/renderer/texture/texture_cube.hpp
   include/zephyr/renderer/texture/texture_resource.hpp
-  include/zephyr/renderer/geometry.hpp
+  include/zephyr/renderer/mesh.hpp
   include/zephyr/renderer/resource.hpp
 )
 

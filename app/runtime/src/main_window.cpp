@@ -8,6 +8,8 @@
 #include "renderer/std430_buffer_layout.hpp"
 #include "renderer/material.hpp"
 
+#include <zephyr/renderer/mesh.hpp>
+
 // Shader compilation test
 #include <fstream>
 #include <glslang/Include/glslang_c_shader_types.h>

@@ -104,12 +104,12 @@ namespace zephyr {
       }
 
       template<typename T>
-      const T* GetComponent() const {
+      [[nodiscard]] const T* GetComponent() const {
         return (const T*)const_cast<SceneNode*>(this)->GetComponent<T>();
       }
 
       template<typename T>
-      T* GetComponent() {
+      [[nodiscard]] T* GetComponent() {
         if(!HasComponent<T>()) {
           ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
         }

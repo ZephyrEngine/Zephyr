@@ -6,9 +6,8 @@
 
 namespace zephyr {
 
-  class Component : public NonCopyable, public NonMoveable {
-    public:
-      virtual ~Component() = default;
+  struct Component : NonCopyable, NonMoveable {
+    virtual ~Component() = default;
   };
 
 } // namespace zephyr
