@@ -9,6 +9,8 @@
 #include <zephyr/panic.hpp>
 #include <limits>
 
+#include <zephyr/logger/logger.hpp>
+
 namespace zephyr {
 
   /**
@@ -17,6 +19,7 @@ namespace zephyr {
    *   - check if Mesh3D has attribute in GetAttribute and SetAttribute methods.
    *   - support for reading attributes
    *   - support for reading and writing indices
+   *   - support for making VBO and IBO as dirty
    */
 
   class Mesh3D {
@@ -50,6 +53,14 @@ namespace zephyr {
         return m_layout_key;
       }
 
+      [[nodiscard]] const VertexBuffer* GetVBO() const {
+        return m_vbo.get();
+      }
+
+      [[nodiscard]] const IndexBuffer* GetIBO() const {
+        return m_ibo.get();
+      }
+
       void SetPosition(size_t id, Vector3 position) {
         m_vbo->Write<Vector3>(id, position, 0u);
       }
@@ -68,6 +79,14 @@ namespace zephyr {
 
       void SetUV0(size_t id, Vector2 uv) {
         m_vbo->Write<Vector2>(id, uv, m_uv0_offset);
+      }
+
+      void SetIndex(size_t id, u32 index) {
+        switch(m_ibo->GetDataType()) {
+          case IndexDataType::UInt16: m_ibo->Data<u16>()[id] = index; break;
+          case IndexDataType::UInt32: m_ibo->Data<u32>()[id] = index; break;
+          default: ZEPHYR_PANIC("Unimplemented index data type");
+        }
       }
 
     private:
@@ -91,6 +110,8 @@ namespace zephyr {
         }
 
         m_stride = current_offset;
+
+        ZEPHYR_INFO("normal_offset={} color0_offset={} uv0_offset={} stride={}", m_normal_offset, m_color0_offset, m_uv0_offset, m_stride)
       }
 
       void CreateVBO() {
@@ -116,6 +137,10 @@ namespace zephyr {
 
         if((bool)m_ibo) {
           m_layout_key |= 0x8000'0000u;
+
+          if(m_ibo->GetDataType() == IndexDataType::UInt32) {
+            m_layout_key |= 0x4000'0000u;
+          }
         }
       }
 

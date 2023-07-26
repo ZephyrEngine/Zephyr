@@ -123,7 +123,7 @@ namespace zephyr {
           ZEPHYR_PANIC("Node already has a component of the type: '{}'", typeid(T).name());
         }
 
-        std::unique_ptr<T> component = std::make_unique<T>(std::forward(args)...);
+        std::unique_ptr<T> component = std::make_unique<T>(std::forward<Args>(args)...);
 
         T* component_raw_ptr = component.get();
         m_components[std::type_index{typeid(T)}] = std::move(component);

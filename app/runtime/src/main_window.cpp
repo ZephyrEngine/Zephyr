@@ -1,4 +1,5 @@
 
+#include <zephyr/scene/mesh.hpp>
 #include <zephyr/scene/node.hpp>
 #include <zephyr/float.hpp>
 #include <stb_image.h>
@@ -7,8 +8,6 @@
 
 #include "renderer/std430_buffer_layout.hpp"
 #include "renderer/material.hpp"
-
-#include <zephyr/renderer/mesh.hpp>
 
 // Shader compilation test
 #include <fstream>
@@ -115,11 +114,8 @@ namespace zephyr {
     const int cubes_per_axis = 25;
 #endif
 
-    m_vbo->Write(0u, -1.0f - 0.1f + std::sin((f32)m_frame * 0.05f), 0u);
-    m_vbo->MarkAsDirty();
-
-    Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_vbo.get());
-    Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_ibo.get());
+    Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_cube_mesh->GetVBO());
+    Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_cube_mesh->GetIBO());
 
     bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
 
@@ -154,7 +150,7 @@ namespace zephyr {
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindPipeline(m_pipeline.get());
     command_buffer->BindVertexBuffers({{vbo}});
-    command_buffer->BindIndexBuffer(ibo, m_ibo->GetDataType());
+    command_buffer->BindIndexBuffer(ibo, m_cube_mesh->GetIBO()->GetDataType());
     command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());
     for(int z = 0; z < cubes_per_axis; z++) {
       for(int x = 0; x < cubes_per_axis; x++) {
@@ -213,7 +209,7 @@ namespace zephyr {
     CreateBindGroups();
     TestShaderCompilation();
     CreateGraphicsPipeline();
-    CreateVertexAndIndexBuffer();
+    CreateCubeMesh();
     CreateUniformBuffer();
     CreateTexture();
     CreateTextureCube();
@@ -305,16 +301,16 @@ namespace zephyr {
     m_pipeline_builder->SetDepthTestEnable(true);
     m_pipeline_builder->SetDepthWriteEnable(true);
     m_pipeline_builder->SetDepthCompareOp(CompareOp::LessOrEqual);
-    m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 8);
+    m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 9);
     m_pipeline_builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
-    m_pipeline_builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 3, false);
-    m_pipeline_builder->AddVertexInputAttribute(2, 0, sizeof(float) * 6, VertexDataType::Float32, 2, false);
+    m_pipeline_builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 4, false);
+    m_pipeline_builder->AddVertexInputAttribute(2, 0, sizeof(float) * 7, VertexDataType::Float32, 2, false);
     m_pipeline_builder->SetPipelineLayout(m_render_device->CreatePipelineLayout({{m_bind_group_layout.get()}}));
 
     m_pipeline = m_pipeline_builder->Build();
   }
 
-  void MainWindow::CreateVertexAndIndexBuffer() {
+  void MainWindow::CreateCubeMesh() {
     /**
      *   4-------5
      *  /|      /|
@@ -365,8 +361,19 @@ namespace zephyr {
       6, 7, 3
     };
 
-    m_vbo = std::make_unique<VertexBuffer>(8 * sizeof(float), std::span{(const u8*)k_vertices, sizeof(k_vertices)});
-    m_ibo = std::make_unique<IndexBuffer>(IndexDataType::UInt16, std::span{(const u8*)k_indices, sizeof(k_indices)});
+    std::shared_ptr<Mesh3D> mesh = std::make_shared<Mesh3D>(8, 36, Mesh3D::Attribute::Color0 | Mesh3D::Attribute::UV0);
+
+    for(size_t i = 0u; i < 8u; i++) {
+      mesh->SetPosition(i, Vector3{k_vertices[i * 8 + 0], k_vertices[i * 8 + 1], k_vertices[i * 8 + 2]});
+      mesh->SetColor0(i, Vector3{k_vertices[i * 8 + 3], k_vertices[i * 8 + 4], k_vertices[i * 8 + 5]});
+      mesh->SetUV0(i, Vector2{k_vertices[i * 8 + 6], k_vertices[i * 8 + 7]});
+    }
+
+    for(size_t i = 0u; i < 36u; i++) {
+      mesh->SetIndex(i, k_indices[i]);
+    }
+
+    m_cube_mesh = std::move(mesh);
   }
 
   void MainWindow::CreateUniformBuffer() {

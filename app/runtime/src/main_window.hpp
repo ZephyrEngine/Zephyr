@@ -8,6 +8,7 @@
 #include <zephyr/renderer/buffer/vertex_buffer.hpp>
 #include <zephyr/renderer/texture/texture_2D.hpp>
 #include <zephyr/renderer/texture/texture_cube.hpp>
+#include <zephyr/renderer/mesh.hpp>
 #include <zephyr/window/window.hpp>
 #include <chrono>
 #include <vector>
@@ -46,7 +47,7 @@ namespace zephyr {
       void CreateRenderPass();
       void CreateFences();
       void CreateGraphicsPipeline();
-      void CreateVertexAndIndexBuffer();
+      void CreateCubeMesh();
       void CreateUniformBuffer();
       void CreateBindGroups();
       void CreateTexture();
@@ -61,8 +62,7 @@ namespace zephyr {
       std::vector<std::unique_ptr<Fence>> m_fences;
       std::unique_ptr<GraphicsPipelineBuilder> m_pipeline_builder;
       std::unique_ptr<GraphicsPipeline> m_pipeline;
-      std::unique_ptr<VertexBuffer> m_vbo;
-      std::unique_ptr<IndexBuffer> m_ibo;
+      std::shared_ptr<Mesh3D> m_cube_mesh;
       std::unique_ptr<UniformBuffer> m_ubo;
       std::shared_ptr<ResourceUploader> m_resource_uploader;
       std::shared_ptr<BufferCache> m_buffer_cache;
