@@ -4,14 +4,13 @@
 #include <zephyr/gpu/enums.hpp>
 #include <zephyr/math/vector.hpp>
 #include <zephyr/renderer/buffer/uniform_buffer.hpp>
+#include <zephyr/renderer/glsl/std430_buffer_layout.hpp>
 #include <zephyr/renderer/texture/texture_2D.hpp>
 #include <array>
 #include <functional>
 #include <string>
 #include <optional>
 #include <vector>
-
-#include "std430_buffer_layout.hpp"
 
 namespace zephyr {
 

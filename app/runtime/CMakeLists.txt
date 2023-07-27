@@ -16,7 +16,6 @@ set(HEADERS
   src/renderer/material_pipeline_cache.hpp
   src/renderer/resource_uploader.hpp
   src/renderer/sampler_cache.hpp
-  src/renderer/std430_buffer_layout.hpp
   src/renderer/texture_cache.hpp
   src/shader/mesh.frag.h
   src/shader/mesh.vert.h

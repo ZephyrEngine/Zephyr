@@ -3,7 +3,6 @@
 
 #include "main_window.hpp"
 
-#include "renderer/std430_buffer_layout.hpp"
 #include "renderer/material.hpp"
 
 // Shader compilation test

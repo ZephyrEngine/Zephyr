@@ -12,6 +12,8 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/buffer/index_buffer.hpp
   include/zephyr/renderer/buffer/uniform_buffer.hpp
   include/zephyr/renderer/buffer/vertex_buffer.hpp
+  include/zephyr/renderer/glsl/type.hpp
+  include/zephyr/renderer/glsl/std430_buffer_layout.hpp
   include/zephyr/renderer/texture/sampler_resource.hpp
   include/zephyr/renderer/texture/texture_2D.hpp
   include/zephyr/renderer/texture/texture_cube.hpp
