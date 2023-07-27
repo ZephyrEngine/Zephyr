@@ -124,9 +124,10 @@ namespace zephyr {
   class PBRMaterialShader final : public MaterialShader {
     public:
       PBRMaterialShader() {
-        m_buffer_layout.Add<f32>("roughness");
-        m_buffer_layout.Add<f32>("metalness");
-        m_buffer_layout.Build(); // TODO: rework setup so that this is an enforced step.
+        GLSLVariableList parameters;
+        parameters.Add<f32>("roughness");
+        parameters.Add<f32>("metalness");
+        m_buffer_layout = STD430BufferLayout{parameters};
       }
 
       [[nodiscard]] const STD430BufferLayout& GetParameterBufferLayout() const override {

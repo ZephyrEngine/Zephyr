@@ -1,26 +1,35 @@
 
 #pragma once
 
-#include <zephyr/renderer/glsl/type.hpp>
+#include <zephyr/renderer/glsl/variable_list.hpp>
 #include <zephyr/panic.hpp>
 #include <algorithm>
 #include <string>
 #include <span>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace zephyr {
 
   class STD430BufferLayout {
     public:
-      struct Variable {
-        GLSLType type;
-        std::string name;
-        size_t array_size;
+      struct Variable : GLSLVariableList::Variable {
         size_t buffer_offset;
         size_t data_size;
         size_t data_alignment;
       };
+
+      STD430BufferLayout() = default;
+
+      explicit STD430BufferLayout(const GLSLVariableList& variable_list) {
+        for(const auto& variable : variable_list.GetVariables()) {
+          m_variables.push_back(Variable{variable});
+          m_variable_map[variable.name] = &m_variables.back();
+        }
+
+        Build();
+      }
 
       [[nodiscard]] std::span<const Variable> GetVariables() const {
         return m_variables;
@@ -30,21 +39,6 @@ namespace zephyr {
         return m_size;
       }
 
-      template<typename T>
-      void Add(std::string name) {
-        Add<T>(name, 0u);
-      }
-
-      template<typename T>
-      void Add(std::string name, size_t array_size) {
-        if(m_variable_map.find(name) != m_variable_map.end()) {
-          ZEPHYR_PANIC("Duplicate variable name in std430 buffer layout: {}", name);
-        }
-
-        m_variables.push_back({GLSLType::FromCPPType<T>(), name, array_size});
-        m_variable_map[name] = &m_variables.back();
-      }
-
       const Variable& GetVariable(const std::string& name) const {
         if(auto match = m_variable_map.find(name); match != m_variable_map.end()) {
           return *match->second;
@@ -52,6 +46,8 @@ namespace zephyr {
 
         ZEPHYR_PANIC("No variable named '{}' found in std430 buffer layout", name);
       }
+
+    private:
 
       void Build() {
         for(auto& variable : m_variables) {
@@ -84,8 +80,6 @@ namespace zephyr {
 
         m_size = buffer_offset;
       }
-
-    private:
 
       [[nodiscard]] static size_t GLSLTypeToSize(const GLSLType& type, bool is_inside_array) {
         return GetNumberOfComponentsFromGrade(type.GetGrade(), is_inside_array) *

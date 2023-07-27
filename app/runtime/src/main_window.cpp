@@ -19,22 +19,22 @@ namespace zephyr {
     Setup();
 
     {
-      STD430BufferLayout layout{};
+      GLSLVariableList parameters{};
+      parameters.Add<f32>("some_float");
+      parameters.Add<bool>("some_bool");
+      parameters.Add<Vector2>("some_vec2");
+      parameters.Add<int>("some_int");
+      parameters.Add<Vector3>("some_vec3");
+      parameters.Add<Vector3>("some_vec3_2");
+      parameters.Add<Vector4>("some_vec4");
+      parameters.Add<uint>("some_uint");
+      parameters.Add<uint>("some_uint_2");
+      parameters.Add<Matrix4>("some_mat4");
+      parameters.Add<Matrix4>("some_mat4_2");
+      parameters.Add<int>("int_array_1", 16);
+      parameters.Add<Matrix4>("mat4_array_1", 16);
 
-      layout.Add<f32>("some_float");
-      layout.Add<bool>("some_bool");
-      layout.Add<Vector2>("some_vec2");
-      layout.Add<int>("some_int");
-      layout.Add<Vector3>("some_vec3");
-      layout.Add<Vector3>("some_vec3_2");
-      layout.Add<Vector4>("some_vec4");
-      layout.Add<uint>("some_uint");
-      layout.Add<uint>("some_uint_2");
-      layout.Add<Matrix4>("some_mat4");
-      layout.Add<Matrix4>("some_mat4_2");
-      layout.Add<int>("int_array_1", 16);
-      layout.Add<Matrix4>("mat4_array_1", 16);
-      layout.Build();
+      STD430BufferLayout layout{parameters};
 
       for(auto& variable : layout.GetVariables()) {
         if(variable.array_size != 0u) {
