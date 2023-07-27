@@ -137,13 +137,12 @@ namespace zephyr {
     fence->Reset();
     m_render_device->GraphicsQueue()->Submit({{m_resource_uploader->GetCurrentCommandBuffer(), command_buffer.get()}}, fence.get());
 
-    // @todo: when is the right time to submit the frame?
     GetSwapChain()->Present();
 
     // Update the transform of the second cube
     const float angle = (f32)m_frame * 0.01f;
     auto& cube_b = m_scene_root->GetChildren()[0]->GetChildren()[0];
-    cube_b->GetTransform().GetPosition() = Vector3{std::cos(angle), 0.0f, -std::sin(angle)} * 1.5f;
+    cube_b->GetTransform().GetPosition() = Vector3{std::cos(angle), 0.0f, -std::sin(angle)} * 2.0f;
     cube_b->GetTransform().GetRotation().SetFromEuler(0.0f, angle, 0.0f);
 
     m_frame++;
@@ -400,7 +399,7 @@ namespace zephyr {
 
     SceneNode* cube_a = m_scene_root->CreateChild("Cube A");
     cube_a->CreateComponent<MeshComponent>(m_cube_mesh);
-    cube_a->GetTransform().GetPosition().Z() = -5.0f;
+    cube_a->GetTransform().GetPosition() = Vector3{0.0f, 0.0f, -5.0f};
 
     SceneNode* cube_b = cube_a->CreateChild("Cube B");
     cube_b->CreateComponent<MeshComponent>(m_cube_mesh);
