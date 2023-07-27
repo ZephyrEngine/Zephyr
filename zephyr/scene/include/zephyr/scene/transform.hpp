@@ -11,7 +11,7 @@ namespace zephyr {
 
   class Transform3D {
     public:
-      explicit Transform3D(SceneNode* parent) : m_parent{parent} {}
+      explicit Transform3D(SceneNode* node) : m_node{node} {}
 
       [[nodiscard]] const Vector3& GetPosition() const {
         return m_position;
@@ -49,9 +49,9 @@ namespace zephyr {
       void UpdateWorld();
 
     private:
-      SceneNode* m_parent;
+      SceneNode* m_node;
       Vector3 m_position;
-      Vector3 m_scale;
+      Vector3 m_scale{1.0f, 1.0f, 1.0f};
       Rotation m_rotation;
       Matrix4 m_local_matrix;
       Matrix4 m_world_matrix;

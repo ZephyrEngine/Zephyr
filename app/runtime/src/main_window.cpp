@@ -1,7 +1,4 @@
 
-#include <zephyr/scene/mesh.hpp>
-#include <zephyr/scene/node.hpp>
-#include <zephyr/float.hpp>
 #include <stb_image.h>
 
 #include "main_window.hpp"
@@ -21,23 +18,6 @@ namespace zephyr {
     SetWindowSize(1600, 900);
     SetWindowTitle("Zephyr Runtime");
     Setup();
-
-    {
-      std::unique_ptr<SceneNode> scene = std::make_unique<SceneNode>("SceneRoot");
-
-      SceneNode* child_a = scene->CreateChild("ChildA");
-      SceneNode* child_b = scene->CreateChild("ChildB");
-      SceneNode* child_c = child_b->CreateChild("ChildC");
-      SceneNode* child_d = child_b->CreateChild("ChildD");
-      SceneNode* child_e = child_d->CreateChild("ChildE");
-
-      scene->Traverse([](SceneNode* node) {
-        ZEPHYR_INFO("node: {}", node->GetName());
-        node->GetTransform().UpdateLocal();
-        node->GetTransform().UpdateWorld();
-        return node->IsVisible();
-      });
-    }
 
     {
       STD430BufferLayout layout{};
@@ -93,29 +73,7 @@ namespace zephyr {
 
     const auto& render_target = GetSwapChain()->AcquireNextRenderTarget();
 
-    struct Transform {
-      Matrix4 projection;
-      Matrix4 model_view;
-    } transform;
-
-    transform.projection = m_projection_matrix;
-
     m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
-
-//    // Do some non-sense calculations to cause load on the CPU side
-    f32 jitter = 0.0f;
-//    for(int i = 0; i < 150000; i++) {
-//      jitter = std::sin(jitter + (f32)(m_frame + i) * 0.001f);
-//    }
-
-#ifdef __APPLE__
-    const int cubes_per_axis = 5;
-#else
-    const int cubes_per_axis = 25;
-#endif
-
-    Buffer* vbo = m_buffer_cache->GetDeviceBuffer(m_cube_mesh->GetVBO());
-    Buffer* ibo = m_buffer_cache->GetDeviceBuffer(m_cube_mesh->GetIBO());
 
     bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
 
@@ -135,39 +93,40 @@ namespace zephyr {
       Texture::Layout::ShaderReadOnly
     );
 
-    static int frame = 0;
-    if(++frame == 1000) {
-      for(int y = 0; y < m_texture->GetHeight(); y++) {
-        for(int x = 0; x < m_texture->GetWidth(); x++) {
-          m_texture->Data<u32>()[y * m_texture->GetWidth() + x] |= 0xFFFF0000;
-        }
-      }
-      m_texture->MarkAsDirty();
-    }
-
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->SetViewport(0, 0, m_width, m_height);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
     command_buffer->BindPipeline(m_pipeline.get());
-    command_buffer->BindVertexBuffers({{vbo}});
-    command_buffer->BindIndexBuffer(ibo, m_cube_mesh->GetIBO()->GetDataType());
     command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());
-    for(int z = 0; z < cubes_per_axis; z++) {
-      for(int x = 0; x < cubes_per_axis; x++) {
-        for(int y = 0; y < cubes_per_axis; y++) {
-          const float scene_x = ((f32)x / (f32)cubes_per_axis * 2.0f - 1.0f) * 5.0f + jitter * 0.0000001f;
-          const float scene_y = ((f32)y / (f32)cubes_per_axis * 2.0f - 1.0f) * 5.0f;
-          const float scene_z = ((f32)z / (f32)cubes_per_axis * 2.0f) * 5.0f + 3.0f;
 
-          transform.model_view = Matrix4::Translation(scene_x, scene_y, -scene_z) *
-                                 Matrix4::RotationX((f32)m_frame * 0.025f) *
-                                 Matrix4::Scale(0.1f, 0.1f, 0.1f);
+    command_buffer->PushConstants(m_pipeline->GetLayout(), 0u, sizeof(Matrix4), &m_projection_matrix);
 
-          command_buffer->PushConstants(m_pipeline->GetLayout(), 0, sizeof(transform), &transform);
-          command_buffer->DrawIndexed(36);
-        }
+    m_scene_root->Traverse([&](SceneNode* node) {
+      node->GetTransform().UpdateLocal();
+      node->GetTransform().UpdateWorld();
+      return true;
+    });
+
+    m_scene_root->Traverse([&](SceneNode* node) {
+      if(!node->IsVisible()) {
+        return false;
       }
-    }
+
+      if(node->HasComponent<MeshComponent>()) {
+        const MeshComponent& mesh_component = node->GetComponent<MeshComponent>();
+        const Mesh3D& mesh = *mesh_component.mesh;
+        const VertexBuffer* vbo = mesh.GetVBO();
+        const IndexBuffer*  ibo = mesh.GetIBO();
+
+        command_buffer->BindVertexBuffers({{m_buffer_cache->GetDeviceBuffer(vbo)}});
+        command_buffer->BindIndexBuffer(m_buffer_cache->GetDeviceBuffer(ibo), ibo->GetDataType());
+        command_buffer->PushConstants(m_pipeline->GetLayout(), sizeof(Matrix4), sizeof(Matrix4), &node->GetTransform().GetWorld());
+        command_buffer->DrawIndexed(ibo->GetNumberOfIndices());
+      }
+
+      return true;
+    });
+
     command_buffer->EndRenderPass();
     command_buffer->End();
 
@@ -180,6 +139,12 @@ namespace zephyr {
 
     // @todo: when is the right time to submit the frame?
     GetSwapChain()->Present();
+
+    // Update the transform of the second cube
+    const float angle = (f32)m_frame * 0.01f;
+    auto& cube_b = m_scene_root->GetChildren()[0]->GetChildren()[0];
+    cube_b->GetTransform().GetPosition() = Vector3{std::cos(angle), 0.0f, -std::sin(angle)} * 1.5f;
+    cube_b->GetTransform().GetRotation().SetFromEuler(0.0f, angle, 0.0f);
 
     m_frame++;
 
@@ -213,6 +178,7 @@ namespace zephyr {
     CreateUniformBuffer();
     CreateTexture();
     CreateTextureCube();
+    CreateScene();
   }
 
   void MainWindow::CreateCommandPoolAndBuffers() {
@@ -391,11 +357,6 @@ namespace zephyr {
 
     m_texture = std::make_unique<Texture2D>(width, height, Texture2D::Format::RGBA, Texture2D::DataType::UnsignedByte, Texture2D::ColorSpace::SRGB);
 
-//    std::shared_ptr<SamplerResource> sampler = std::make_shared<SamplerResource>();
-//    sampler->SetMagFilter(Sampler::FilterMode::Nearest);
-//    sampler->SetMinFilter(Sampler::FilterMode::Nearest);
-//    m_texture->SetSampler(std::move(sampler));
-
     std::memcpy(m_texture->Data(), texture_data, m_texture->Size());
   }
 
@@ -432,6 +393,18 @@ namespace zephyr {
     for(int i = 0; i < 6; i++) {
       std::memcpy(m_texture_cube->Data<u8>((TextureCube::Face)i), face_data[i], m_texture_cube->Size()/6);
     }
+  }
+
+  void MainWindow::CreateScene() {
+    m_scene_root = std::make_unique<SceneNode>();
+
+    SceneNode* cube_a = m_scene_root->CreateChild("Cube A");
+    cube_a->CreateComponent<MeshComponent>(m_cube_mesh);
+    cube_a->GetTransform().GetPosition().Z() = -5.0f;
+
+    SceneNode* cube_b = cube_a->CreateChild("Cube B");
+    cube_b->CreateComponent<MeshComponent>(m_cube_mesh);
+    cube_b->GetTransform().GetScale() = Vector3{0.25f, 0.25f, 0.25f};
   }
 
   void MainWindow::UpdateFramesPerSecondCounter() {

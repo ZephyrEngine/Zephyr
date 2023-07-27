@@ -104,21 +104,21 @@ namespace zephyr {
       }
 
       template<typename T>
-      [[nodiscard]] const T* GetComponent() const {
-        return (const T*)const_cast<SceneNode*>(this)->GetComponent<T>();
+      [[nodiscard]] const T& GetComponent() const {
+        return (const T&)const_cast<SceneNode*>(this)->GetComponent<T>();
       }
 
       template<typename T>
-      [[nodiscard]] T* GetComponent() {
+      [[nodiscard]] T& GetComponent() {
         if(!HasComponent<T>()) {
           ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
         }
 
-        return m_components[std::type_index{typeid(T)}].get();
+        return (T&)*m_components[std::type_index{typeid(T)}];
       }
 
       template<typename T, typename... Args>
-      T* CreateComponent(Args&&... args) {
+      T& CreateComponent(Args&&... args) {
         if(HasComponent<T>()) {
           ZEPHYR_PANIC("Node already has a component of the type: '{}'", typeid(T).name());
         }
@@ -127,7 +127,7 @@ namespace zephyr {
 
         T* component_raw_ptr = component.get();
         m_components[std::type_index{typeid(T)}] = std::move(component);
-        return component_raw_ptr;
+        return *component_raw_ptr;
       }
 
       template<typename T>
