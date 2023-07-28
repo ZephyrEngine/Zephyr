@@ -9,11 +9,7 @@
 namespace zephyr {
 
   enum class Technique : u8 {
-    EarlyZ,
-    Shadow,
-    GBuffer,
-    ForwardOpaque,
-    ForwardTransparent
+    Forward
   };
 
   struct TechniqueBlendState {

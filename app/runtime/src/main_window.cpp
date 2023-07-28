@@ -74,29 +74,9 @@ namespace zephyr {
 
     m_render_pass->SetClearColor(0, 0.02, 0.02, 0.02, 1.0);
 
-    bind_group->Bind(0u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
-
-    auto& sampler = m_texture->GetSampler();
-
-    bind_group->Bind(
-      1u,
-      m_texture_cache->GetDeviceTexture(m_texture.get()),
-      (bool)sampler ? m_sampler_cache->GetDeviceSampler(m_texture->GetSampler().get()) : m_render_device->DefaultLinearSampler(),
-      Texture::Layout::ShaderReadOnly
-    );
-
-    bind_group->Bind(
-      2u,
-      m_texture_cache->GetDeviceTexture(m_texture_cube.get()),
-      (bool)sampler ? m_sampler_cache->GetDeviceSampler(m_texture_cube->GetSampler().get()) : m_render_device->DefaultLinearSampler(),
-      Texture::Layout::ShaderReadOnly
-    );
-
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->SetViewport(0, 0, m_width, m_height);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
-
-    command_buffer->PushConstants(m_pipeline->GetLayout(), 0u, sizeof(Matrix4), &m_projection_matrix);
 
     m_scene_root->Traverse([&](SceneNode* node) {
       node->GetTransform().UpdateLocal();
@@ -106,6 +86,7 @@ namespace zephyr {
 
     const Mesh3D* current_mesh = nullptr;
     const Material* current_material = nullptr;
+    GraphicsPipeline* current_pipeline = nullptr;
 
     m_scene_root->Traverse([&](SceneNode* node) {
       if(!node->IsVisible()) {
@@ -119,16 +100,49 @@ namespace zephyr {
         const IndexBuffer*  ibo = mesh.GetIBO();
         const VertexBuffer* vbo = mesh.GetVBO();
 
-        command_buffer->PushConstants(m_pipeline->GetLayout(), sizeof(Matrix4), sizeof(Matrix4), &node->GetTransform().GetWorld());
+        const bool new_material = &material != current_material;
+        const bool new_mesh_layout = !current_mesh || mesh.GetLayoutKey() != current_mesh->GetLayoutKey();
+        const bool new_mesh = &mesh != current_mesh;
 
-        if(&material != current_material) {
-          command_buffer->BindPipeline(m_pipeline.get());
-          command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());
+        if(new_material || new_mesh_layout) {
+          GraphicsPipeline* pipeline = m_material_pipeline_cache->GetGraphicsPipeline(Technique::Forward, &material, &mesh, m_render_pass);
+
+          command_buffer->BindPipeline(pipeline);
+          command_buffer->BindBindGroup(PipelineBindPoint::Graphics, pipeline->GetLayout(), 0, bind_group.get());
+
+          // Update bind group bindings
+          {
+            auto& sampler = m_texture->GetSampler();
+
+            // problem: bind group can not be updated here (at least not more than once)
+            // solution: possibly use vkCmdPushDescriptorSetKHR
+
+            bind_group->Bind(
+              0u,
+              m_texture_cache->GetDeviceTexture(m_texture.get()),
+              (bool)sampler ? m_sampler_cache->GetDeviceSampler(m_texture->GetSampler().get()) : m_render_device->DefaultLinearSampler(),
+              Texture::Layout::ShaderReadOnly
+            );
+
+            bind_group->Bind(
+              1u,
+              m_texture_cache->GetDeviceTexture(m_texture_cube.get()),
+              (bool)sampler ? m_sampler_cache->GetDeviceSampler(m_texture_cube->GetSampler().get()) : m_render_device->DefaultLinearSampler(),
+              Texture::Layout::ShaderReadOnly
+            );
+
+            bind_group->Bind(32u, m_buffer_cache->GetDeviceBuffer(m_ubo.get()), BindingType::UniformBuffer);
+          }
 
           current_material = &material;
+          current_pipeline = pipeline;
         }
 
-        if(&mesh != current_mesh) {
+        // @todo: ideally do not embed the projection matrix on every draw call
+        command_buffer->PushConstants(current_pipeline->GetLayout(), 0u, sizeof(Matrix4), &m_projection_matrix);
+        command_buffer->PushConstants(current_pipeline->GetLayout(), sizeof(Matrix4), sizeof(Matrix4), &node->GetTransform().GetWorld());
+
+        if(new_mesh) {
           if(ibo) {
             command_buffer->BindIndexBuffer(m_buffer_cache->GetDeviceBuffer(ibo), ibo->GetDataType());
           }
@@ -189,10 +203,10 @@ namespace zephyr {
     CreateTextureCache();
     CreateSamplerCache();
     CreateRenderPass();
+    CreateMaterialPipelineCache();
     CreateFences();
     CreateBindGroups();
     TestShaderCompilation();
-    CreateGraphicsPipeline();
     CreateCubeMesh();
     CreateUniformBuffer();
     CreateTexture();
@@ -250,49 +264,29 @@ namespace zephyr {
   }
 
   void MainWindow::CreateBindGroups() {
-    m_bind_group_layout = m_render_device->CreateBindGroupLayout({{
-      {
-        .binding = 0u,
-        .type = BindingType::UniformBuffer,
-        .stages = ShaderStage::All
-      },
-      {
-        .binding = 1u,
+    // @todo: deduplicate bind group layout creation
+
+    std::array<BindGroupLayout::Entry, 33> bindings;
+
+    for(u32 binding = 0; binding < 32u; binding++) {
+      bindings[binding] = {
+        .binding = binding,
         .type = BindingType::ImageWithSampler,
         .stages = ShaderStage::All
-      },
-      {
-        .binding = 2u,
-        .type = BindingType::ImageWithSampler,
-        .stages = ShaderStage::All
-      }
-    }});
+      };
+    }
+
+    bindings[32] = {
+      .binding = 32u,
+      .type = BindingType::UniformBuffer,
+      .stages = ShaderStage::All
+    };
+
+    m_bind_group_layout = m_render_device->CreateBindGroupLayout(bindings);
 
     for(uint i = 0; i < m_frames_in_flight; i++) {
       m_bind_groups.push_back(m_render_device->CreateBindGroup(m_bind_group_layout));
     }
-  }
-
-  void MainWindow::CreateGraphicsPipeline() {
-    std::shared_ptr<ShaderModule> vert_shader = m_render_device->CreateShaderModule(mesh_vert, sizeof(mesh_vert));
-    std::shared_ptr<ShaderModule> frag_shader = m_render_device->CreateShaderModule(mesh_frag, sizeof(mesh_frag));
-
-    m_pipeline_builder = m_render_device->CreateGraphicsPipelineBuilder();
-
-    m_pipeline_builder->SetDynamicViewportEnable(true);
-    m_pipeline_builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
-    m_pipeline_builder->SetShaderModule(ShaderStage::Fragment, frag_shader);
-    m_pipeline_builder->SetRenderPass(m_render_pass);
-    m_pipeline_builder->SetDepthTestEnable(true);
-    m_pipeline_builder->SetDepthWriteEnable(true);
-    m_pipeline_builder->SetDepthCompareOp(CompareOp::LessOrEqual);
-    m_pipeline_builder->AddVertexInputBinding(0, sizeof(float) * 9);
-    m_pipeline_builder->AddVertexInputAttribute(0, 0, 0, VertexDataType::Float32, 3, false);
-    m_pipeline_builder->AddVertexInputAttribute(1, 0, sizeof(float) * 3, VertexDataType::Float32, 4, false);
-    m_pipeline_builder->AddVertexInputAttribute(2, 0, sizeof(float) * 7, VertexDataType::Float32, 2, false);
-    m_pipeline_builder->SetPipelineLayout(m_render_device->CreatePipelineLayout({{m_bind_group_layout.get()}}));
-
-    m_pipeline = m_pipeline_builder->Build();
   }
 
   void MainWindow::CreateCubeMesh() {
@@ -559,7 +553,7 @@ layout(set = 0, binding = 0, std430) uniform MaterialParams {{
 
     // @todo: think how we want to treat material parameters for different technique, some of which may be generic
 
-    const TechniquePass& technique_pass = shader.GetTechniquePass(Technique::GBuffer).value();
+    const TechniquePass& technique_pass = shader.GetTechniquePass(Technique::Forward).value();
 
     CompileShader(uniform_block + ReadAsString(technique_pass.frag_shader_path), GLSLANG_STAGE_FRAGMENT);
 

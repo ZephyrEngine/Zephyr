@@ -48,7 +48,6 @@ namespace zephyr {
       void CreateMaterialPipelineCache();
       void CreateRenderPass();
       void CreateFences();
-      void CreateGraphicsPipeline();
       void CreateCubeMesh();
       void CreateUniformBuffer();
       void CreateBindGroups();
@@ -64,7 +63,6 @@ namespace zephyr {
       std::shared_ptr<RenderPass> m_render_pass;
       std::vector<std::unique_ptr<Fence>> m_fences;
       std::unique_ptr<GraphicsPipelineBuilder> m_pipeline_builder;
-      std::unique_ptr<GraphicsPipeline> m_pipeline;
       std::shared_ptr<Mesh3D> m_cube_mesh;
       std::unique_ptr<UniformBuffer> m_ubo;
       std::shared_ptr<ResourceUploader> m_resource_uploader;
