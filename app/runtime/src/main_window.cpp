@@ -95,8 +95,6 @@ namespace zephyr {
     command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffer->SetViewport(0, 0, m_width, m_height);
     command_buffer->BeginRenderPass(render_target.get(), m_render_pass.get());
-    command_buffer->BindPipeline(m_pipeline.get());
-    command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());
 
     command_buffer->PushConstants(m_pipeline->GetLayout(), 0u, sizeof(Matrix4), &m_projection_matrix);
 
@@ -106,6 +104,9 @@ namespace zephyr {
       return true;
     });
 
+    const Mesh3D* current_mesh = nullptr;
+    const Material* current_material = nullptr;
+
     m_scene_root->Traverse([&](SceneNode* node) {
       if(!node->IsVisible()) {
         return false;
@@ -114,13 +115,33 @@ namespace zephyr {
       if(node->HasComponent<MeshComponent>()) {
         const MeshComponent& mesh_component = node->GetComponent<MeshComponent>();
         const Mesh3D& mesh = *mesh_component.mesh;
-        const VertexBuffer* vbo = mesh.GetVBO();
+        const Material& material = *mesh_component.material;
         const IndexBuffer*  ibo = mesh.GetIBO();
+        const VertexBuffer* vbo = mesh.GetVBO();
 
-        command_buffer->BindVertexBuffers({{m_buffer_cache->GetDeviceBuffer(vbo)}});
-        command_buffer->BindIndexBuffer(m_buffer_cache->GetDeviceBuffer(ibo), ibo->GetDataType());
         command_buffer->PushConstants(m_pipeline->GetLayout(), sizeof(Matrix4), sizeof(Matrix4), &node->GetTransform().GetWorld());
-        command_buffer->DrawIndexed(ibo->GetNumberOfIndices());
+
+        if(&material != current_material) {
+          command_buffer->BindPipeline(m_pipeline.get());
+          command_buffer->BindBindGroup(PipelineBindPoint::Graphics, m_pipeline->GetLayout(), 0, bind_group.get());
+
+          current_material = &material;
+        }
+
+        if(&mesh != current_mesh) {
+          if(ibo) {
+            command_buffer->BindIndexBuffer(m_buffer_cache->GetDeviceBuffer(ibo), ibo->GetDataType());
+          }
+          command_buffer->BindVertexBuffers({{m_buffer_cache->GetDeviceBuffer(vbo)}});
+
+          current_mesh = &mesh;
+        }
+
+        if(ibo) {
+          command_buffer->DrawIndexed(ibo->GetNumberOfIndices());
+        } else {
+          command_buffer->Draw(vbo->GetNumberOfVertices());
+        }
       }
 
       return true;
@@ -396,12 +417,14 @@ namespace zephyr {
   void MainWindow::CreateScene() {
     m_scene_root = std::make_unique<SceneNode>();
 
+    std::shared_ptr<Material> pbr_material = std::make_shared<Material>(std::make_shared<PBRMaterialShader>());
+
     SceneNode* cube_a = m_scene_root->CreateChild("Cube A");
-    cube_a->CreateComponent<MeshComponent>(m_cube_mesh);
+    cube_a->CreateComponent<MeshComponent>(m_cube_mesh, pbr_material);
     cube_a->GetTransform().GetPosition() = Vector3{0.0f, 0.0f, -5.0f};
 
     SceneNode* cube_b = cube_a->CreateChild("Cube B");
-    cube_b->CreateComponent<MeshComponent>(m_cube_mesh);
+    cube_b->CreateComponent<MeshComponent>(m_cube_mesh, pbr_material);
     cube_b->GetTransform().GetScale() = Vector3{0.25f, 0.25f, 0.25f};
   }
 

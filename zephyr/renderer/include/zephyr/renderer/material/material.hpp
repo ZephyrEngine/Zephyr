@@ -13,7 +13,7 @@
 
 namespace zephyr {
 
-    class MaterialShader {
+  class MaterialShader {
     public:
       [[nodiscard]] virtual const STD430BufferLayout& GetParameterBufferLayout() const = 0;
       [[nodiscard]] virtual std::span<const std::string> GetTextureSlots() const = 0;
