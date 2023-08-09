@@ -19,9 +19,11 @@ namespace zephyr {
     public:
       explicit MaterialPipelineCache(std::shared_ptr<RenderDevice> render_device);
 
+      void RegisterTechnique(Technique technique, std::shared_ptr<RenderPass> render_pass);
+
       // @todo: use references (and just buffer, texture and sampler caches accordingly)
       // @todo: get rid of the render pass parameter
-      GraphicsPipeline* GetGraphicsPipeline(Technique technique, const Material* material, const Mesh3D* mesh, const std::shared_ptr<RenderPass>& render_pass);
+      GraphicsPipeline* GetGraphicsPipeline(Technique technique, const Material* material, const Mesh3D* mesh);
 
     private:
       struct Key {
@@ -58,6 +60,9 @@ namespace zephyr {
       std::shared_ptr<RenderDevice> m_render_device;
       std::shared_ptr<BindGroupLayout> m_bind_group_layout;
       std::unordered_map<const Key, Entry, KeyHash> m_cache;
+      std::array<std::shared_ptr<RenderPass>, 256> m_technique_render_pass;
+
+      static_assert(std::is_same_v<std::underlying_type_t<Technique>, u8>);
   };
 
 } // namespace zephyr

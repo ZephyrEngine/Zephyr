@@ -105,7 +105,7 @@ namespace zephyr {
         const bool new_mesh = &mesh != current_mesh;
 
         if(new_material || new_mesh_layout) {
-          GraphicsPipeline* pipeline = m_material_pipeline_cache->GetGraphicsPipeline(Technique::Forward, &material, &mesh, m_render_pass);
+          GraphicsPipeline* pipeline = m_material_pipeline_cache->GetGraphicsPipeline(Technique::Forward, &material, &mesh);
 
           command_buffer->BindPipeline(pipeline);
           command_buffer->BindBindGroup(PipelineBindPoint::Graphics, pipeline->GetLayout(), 0, bind_group.get());
@@ -255,6 +255,8 @@ namespace zephyr {
 
   void MainWindow::CreateMaterialPipelineCache() {
     m_material_pipeline_cache = std::make_shared<MaterialPipelineCache>(m_render_device);
+
+    m_material_pipeline_cache->RegisterTechnique(Technique::Forward, m_render_pass);
   }
 
   void MainWindow::CreateFences() {

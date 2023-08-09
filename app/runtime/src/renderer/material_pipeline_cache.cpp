@@ -9,10 +9,16 @@ namespace zephyr {
 
   MaterialPipelineCache::MaterialPipelineCache(std::shared_ptr<RenderDevice> render_device)
       : m_render_device{std::move(render_device)} {
+    m_technique_render_pass.fill(nullptr);
+
     CreateBindGroupLayout();
   }
 
-  GraphicsPipeline* MaterialPipelineCache::GetGraphicsPipeline(Technique technique, const Material* material, const Mesh3D* mesh, const std::shared_ptr<RenderPass>& render_pass) {
+  void MaterialPipelineCache::RegisterTechnique(Technique technique, std::shared_ptr<RenderPass> render_pass) {
+    m_technique_render_pass[(u8)technique] = std::move(render_pass);
+  }
+
+  GraphicsPipeline* MaterialPipelineCache::GetGraphicsPipeline(Technique technique, const Material* material, const Mesh3D* mesh) {
     const u64 variant_key = BuildVariantKey(technique, material, mesh);
     const Key key{&material->GetShader(), variant_key, technique};
 
@@ -25,6 +31,12 @@ namespace zephyr {
 
       std::shared_ptr<ShaderModule> vert_shader = m_render_device->CreateShaderModule(mesh_vert, sizeof(mesh_vert));
       std::shared_ptr<ShaderModule> frag_shader = m_render_device->CreateShaderModule(mesh_frag, sizeof(mesh_frag));
+
+      std::shared_ptr<RenderPass> render_pass = m_technique_render_pass[(u8)technique];
+
+      if(!render_pass) {
+        ZEPHYR_PANIC("No render pass has been registered for technique: {}", (u8)technique);
+      }
 
       pipeline_builder->SetDynamicViewportEnable(true);
       pipeline_builder->SetShaderModule(ShaderStage::Vertex, vert_shader);
