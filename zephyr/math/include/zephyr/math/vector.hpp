@@ -278,7 +278,7 @@ namespace zephyr {
          * @param other the other vector
          * @returm the result vector
          */
-        [[nodiscard]] auto Cross(Vector3 const& other) const -> Vector3 {
+        [[nodiscard]] auto Cross(Vector3 const& other) const -> Derived {
           return {
             this->data[1] * other[2] - this->data[2] * other[1],
             this->data[2] * other[0] - this->data[0] * other[2],
@@ -312,7 +312,7 @@ namespace zephyr {
         /**
          * Construct a Vector4 from a Vector3 and a scalar w-component.
          */
-        explicit Vector4(Vec3 const& xyz, T w = NumericConstants<T>::one()) {
+        explicit Vector4(Vec3 const& xyz, T w = NumericConstants<T>::One()) {
           this->data[0] = xyz.X();
           this->data[1] = xyz.Y();
           this->data[2] = xyz.Z();
