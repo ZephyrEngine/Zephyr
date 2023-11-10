@@ -92,7 +92,7 @@ namespace zephyr {
       .pQueueFamilyIndices = nullptr,
       .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
       .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-      .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+      .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,//VK_PRESENT_MODE_FIFO_KHR,
       .clipped = VK_TRUE,
       .oldSwapchain = swap_chain
     };
