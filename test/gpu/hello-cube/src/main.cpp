@@ -15,6 +15,8 @@
 #include "shader/mesh.vert.h"
 #include "shader/mesh.frag.h"
 
+#include "render_command_list.hpp"
+
 using namespace zephyr;
 
 /// BEGIN SETTINGS
@@ -24,8 +26,9 @@ static constexpr int g_thread_count = 4;
 enum class Mode {
   ST,
   MT, // Multi-threaded, recording directly into Vulkan native command buffers
-  MT_irc // Multi-threaded, using intermediate render command lists
-} g_mode = Mode::MT_irc;
+  MT_irc, // Multi-threaded, using intermediate render command lists
+  MT_irc2
+} g_mode = Mode::MT_irc2;
 
 /// END SETTINGS
 
@@ -409,6 +412,119 @@ class MainWindow final : public Window {
           render_device->GraphicsQueue()->Submit({cmd_bufs}, fence);
           break;
         }
+        case Mode::MT_irc2: {
+          // Multi-threaded, intermediate render command lists (2)
+          const int split_cubes = x_cubes / g_thread_count;
+
+          std::vector<std::thread> threads;
+
+          std::vector<CommandBuffer*> cmd_bufs;
+
+          for(int i = 0; i < g_thread_count; i++) {
+            CommandBuffer* render_command_buffer = m_render_command_buffers[frame_index * g_thread_count + i].get();
+
+            cmd_bufs.push_back(render_command_buffer);
+
+            gpu_next::RenderCommandList* render_command_list = &render_command_lists_2[i];
+
+            threads.emplace_back([=]{
+              Transform transform;
+              transform.model_view = Matrix4::Translation(0, 0, -5);
+
+              render_command_list->Reset();
+              if(i == 0) {
+                render_command_list->BeginRenderPass(render_target.get(), render_pass_clear.get());
+              } else {
+                render_command_list->BeginRenderPass(render_target.get(), render_pass_load.get());
+              }
+
+              const int x0 = split_cubes * i;
+              const int x1 = x0 + split_cubes;
+
+              for(int x = x0; x < x1; x++) {
+                for(int y = 0; y < y_cubes; y++) {
+                  for(int z = 0; z < z_cubes; z++) {
+                    transform.model_view = Matrix4::Translation(
+                      ((f32)x - (f32)x_cubes * 0.5f) * spread,
+                      ((f32)y - (f32)y_cubes * 0.5f) * spread,
+                      -5.0f - (f32)z * spread
+                    ) * Matrix4::Scale(0.1f, 0.1f, 0.1f);
+
+                    render_command_list->BindPipeline(pipeline.get());
+                    render_command_list->BindVertexBuffer(0, vbo.get());
+                    render_command_list->BindIndexBuffer(IndexDataType::UInt16, ibo.get());
+                    render_command_list->PushConstants(pipeline->GetLayout(), 0, sizeof(transform), &transform);
+                    render_command_list->DrawIndexed(36);
+                  }
+                }
+              }
+
+              render_command_list->EndRenderPass();
+
+              //render_command_list->Translate(render_command_buffer);
+              {
+                const gpu_next::RenderCommandBase* command_ = render_command_list->GetHead();
+
+                render_command_buffer->Begin(CommandBuffer::OneTimeSubmit::Yes);
+
+                while(command_ != nullptr) {
+                  switch(command_->CommandID()) {
+                    case gpu_next::RenderCommandID::BeginRenderPass: {
+                      auto command = (gpu_next::BeginRenderPassCmd*)command_;
+                      render_command_buffer->BeginRenderPass(command->render_target, command->render_pass);
+                      break;
+                    }
+                    case gpu_next::RenderCommandID::EndRenderPass: {
+                      render_command_buffer->EndRenderPass();
+                      break;
+                    }
+                    case gpu_next::RenderCommandID::BindPipeline: {
+                      auto command = (gpu_next::BindPipelineCmd*)command_;
+                      render_command_buffer->BindPipeline(command->pipeline);
+                      break;
+                    }
+                    case gpu_next::RenderCommandID::BindVertexBuffer: {
+                      auto command = (gpu_next::BindVertexBufferCmd*)command_;
+                      render_command_buffer->BindVertexBuffers({{command->buffer}}, command->index);
+                      break;
+                    }
+                    case gpu_next::RenderCommandID::BindIndexBuffer: {
+                      auto command = (gpu_next::BindIndexBufferCmd*)command_;
+                      render_command_buffer->BindIndexBuffer(command->buffer, command->data_type);
+                      break;
+                    }
+                    case gpu_next::RenderCommandID::PushConstants: {
+                      auto command = (gpu_next::PushConstantsCmd*)command_;
+                      render_command_buffer->PushConstants(command->layout, command->offset, command->size, command->data);
+                      break;
+                    }
+                    case gpu_next::RenderCommandID::DrawIndexed: {
+                      auto command = (gpu_next::DrawIndexedCmd*)command_;
+                      render_command_buffer->DrawIndexed(command->index_count);
+                      break;
+                    }
+                    default: {
+                      ZEPHYR_PANIC("Unhandled command ID: {}", (int)command_->CommandID());
+                    }
+                  }
+
+                  command_ = command_->Next();
+                }
+
+                render_command_buffer->End();
+              }
+            });
+          }
+
+          for(auto& thread : threads) thread.join();
+
+          // @todo: remove TmpWaitForImageFullyRead() completely and use a semaphore instead.
+          GetSwapChain()->TmpWaitForImageFullyRead();
+          fence->Reset();
+          // @todo: do not hardcode number of threads.
+          render_device->GraphicsQueue()->Submit({cmd_bufs}, fence);
+          break;
+        }
       }
 
       GetSwapChain()->Present();
@@ -605,6 +721,7 @@ class MainWindow final : public Window {
     uint m_frames_in_flight{};
 
     RenderCommandList render_command_lists[g_thread_count];
+    gpu_next::RenderCommandList render_command_lists_2[g_thread_count];
 };
 
 int main() {
