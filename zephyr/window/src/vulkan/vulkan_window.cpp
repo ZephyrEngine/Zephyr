@@ -73,7 +73,11 @@ namespace zephyr {
     const VkInstanceCreateInfo create_info{
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pNext = nullptr,
+#ifdef __APPLE__
+      .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+#else
       .flags = 0,
+#endif
       .pApplicationInfo = &app_info,
       .enabledLayerCount = static_cast<u32>(layers.size()),
       .ppEnabledLayerNames = layers.data(),
@@ -178,6 +182,11 @@ namespace zephyr {
     SDL_Vulkan_GetInstanceExtensions(window, &extension_count, nullptr);
     extensions.resize(extension_count);
     SDL_Vulkan_GetInstanceExtensions(window, &extension_count, extensions.data());
+
+#ifdef __APPLE__
+    extensions.push_back("VK_KHR_portability_enumeration");
+    extensions.push_back("VK_KHR_get_physical_device_properties2");
+#endif
 
     return extensions;
   }
