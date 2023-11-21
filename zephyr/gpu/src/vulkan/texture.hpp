@@ -12,57 +12,57 @@ namespace zephyr {
   class VulkanTexture final : public Texture {
     public:
      ~VulkanTexture() override {
-        if (image_owned) {
-          vmaDestroyImage(allocator, image, allocation);
+        if (m_image_owned) {
+          vmaDestroyImage(m_allocator, m_image, m_allocation);
         }
       }
 
       void* Handle() override {
-        return (void*)image;
+        return (void*)m_image;
       }
 
       Grade GetGrade() const override {
-        return grade;
+        return m_grade;
       }
 
       Format GetFormat() const override {
-        return format;
+        return m_format;
       }
 
       Usage GetUsage() const override {
-        return usage;
+        return m_usage;
       }
 
       u32 GetWidth() const override {
-        return width;
+        return m_width;
       }
 
       u32 GetHeight() const override {
-        return height;
+        return m_height;
       }
 
       u32 GetDepth() const override {
-        return depth;
+        return m_depth;
       }
 
       u32 GetLayerCount() const override {
-        return range.layer_count;
+        return m_range.layer_count;
       }
 
       u32 GetMipCount() const override {
-        return range.mip_count;
+        return m_range.mip_count;
       }
 
       const SubresourceRange& DefaultSubresourceRange() const override {
-        return range;
+        return m_range;
       }
 
       const View* DefaultView() const override {
-        return default_view.get();
+        return m_default_view.get();
       }
 
       View* DefaultView() override {
-        return default_view.get();
+        return m_default_view.get();
       }
 
       std::unique_ptr<View> CreateView(
@@ -71,7 +71,7 @@ namespace zephyr {
         const SubresourceRange& range,
         const ComponentMapping& mapping = {}
       ) override {
-        return std::make_unique<VulkanTextureView>(device, this, type, format, width, height, range, mapping);
+        return std::make_unique<VulkanTextureView>(m_device, this, type, format, m_width, m_height, range, mapping);
       }
 
       static std::unique_ptr<VulkanTexture> Create2D(
@@ -105,25 +105,27 @@ namespace zephyr {
         Format format,
         VkImage image
       ) {
-        auto texture = std::make_unique<VulkanTexture>();
+        std::unique_ptr<VulkanTexture> texture{new VulkanTexture{}};
 
-        texture->device = device;
-        texture->image = image;
-        texture->grade = Grade::_2D;
-        texture->format = format;
-        texture->usage = Usage::ColorAttachment;
-        texture->width = width;
-        texture->height = height;
-        texture->depth = 1;
-        texture->range = { (Aspect)GetAspectBits(format), 0, 1, 0, 1 };
-        texture->image_owned = false;
-        texture->default_view = texture->CreateView(
+        texture->m_device = device;
+        texture->m_image = image;
+        texture->m_grade = Grade::_2D;
+        texture->m_format = format;
+        texture->m_usage = Usage::ColorAttachment;
+        texture->m_width = width;
+        texture->m_height = height;
+        texture->m_depth = 1;
+        texture->m_range = { (Aspect)GetAspectBits(format), 0, 1, 0, 1 };
+        texture->m_image_owned = false;
+        texture->m_default_view = texture->CreateView(
           View::Type::_2D, format, texture->DefaultSubresourceRange());
 
         return texture;
       }
 
     private:
+      VulkanTexture() = default;
+
       static std::unique_ptr<VulkanTexture> Create(
         VkDevice device,
         VmaAllocator allocator,
@@ -138,7 +140,7 @@ namespace zephyr {
         u32 layer_count = 1,
         VkImageCreateFlags flags = 0
       ) {
-        auto texture = std::make_unique<VulkanTexture>();
+        std::unique_ptr<VulkanTexture> texture{new VulkanTexture{}};
 
         if (default_view_type == View::Type::Cube || default_view_type == View::Type::CubeArray) {
           flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -170,21 +172,21 @@ namespace zephyr {
           .usage = VMA_MEMORY_USAGE_AUTO
         };
 
-        if (vmaCreateImage(allocator, &image_info, &alloc_info, &texture->image, &texture->allocation, nullptr) != VK_SUCCESS) {
+        if (vmaCreateImage(allocator, &image_info, &alloc_info, &texture->m_image, &texture->m_allocation, nullptr) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanTexture: failed to create image");
         }
 
-        texture->device = device;
-        texture->allocator = allocator;
-        texture->grade = grade;
-        texture->format = format;
-        texture->usage = usage;
-        texture->width = width;
-        texture->height = height;
-        texture->depth = depth;
-        texture->range = { (Aspect)GetAspectBits(format), 0, mip_count, 0, layer_count };
-        texture->image_owned = true;
-        texture->default_view = texture->CreateView(
+        texture->m_device = device;
+        texture->m_allocator = allocator;
+        texture->m_grade = grade;
+        texture->m_format = format;
+        texture->m_usage = usage;
+        texture->m_width = width;
+        texture->m_height = height;
+        texture->m_depth = depth;
+        texture->m_range = { (Aspect)GetAspectBits(format), 0, mip_count, 0, layer_count };
+        texture->m_image_owned = true;
+        texture->m_default_view = texture->CreateView(
           default_view_type, format, texture->DefaultSubresourceRange());
 
         return texture;
@@ -205,19 +207,19 @@ namespace zephyr {
         }
       }
 
-      VkDevice device;
-      VmaAllocator allocator;
-      VmaAllocation allocation;
-      VkImage image;
-      Grade grade;
-      Format format;
-      Usage usage;
-      u32 width;
-      u32 height;
-      u32 depth;
-      SubresourceRange range;
-      std::unique_ptr<View> default_view;
-      bool image_owned;
+      VkDevice m_device{};
+      VmaAllocator m_allocator{};
+      VmaAllocation m_allocation{};
+      VkImage m_image{};
+      Grade m_grade{};
+      Format m_format{};
+      Usage m_usage{};
+      u32 m_width{};
+      u32 m_height{};
+      u32 m_depth{};
+      SubresourceRange m_range{};
+      std::unique_ptr<View> m_default_view{};
+      bool m_image_owned{};
   };
 
 } // namespace zephyr

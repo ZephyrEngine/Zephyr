@@ -18,7 +18,13 @@ namespace zephyr {
         u32 height,
         Texture::SubresourceRange const& range,
         ComponentMapping const& mapping
-      )   : device(device), type(type), format(format), width(width), height(height), range(range), mapping(mapping) {
+      )   : m_device{device}
+          , m_type{type}
+          , m_format{format}
+          , m_width{width}
+          , m_height{height}
+          , m_range{range}
+          , m_mapping{mapping} {
         const VkImageViewCreateInfo info{
           .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
           .pNext = nullptr,
@@ -41,72 +47,72 @@ namespace zephyr {
           }
         };
 
-        if (vkCreateImageView(device, &info, nullptr, &image_view) != VK_SUCCESS) {
+        if (vkCreateImageView(device, &info, nullptr, &m_image_view) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanTextureView: failed to create image view");
         }
       }
 
      ~VulkanTextureView() override {
-        vkDestroyImageView(device, image_view, nullptr);
+        vkDestroyImageView(m_device, m_image_view, nullptr);
       }
 
       void* Handle() override {
-        return (void*)image_view;
+        return (void*)m_image_view;
       }
 
       Type GetType() const override {
-        return type;
+        return m_type;
       }
 
       Texture::Format GetFormat() const override {
-        return format;
+        return m_format;
       }
 
       u32 GetWidth() const override {
-        return width;
+        return m_width;
       }
 
       u32 GetHeight() const override {
-        return height;
+        return m_height;
       }
 
       Texture::Aspect GetAspect() const override {
-        return range.aspect;
+        return m_range.aspect;
       }
 
       u32 GetBaseMip() const override {
-        return range.base_mip;
+        return m_range.base_mip;
       }
 
       u32 GetMipCount() const override {
-        return range.mip_count;
+        return m_range.mip_count;
       }
 
       u32 GetBaseLayer() const override {
-        return range.base_layer;
+        return m_range.base_layer;
       }
 
       u32 GetLayerCount() const override {
-        return range.layer_count;
+        return m_range.layer_count;
       }
 
       const Texture::SubresourceRange& GetSubresourceRange() const override {
-        return range;
+        return m_range;
       }
 
       const ComponentMapping& GetComponentMapping() const override {
-        return mapping;
+        return m_mapping;
       }
 
     private:
-      VkDevice device;
-      VkImageView image_view;
-      Type type;
-      Texture::Format format;
-      u32 width;
-      u32 height;
-      Texture::SubresourceRange range;
-      ComponentMapping mapping;
+      VkDevice m_device;
+      VkImageView m_image_view;
+      Type m_type;
+      Texture::Format m_format;
+      u32 m_width;
+      u32 m_height;
+      Texture::SubresourceRange m_range;
+      ComponentMapping m_mapping;
   };
 
 } // namespace zephyr

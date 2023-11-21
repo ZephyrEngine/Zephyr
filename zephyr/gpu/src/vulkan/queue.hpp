@@ -7,10 +7,10 @@ namespace zephyr {
 
   class VulkanQueue final : public Queue {
     public:
-      explicit VulkanQueue(VkQueue queue) : queue(queue) {}
+      explicit VulkanQueue(VkQueue queue) : m_queue{queue} {}
 
       void* Handle() override {
-        return (void*)queue;
+        return (void*)m_queue;
       }
 
       void Submit(std::span<CommandBuffer* const> buffers, Fence* fence) override {
@@ -34,15 +34,15 @@ namespace zephyr {
 
         const auto fence_handle = fence ? (VkFence)fence->Handle() : VK_NULL_HANDLE;
 
-        vkQueueSubmit(queue, 1, &submit, fence_handle);
+        vkQueueSubmit(m_queue, 1, &submit, fence_handle);
       }
 
       void WaitIdle() override {
-        vkQueueWaitIdle(queue);
+        vkQueueWaitIdle(m_queue);
       }
 
     private:
-      VkQueue queue;
+      VkQueue m_queue;
   };
 
 } // namespace zephyr

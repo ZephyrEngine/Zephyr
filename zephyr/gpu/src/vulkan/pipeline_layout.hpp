@@ -10,7 +10,7 @@ namespace zephyr {
       VulkanPipelineLayout(
         VkDevice device,
         std::span<BindGroupLayout* const> bind_group_layouts
-      )   : device(device) {
+      )   : m_device{device} {
         std::vector<VkDescriptorSetLayout> descriptor_set_layouts{};
 
         for (auto& bind_group_layout : bind_group_layouts) {
@@ -33,22 +33,22 @@ namespace zephyr {
           .pPushConstantRanges = &push_constant_rage
         };
 
-        if (vkCreatePipelineLayout(device, &info, nullptr, &layout) != VK_SUCCESS) {
+        if (vkCreatePipelineLayout(device, &info, nullptr, &m_layout) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanPipelineLayout: failed to create pipeline layout");
         }
       }
 
      ~VulkanPipelineLayout() override {
-        vkDestroyPipelineLayout(device, layout, nullptr);
+        vkDestroyPipelineLayout(m_device, m_layout, nullptr);
       }
 
       void* Handle() override {
-        return (void*)layout;
+        return (void*)m_layout;
       }
 
     private:
-      VkDevice device;
-      VkPipelineLayout layout;
+      VkDevice m_device;
+      VkPipelineLayout m_layout;
   };
 
 } // namespace zephyr

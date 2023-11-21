@@ -8,7 +8,7 @@ namespace zephyr {
 
   class VulkanSampler final : public Sampler {
     public:
-      VulkanSampler(VkDevice device, const Config& config) : device(device) {
+      VulkanSampler(VkDevice device, const Config& config) : m_device{device} {
         // @todo: clamp anisotropy level to the hardware-supported level.
         const VkSamplerCreateInfo info{
          .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -31,22 +31,22 @@ namespace zephyr {
          .unnormalizedCoordinates = VK_FALSE
         };
 
-        if (vkCreateSampler(device, &info, nullptr, &sampler) != VK_SUCCESS) {
+        if (vkCreateSampler(device, &info, nullptr, &m_sampler) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanSampler: failed to create sampler");
         }
       }
 
      ~VulkanSampler() override {
-        vkDestroySampler(device, sampler, nullptr);
+        vkDestroySampler(m_device, m_sampler, nullptr);
       }
 
       void* Handle() override {
-        return (void*)sampler;
+        return (void*)m_sampler;
       }
 
     private:
-      VkDevice device;
-      VkSampler sampler;
+      VkDevice m_device;
+      VkSampler m_sampler;
   };
 
 } // namespace zephyr

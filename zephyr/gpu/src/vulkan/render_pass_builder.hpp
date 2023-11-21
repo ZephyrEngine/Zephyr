@@ -13,9 +13,9 @@ namespace zephyr {
 
   class VulkanRenderPassBuilder final : public RenderPassBuilder {
     public:
-      VulkanRenderPassBuilder(VkDevice device) : device(device) {
-        for(size_t i = 0; i < color_attachments.size(); i++) {
-          color_attachments[i].descriptor = VkAttachmentDescription{
+      VulkanRenderPassBuilder(VkDevice device) : m_device{device} {
+        for(size_t i = 0; i < m_color_attachments.size(); i++) {
+          m_color_attachments[i].descriptor = VkAttachmentDescription{
             .flags = 0,
             .format = VK_FORMAT_B8G8R8A8_SRGB,
             .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -28,7 +28,7 @@ namespace zephyr {
           };
         }
 
-        depth_stencil_attachment.descriptor = VkAttachmentDescription{
+        m_depth_stencil_attachment.descriptor = VkAttachmentDescription{
           .flags = 0,
           .format = VK_FORMAT_D24_UNORM_S8_UINT,
           .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -42,80 +42,80 @@ namespace zephyr {
       }
 
       void SetColorAttachmentCount(size_t count) override {
-        color_attachment_count = count;
+        m_color_attachment_count = count;
       }
 
       void SetColorAttachmentFormat(size_t id, Texture::Format format) override {
         Expand(id);
-        color_attachments.at(id).descriptor.format = (VkFormat)format;
+        m_color_attachments.at(id).descriptor.format = (VkFormat)format;
       }
 
       void SetColorAttachmentSrcLayout(size_t id, Texture::Layout layout, std::optional<Transition> transition) override {
         Expand(id);
-        color_attachments.at(id).descriptor.initialLayout = (VkImageLayout)layout;
-        color_attachments.at(id).transitions.initial = transition;
+        m_color_attachments.at(id).descriptor.initialLayout = (VkImageLayout)layout;
+        m_color_attachments.at(id).transitions.initial = transition;
       }
 
       void SetColorAttachmentDstLayout(size_t id, Texture::Layout layout, std::optional<Transition> transition) override {
         Expand(id);
-        color_attachments.at(id).descriptor.finalLayout = (VkImageLayout)layout;
-        color_attachments.at(id).transitions.final = transition;
+        m_color_attachments.at(id).descriptor.finalLayout = (VkImageLayout)layout;
+        m_color_attachments.at(id).transitions.final = transition;
       }
 
       void SetColorAttachmentLoadOp(size_t id, RenderPass::LoadOp op) override {
         Expand(id);
-        color_attachments.at(id).descriptor.loadOp = (VkAttachmentLoadOp)op;
+        m_color_attachments.at(id).descriptor.loadOp = (VkAttachmentLoadOp)op;
       }
 
       void SetColorAttachmentStoreOp(size_t id, RenderPass::StoreOp op) override {
         Expand(id);
-        color_attachments.at(id).descriptor.storeOp = (VkAttachmentStoreOp)op;
+        m_color_attachments.at(id).descriptor.storeOp = (VkAttachmentStoreOp)op;
       }
 
       void ClearDepthAttachment() override {
-        have_depth_stencil_attachment = false;
+        m_have_depth_stencil_attachment = false;
       }
 
       void SetDepthAttachmentFormat(Texture::Format format) override {
-        depth_stencil_attachment.descriptor.format = (VkFormat)format;
-        have_depth_stencil_attachment = true;
+        m_depth_stencil_attachment.descriptor.format = (VkFormat)format;
+        m_have_depth_stencil_attachment = true;
       }
 
       void SetDepthAttachmentSrcLayout(Texture::Layout layout, std::optional<Transition> transition) override {
-        depth_stencil_attachment.descriptor.initialLayout = (VkImageLayout)layout;
-        depth_stencil_attachment.transitions.initial = transition;
+        m_depth_stencil_attachment.descriptor.initialLayout = (VkImageLayout)layout;
+        m_depth_stencil_attachment.transitions.initial = transition;
 
-        have_depth_stencil_attachment = true;
+        m_have_depth_stencil_attachment = true;
       }
 
       void SetDepthAttachmentDstLayout(Texture::Layout layout, std::optional<Transition> transition) override {
-        depth_stencil_attachment.descriptor.finalLayout = (VkImageLayout)layout;
-        depth_stencil_attachment.transitions.final = transition;
+        m_depth_stencil_attachment.descriptor.finalLayout = (VkImageLayout)layout;
+        m_depth_stencil_attachment.transitions.final = transition;
 
-        have_depth_stencil_attachment = true;
+        m_have_depth_stencil_attachment = true;
       }
 
       void SetDepthAttachmentLoadOp(RenderPass::LoadOp op) override {
-        depth_stencil_attachment.descriptor.loadOp = (VkAttachmentLoadOp)op;
+        m_depth_stencil_attachment.descriptor.loadOp = (VkAttachmentLoadOp)op;
 
-        have_depth_stencil_attachment = true;
+        m_have_depth_stencil_attachment = true;
       }
 
       void SetDepthAttachmentStoreOp(RenderPass::StoreOp op) override {
-        depth_stencil_attachment.descriptor.storeOp = (VkAttachmentStoreOp)op;
+        m_depth_stencil_attachment.descriptor.storeOp = (VkAttachmentStoreOp)op;
 
-        have_depth_stencil_attachment = true;
+        m_have_depth_stencil_attachment = true;
       }
 
       void SetDepthAttachmentStencilLoadOp(RenderPass::LoadOp op) override {
-        depth_stencil_attachment.descriptor.stencilLoadOp = (VkAttachmentLoadOp)op;
+        m_depth_stencil_attachment.descriptor.stencilLoadOp = (VkAttachmentLoadOp)op;
 
-        have_depth_stencil_attachment = true;
+        m_have_depth_stencil_attachment = true;
       }
 
       void SetDepthAttachmentStencilStoreOp(RenderPass::StoreOp op) override {
-        depth_stencil_attachment.descriptor.stencilStoreOp = (VkAttachmentStoreOp)op;
-        have_depth_stencil_attachment = true;
+        m_depth_stencil_attachment.descriptor.stencilStoreOp = (VkAttachmentStoreOp)op;
+        m_have_depth_stencil_attachment = true;
       }
 
       std::unique_ptr<RenderPass> Build() const override {
@@ -125,9 +125,9 @@ namespace zephyr {
         bool have_final_color_layout_transition = false;
         bool have_final_depth_layout_transition = false;
 
-        size_t attachment_count = color_attachment_count;
+        size_t attachment_count = m_color_attachment_count;
 
-        if(have_depth_stencil_attachment) {
+        if(m_have_depth_stencil_attachment) {
           attachment_count++;
         }
 
@@ -140,9 +140,9 @@ namespace zephyr {
         auto final_dependency_stages = PipelineStage::None;
         auto final_dependency_access = Access::None;
 
-        for(size_t i = 0; i < color_attachment_count; i++) {
-          auto const& attachment  = color_attachments[i];
-          auto const& transitions = attachment.transitions;
+        for(size_t i = 0; i < m_color_attachment_count; i++) {
+          const auto& attachment  = m_color_attachments[i];
+          const auto& transitions = attachment.transitions;
 
           descriptors[i] = attachment.descriptor;
           references[i].attachment = i;
@@ -185,15 +185,15 @@ namespace zephyr {
           }
         }
 
-        if(have_depth_stencil_attachment) {
-          const auto& attachment  = depth_stencil_attachment;
+        if(m_have_depth_stencil_attachment) {
+          const auto& attachment  = m_depth_stencil_attachment;
           const auto& transitions = attachment.transitions;
 
-          auto& descriptor = descriptors[color_attachment_count];
-          auto& reference  = references [color_attachment_count];
+          auto& descriptor = descriptors[m_color_attachment_count];
+          auto& reference  = references [m_color_attachment_count];
 
-          descriptor = depth_stencil_attachment.descriptor;
-          reference.attachment = color_attachment_count;
+          descriptor = m_depth_stencil_attachment.descriptor;
+          reference.attachment = m_color_attachment_count;
           reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
           const auto initial_layout = descriptor.initialLayout;
@@ -235,13 +235,13 @@ namespace zephyr {
           .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
           .inputAttachmentCount = 0,
           .pInputAttachments = nullptr,
-          .colorAttachmentCount = (u32)color_attachment_count,
+          .colorAttachmentCount = (u32)m_color_attachment_count,
           .pColorAttachments = references,
           .pResolveAttachments = nullptr
         };
 
-        if(have_depth_stencil_attachment) {
-          sub_pass.pDepthStencilAttachment = &references[color_attachment_count];
+        if(m_have_depth_stencil_attachment) {
+          sub_pass.pDepthStencilAttachment = &references[m_color_attachment_count];
         } else {
           sub_pass.pDepthStencilAttachment = nullptr;
         }
@@ -304,15 +304,15 @@ namespace zephyr {
 
         VkRenderPass render_pass;
 
-        if(vkCreateRenderPass(device, &info, nullptr, &render_pass) != VK_SUCCESS) {
+        if(vkCreateRenderPass(m_device, &info, nullptr, &render_pass) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanRenderPassBuilder: failed to create a render pass");
         }
 
-        return std::make_unique<VulkanRenderPass>(device, render_pass, color_attachment_count, have_depth_stencil_attachment);
+        return std::make_unique<VulkanRenderPass>(m_device, render_pass, m_color_attachment_count, m_have_depth_stencil_attachment);
       }
 
     private:
-      static constexpr size_t kMaxColorAttachments = VulkanRenderPass::kMaxColorAttachments;
+      static constexpr size_t k_max_color_attachments = VulkanRenderPass::k_max_color_attachments;
 
       struct Attachment {
         VkAttachmentDescription descriptor{};
@@ -324,16 +324,14 @@ namespace zephyr {
       };
 
       void Expand(size_t id) {
-        color_attachment_count = std::max(color_attachment_count, id + 1);
+        m_color_attachment_count = std::max(m_color_attachment_count, id + 1);
       }
 
-      VkDevice device;
-
-      size_t color_attachment_count = 0;
-      std::array<Attachment, kMaxColorAttachments> color_attachments;
-
-      bool have_depth_stencil_attachment = false;
-      Attachment depth_stencil_attachment;
+      VkDevice m_device;
+      size_t m_color_attachment_count{0};
+      std::array<Attachment, k_max_color_attachments> m_color_attachments;
+      bool m_have_depth_stencil_attachment{false};
+      Attachment m_depth_stencil_attachment;
   };
 
 } // namespace zephyr

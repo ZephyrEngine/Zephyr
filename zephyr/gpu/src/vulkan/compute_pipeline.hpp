@@ -9,15 +9,15 @@ namespace zephyr {
   class VulkanComputePipeline final : public ComputePipeline {
     public:
      ~VulkanComputePipeline() override {
-        vkDestroyPipeline(device, pipeline, nullptr);
+        vkDestroyPipeline(m_device, m_pipeline, nullptr);
       }
 
       void* Handle() override {
-        return pipeline;
+        return m_pipeline;
       }
 
       auto GetLayout() -> PipelineLayout* override {
-        return layout.get();
+        return m_layout.get();
       }
 
       static std::unique_ptr<VulkanComputePipeline> Create(
@@ -45,12 +45,12 @@ namespace zephyr {
           .basePipelineIndex = 0
         };
 
-        if(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &self->pipeline) != VK_SUCCESS) {
+        if(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &self->m_pipeline) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanComputePipeline: failed to create the compute pipeline");
         }
 
-        self->device = device;
-        self->layout = std::move(layout);
+        self->m_device = device;
+        self->m_layout = std::move(layout);
 
         return self;
       }
@@ -58,9 +58,9 @@ namespace zephyr {
     private:
       VulkanComputePipeline() = default;
 
-      VkDevice device = VK_NULL_HANDLE;
-      VkPipeline pipeline = VK_NULL_HANDLE;
-      std::shared_ptr<PipelineLayout> layout{};
+      VkDevice m_device{VK_NULL_HANDLE};
+      VkPipeline m_pipeline{VK_NULL_HANDLE};
+      std::shared_ptr<PipelineLayout> m_layout{};
   };
 
 } // namespace zephyr

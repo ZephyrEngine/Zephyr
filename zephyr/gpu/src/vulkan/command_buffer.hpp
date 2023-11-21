@@ -12,26 +12,27 @@ namespace zephyr {
   class VulkanCommandBuffer final : public CommandBuffer {
     public:
       VulkanCommandBuffer(VkDevice device, std::shared_ptr<CommandPool> pool)
-          : device(device), pool(std::move(pool)) {
+          : m_device{device}
+          , m_pool{std::move(pool)} {
         const VkCommandBufferAllocateInfo info{
           .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
           .pNext = nullptr,
-          .commandPool = (VkCommandPool)this->pool->Handle(),
+          .commandPool = (VkCommandPool)m_pool->Handle(),
           .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
           .commandBufferCount = 1
         };
 
-        if (vkAllocateCommandBuffers(device, &info, &buffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(device, &info, &m_buffer) != VK_SUCCESS) {
           ZEPHYR_PANIC("Vulkan: failed to allocate command buffer");
         }
       }
 
      ~VulkanCommandBuffer() override {
-        vkFreeCommandBuffers(device, (VkCommandPool)pool->Handle(), 1, &buffer);
+        vkFreeCommandBuffers(m_device, (VkCommandPool)m_pool->Handle(), 1, &m_buffer);
       }
 
       void* Handle() override {
-        return (void*)buffer;
+        return (void*)m_buffer;
       }
 
       void Begin(OneTimeSubmit one_time_submit) override {
@@ -42,11 +43,11 @@ namespace zephyr {
           .pInheritanceInfo = nullptr
         };
 
-        vkBeginCommandBuffer(buffer, &begin_info);
+        vkBeginCommandBuffer(m_buffer, &begin_info);
       }
 
       void End() override {
-        vkEndCommandBuffer(buffer);
+        vkEndCommandBuffer(m_buffer);
       }
 
       void SetViewport(int x, int y, int width, int height) override {
@@ -59,7 +60,7 @@ namespace zephyr {
           .maxDepth = 1.0f
         };
 
-        vkCmdSetViewport(buffer, 0, 1, &viewport);
+        vkCmdSetViewport(m_buffer, 0, 1, &viewport);
       }
 
       void SetScissor(int x, int y, int width, int height) override {
@@ -74,7 +75,7 @@ namespace zephyr {
           }
         };
 
-        vkCmdSetScissor(buffer, 0, 1, &scissor);
+        vkCmdSetScissor(m_buffer, 0, 1, &scissor);
       }
 
       void CopyBuffer(
@@ -90,7 +91,7 @@ namespace zephyr {
           .size = size
         };
 
-        vkCmdCopyBuffer(buffer, (VkBuffer)src->Handle(), (VkBuffer)dst->Handle(), 1, &copy);
+        vkCmdCopyBuffer(m_buffer, (VkBuffer)src->Handle(), (VkBuffer)dst->Handle(), 1, &copy);
       }
 
       void CopyBufferToTexture(
@@ -118,7 +119,7 @@ namespace zephyr {
           }
         };
 
-        vkCmdCopyBufferToImage(this->buffer, (VkBuffer)buffer->Handle(), (VkImage)texture->Handle(), (VkImageLayout)texture_layout, 1, &region);
+        vkCmdCopyBufferToImage(m_buffer, (VkBuffer)buffer->Handle(), (VkImage)texture->Handle(), (VkImageLayout)texture_layout, 1, &region);
       }
 
       void BlitTexture2D(
@@ -171,7 +172,7 @@ namespace zephyr {
           }
         };
 
-        vkCmdBlitImage(buffer, (VkImage)src_texture->Handle(), (VkImageLayout)src_layout, (VkImage)dst_texture->Handle(), (VkImageLayout)dst_layout, 1, &region, (VkFilter)filter);
+        vkCmdBlitImage(m_buffer, (VkImage)src_texture->Handle(), (VkImageLayout)src_layout, (VkImage)dst_texture->Handle(), (VkImageLayout)dst_layout, 1, &region, (VkFilter)filter);
       }
 
       void PushConstants(
@@ -180,7 +181,7 @@ namespace zephyr {
         u32 size,
         void const* data
       ) override {
-        vkCmdPushConstants(buffer, (VkPipelineLayout)pipeline_layout->Handle(), VK_SHADER_STAGE_ALL, offset, size, data);
+        vkCmdPushConstants(m_buffer, (VkPipelineLayout)pipeline_layout->Handle(), VK_SHADER_STAGE_ALL, offset, size, data);
       }
 
       void BeginRenderPass(
@@ -209,19 +210,19 @@ namespace zephyr {
           .pClearValues = clear_values.data()
         };
 
-        vkCmdBeginRenderPass(buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(m_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
       }
 
       void EndRenderPass() override {
-        vkCmdEndRenderPass(buffer);
+        vkCmdEndRenderPass(m_buffer);
       }
 
       void BindPipeline(GraphicsPipeline* pipeline) override {
-        vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline->Handle());
+        vkCmdBindPipeline(m_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline->Handle());
       }
 
       void BindPipeline(ComputePipeline* pipeline) override {
-        vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pipeline->Handle());
+        vkCmdBindPipeline(m_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pipeline->Handle());
       }
 
       void BindBindGroup(
@@ -234,7 +235,7 @@ namespace zephyr {
         const auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
 
         vkCmdBindDescriptorSets(
-          buffer,
+          m_buffer,
           (VkPipelineBindPoint)pipeline_bind_point,
           vk_pipeline_layout,
           set,
@@ -256,7 +257,7 @@ namespace zephyr {
           buffer_handles[i] = (VkBuffer)buffers[i]->Handle();
         }
 
-        vkCmdBindVertexBuffers(buffer, first_binding, buffers.size(), buffer_handles, buffer_offsets);
+        vkCmdBindVertexBuffers(m_buffer, first_binding, buffers.size(), buffer_handles, buffer_offsets);
       }
 
       void BindIndexBuffer(
@@ -264,7 +265,7 @@ namespace zephyr {
         IndexDataType data_type,
         size_t offset = 0
       ) override {
-        vkCmdBindIndexBuffer(this->buffer, (VkBuffer)buffer->Handle(), offset, (VkIndexType)data_type);
+        vkCmdBindIndexBuffer(m_buffer, (VkBuffer)buffer->Handle(), offset, (VkIndexType)data_type);
       }
 
       void Draw(
@@ -273,7 +274,7 @@ namespace zephyr {
         u32 first_vertex,
         u32 first_instance
       ) override {
-        vkCmdDraw(buffer, vertex_count, instance_count, first_vertex, first_instance);
+        vkCmdDraw(m_buffer, vertex_count, instance_count, first_vertex, first_instance);
       }
 
       void DrawIndexed(
@@ -283,11 +284,11 @@ namespace zephyr {
         s32 vertex_offset,
         u32 first_instance
       ) override {
-        vkCmdDrawIndexed(buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+        vkCmdDrawIndexed(m_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
       }
 
       void DispatchCompute(u32 group_count_x, u32 group_count_y, u32 group_count_z) override {
-        vkCmdDispatch(buffer, group_count_x, group_count_y, group_count_z);
+        vkCmdDispatch(m_buffer, group_count_x, group_count_y, group_count_z);
       }
 
       void Barrier(
@@ -320,13 +321,13 @@ namespace zephyr {
           }
         };
 
-        vkCmdPipelineBarrier(buffer, (VkPipelineStageFlags)src_stage, (VkPipelineStageFlags)dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        vkCmdPipelineBarrier(m_buffer, (VkPipelineStageFlags)src_stage, (VkPipelineStageFlags)dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
       }
 
     private:
-      VkDevice device;
-      VkCommandBuffer buffer;
-      std::shared_ptr<CommandPool> pool;
+      VkDevice m_device;
+      VkCommandBuffer m_buffer;
+      std::shared_ptr<CommandPool> m_pool;
   };
 
 } // namespace zephyr

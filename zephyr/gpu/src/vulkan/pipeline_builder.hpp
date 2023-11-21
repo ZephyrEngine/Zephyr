@@ -15,31 +15,33 @@ namespace zephyr {
         VkDevice device,
         VkPipeline pipeline,
         std::shared_ptr<PipelineLayout> layout
-      )   : device(device), pipeline(pipeline), layout(std::move(layout)) {
+      )   : m_device{device}
+          , m_pipeline{pipeline}
+          , m_layout(std::move(layout)) {
       }
 
      ~VulkanGraphicsPipeline() {
-        vkDestroyPipeline(device, pipeline, nullptr);
+        vkDestroyPipeline(m_device, m_pipeline, nullptr);
       }
 
       void* Handle() override {
-        return (void*)pipeline;
+        return (void*)m_pipeline;
       }
 
       PipelineLayout* GetLayout() override {
-        return layout.get();
+        return m_layout.get();
       }
 
     private:
-      VkDevice device;
-      VkPipeline pipeline;
-      std::shared_ptr<PipelineLayout> layout;
+      VkDevice m_device;
+      VkPipeline m_pipeline;
+      std::shared_ptr<PipelineLayout> m_layout;
   };
 
   class VulkanGraphicsPipelineBuilder final : public GraphicsPipelineBuilder {
     public:
-      VulkanGraphicsPipelineBuilder(VkDevice device, std::shared_ptr<PipelineLayout> default_layout) : device(device) {
-        attachment_blend_state.fill({
+      VulkanGraphicsPipelineBuilder(VkDevice device, std::shared_ptr<PipelineLayout> default_layout) : m_device{device} {
+        m_attachment_blend_state.fill({
           .blendEnable = VK_FALSE,
           .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
           .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -54,131 +56,131 @@ namespace zephyr {
       }
 
       void SetViewport(int x, int y, int width, int height) override {
-        viewport.x = (float)x;
-        viewport.y = (float)y;
-        viewport.width = (float)width;
-        viewport.height = (float)height;
+        m_viewport.x = (float)x;
+        m_viewport.y = (float)y;
+        m_viewport.width = (float)width;
+        m_viewport.height = (float)height;
       }
 
       void SetScissor(int x, int y, int width, int height) override {
-        scissor.offset.x = x;
-        scissor.offset.y = y;
-        scissor.extent.width = width;
-        scissor.extent.height = height;
+        m_scissor.offset.x = x;
+        m_scissor.offset.y = y;
+        m_scissor.extent.width = width;
+        m_scissor.extent.height = height;
       }
 
       void SetShaderModule(ShaderStage stage, std::shared_ptr<ShaderModule> shader_module) override {
         switch (stage) {
           case ShaderStage::Vertex:
-            own.shader_vert = std::move(shader_module);
+            m_own.shader_vert = std::move(shader_module);
             break;
           case ShaderStage::TessellationControl:
-            own.shader_tess_control = std::move(shader_module);
+            m_own.shader_tess_control = std::move(shader_module);
             break;
           case ShaderStage::TessellationEvaluation:
-            own.shader_tess_evaluation = std::move(shader_module);
+            m_own.shader_tess_evaluation = std::move(shader_module);
             break;
           case ShaderStage::Fragment:
-            own.shader_frag = std::move(shader_module);
+            m_own.shader_frag = std::move(shader_module);
             break;
           default: ZEPHYR_PANIC("Unsupported or bad shader stage passed to SetShaderModule(): 0x{:08X}", (u32)stage);
         }
 
-        pipeline_stages_dirty = true;
+        m_pipeline_stages_dirty = true;
       }
 
       void SetPipelineLayout(std::shared_ptr<PipelineLayout> layout) override {
-        pipeline_info.layout = (VkPipelineLayout)layout->Handle();
-        own.layout = std::move(layout);
+        m_pipeline_info.layout = (VkPipelineLayout)layout->Handle();
+        m_own.layout = std::move(layout);
       }
 
       void SetRenderPass(std::shared_ptr<RenderPass> render_pass) override {
-        own.render_pass = render_pass;
-        pipeline_info.renderPass = ((VulkanRenderPass*)(render_pass.get()))->Handle();
+        m_own.render_pass = render_pass;
+        m_pipeline_info.renderPass = ((VulkanRenderPass*)(render_pass.get()))->Handle();
       }
 
       void SetRasterizerDiscardEnable(bool enable) override {
-        rasterization_info.rasterizerDiscardEnable = enable ? VK_TRUE : VK_FALSE;
+        m_rasterization_info.rasterizerDiscardEnable = enable ? VK_TRUE : VK_FALSE;
       }
 
       void SetPolygonMode(PolygonMode mode) override {
-        rasterization_info.polygonMode = (VkPolygonMode)mode;
+        m_rasterization_info.polygonMode = (VkPolygonMode)mode;
       }
 
       void SetPolygonCull(PolygonFace face) override {
-        rasterization_info.cullMode = (VkCullModeFlags)face;
+        m_rasterization_info.cullMode = (VkCullModeFlags)face;
       }
 
       void SetLineWidth(float width) override {
-        rasterization_info.lineWidth = width;
+        m_rasterization_info.lineWidth = width;
       }
 
       void SetDepthTestEnable(bool enable) override {
-        depth_stencil_info.depthTestEnable = enable ? VK_TRUE : VK_FALSE;
+        m_depth_stencil_info.depthTestEnable = enable ? VK_TRUE : VK_FALSE;
       }
 
       void SetDepthWriteEnable(bool enable) override {
-        depth_stencil_info.depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
+        m_depth_stencil_info.depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
       }
 
       void SetDepthCompareOp(CompareOp compare_op) override {
-        depth_stencil_info.depthCompareOp = (VkCompareOp)compare_op;
+        m_depth_stencil_info.depthCompareOp = (VkCompareOp)compare_op;
       }
 
       void SetPrimitiveTopology(PrimitiveTopology topology) override {
-        input_assembly_info.topology = (VkPrimitiveTopology)topology;
+        m_input_assembly_info.topology = (VkPrimitiveTopology)topology;
       }
 
       void SetPrimitiveRestartEnable(bool enable) override {
-        input_assembly_info.primitiveRestartEnable = enable ? VK_TRUE : VK_FALSE;
+        m_input_assembly_info.primitiveRestartEnable = enable ? VK_TRUE : VK_FALSE;
       }
 
       void SetBlendEnable(size_t color_attachment, bool enable) override {
-        attachment_blend_state.at(color_attachment).blendEnable = enable ? VK_TRUE : VK_FALSE;
+        m_attachment_blend_state.at(color_attachment).blendEnable = enable ? VK_TRUE : VK_FALSE;
       }
 
       void SetSrcColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-        attachment_blend_state.at(color_attachment).srcColorBlendFactor = (VkBlendFactor)blend_factor;
+        m_attachment_blend_state.at(color_attachment).srcColorBlendFactor = (VkBlendFactor)blend_factor;
       }
 
       void SetSrcAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-        attachment_blend_state.at(color_attachment).srcAlphaBlendFactor = (VkBlendFactor)blend_factor;
+        m_attachment_blend_state.at(color_attachment).srcAlphaBlendFactor = (VkBlendFactor)blend_factor;
       }
 
       void SetDstColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-        attachment_blend_state.at(color_attachment).dstColorBlendFactor = (VkBlendFactor)blend_factor;
+        m_attachment_blend_state.at(color_attachment).dstColorBlendFactor = (VkBlendFactor)blend_factor;
       }
 
       void SetDstAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-        attachment_blend_state.at(color_attachment).dstAlphaBlendFactor = (VkBlendFactor)blend_factor;
+        m_attachment_blend_state.at(color_attachment).dstAlphaBlendFactor = (VkBlendFactor)blend_factor;
       }
 
       void SetColorBlendOp(size_t color_attachment, BlendOp blend_op) override {
-        attachment_blend_state.at(color_attachment).colorBlendOp = (VkBlendOp)blend_op;
+        m_attachment_blend_state.at(color_attachment).colorBlendOp = (VkBlendOp)blend_op;
       }
 
       void SetAlphaBlendOp(size_t color_attachment, BlendOp blend_op) override {
-        attachment_blend_state.at(color_attachment).alphaBlendOp = (VkBlendOp)blend_op;
+        m_attachment_blend_state.at(color_attachment).alphaBlendOp = (VkBlendOp)blend_op;
       }
 
       void SetColorWriteMask(size_t color_attachment, ColorComponent components) override {
-        attachment_blend_state.at(color_attachment).colorWriteMask = (VkColorComponentFlags)components;
+        m_attachment_blend_state.at(color_attachment).colorWriteMask = (VkColorComponentFlags)components;
       }
 
       void SetBlendConstants(float r, float g, float b, float a) override {
-        color_blend_info.blendConstants[0] = r;
-        color_blend_info.blendConstants[1] = g;
-        color_blend_info.blendConstants[2] = b;
-        color_blend_info.blendConstants[3] = a;
+        m_color_blend_info.blendConstants[0] = r;
+        m_color_blend_info.blendConstants[1] = g;
+        m_color_blend_info.blendConstants[2] = b;
+        m_color_blend_info.blendConstants[3] = a;
       }
 
       void ResetVertexInput() override {
-        vertex_input_bindings.clear();
-        vertex_input_attributes.clear();
+        m_vertex_input_bindings.clear();
+        m_vertex_input_attributes.clear();
       }
 
       void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate) override {
-        vertex_input_bindings.push_back({
+        m_vertex_input_bindings.push_back({
           .binding = binding,
           .stride = stride,
           .inputRate = (VkVertexInputRate)input_rate
@@ -193,7 +195,7 @@ namespace zephyr {
         int components,
         bool normalized
       ) override {
-        vertex_input_attributes.push_back({
+        m_vertex_input_attributes.push_back({
           .location = location,
           .binding = binding,
           .format = GetVertexInputAttributeFormat(data_type, components, normalized),
@@ -202,62 +204,62 @@ namespace zephyr {
       }
 
       void SetPatchControlPointCount(int patch_control_points) override {
-        tessellation_info.patchControlPoints = (u32)patch_control_points;
+        m_tessellation_info.patchControlPoints = (u32)patch_control_points;
       }
 
       void SetDynamicViewportEnable(bool enable) override {
-        enable_dynamic_viewport = enable;
+        m_enable_dynamic_viewport = enable;
       }
 
       void SetDynamicScissorEnable(bool enable) override {
-        enable_dynamic_scissor = enable;
+        m_enable_dynamic_scissor = enable;
       }
 
       auto Build() -> std::unique_ptr<GraphicsPipeline> override {
-        auto number_of_color_attachments = own.render_pass->GetNumberOfColorAttachments();
+        auto number_of_color_attachments = m_own.render_pass->GetNumberOfColorAttachments();
 
-        if (number_of_color_attachments > attachment_blend_state.size()) {
+        if (number_of_color_attachments > m_attachment_blend_state.size()) {
           ZEPHYR_PANIC("VulkanGraphicsPipelineBuilder: render pass with more than 32 color attachments is unsupported.");
         }
 
-        if(pipeline_stages_dirty) {
+        if(m_pipeline_stages_dirty) {
           UpdatePipelineStages();
-          pipeline_stages_dirty = false;
+          m_pipeline_stages_dirty = false;
         }
 
-        color_blend_info.attachmentCount = (u32)number_of_color_attachments;
+        m_color_blend_info.attachmentCount = (u32)number_of_color_attachments;
 
-        vertex_input_info.pVertexBindingDescriptions = vertex_input_bindings.data();
-        vertex_input_info.vertexBindingDescriptionCount = (u32)vertex_input_bindings.size();
-        vertex_input_info.pVertexAttributeDescriptions = vertex_input_attributes.data();
-        vertex_input_info.vertexAttributeDescriptionCount = (u32)vertex_input_attributes.size();
+        m_vertex_input_info.pVertexBindingDescriptions = m_vertex_input_bindings.data();
+        m_vertex_input_info.vertexBindingDescriptionCount = (u32)m_vertex_input_bindings.size();
+        m_vertex_input_info.pVertexAttributeDescriptions = m_vertex_input_attributes.data();
+        m_vertex_input_info.vertexAttributeDescriptionCount = (u32)m_vertex_input_attributes.size();
 
         Vector_N<VkDynamicState, 2> dynamic_states;
 
-        if(enable_dynamic_viewport) {
+        if(m_enable_dynamic_viewport) {
           dynamic_states.PushBack(VK_DYNAMIC_STATE_VIEWPORT);
         }
 
-        if(enable_dynamic_scissor) {
+        if(m_enable_dynamic_scissor) {
           dynamic_states.PushBack(VK_DYNAMIC_STATE_SCISSOR);
         }
 
-        dynamic_state_info.pDynamicStates = dynamic_states.Data();
-        dynamic_state_info.dynamicStateCount = dynamic_states.Size();
+        m_dynamic_state_info.pDynamicStates = dynamic_states.Data();
+        m_dynamic_state_info.dynamicStateCount = dynamic_states.Size();
 
         auto pipeline = VkPipeline{};
 
-        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanGraphicsPipelineBuilder: failed to create graphics pipeline");
         }
 
-        return std::make_unique<VulkanGraphicsPipeline>(device, pipeline, own.layout);
+        return std::make_unique<VulkanGraphicsPipeline>(m_device, pipeline, m_own.layout);
       }
 
     private:
       void UpdatePipelineStages() {
         const auto PushStage = [this](VkShaderStageFlagBits stage, std::shared_ptr<ShaderModule> const& shader) {
-          pipeline_stages.PushBack({
+          m_pipeline_stages.PushBack({
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
@@ -268,22 +270,22 @@ namespace zephyr {
           });
         };
 
-        if(!own.shader_vert || !own.shader_frag || (bool)own.shader_tess_control != (bool)own.shader_tess_evaluation) {
+        if(!m_own.shader_vert || !m_own.shader_frag || (bool)m_own.shader_tess_control != (bool)m_own.shader_tess_evaluation) {
           ZEPHYR_PANIC("VulkanGraphicsPipelineBuilder: pipeline stages are incomplete");
         }
 
-        pipeline_stages.Clear();
+        m_pipeline_stages.Clear();
 
-        PushStage(VK_SHADER_STAGE_VERTEX_BIT, own.shader_vert);
-        PushStage(VK_SHADER_STAGE_FRAGMENT_BIT, own.shader_frag);
+        PushStage(VK_SHADER_STAGE_VERTEX_BIT, m_own.shader_vert);
+        PushStage(VK_SHADER_STAGE_FRAGMENT_BIT, m_own.shader_frag);
 
-        if(own.shader_tess_control) {
-          PushStage(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, own.shader_tess_control);
-          PushStage(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, own.shader_tess_evaluation);
+        if(m_own.shader_tess_control) {
+          PushStage(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_own.shader_tess_control);
+          PushStage(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_own.shader_tess_evaluation);
         }
 
-        pipeline_info.pStages = pipeline_stages.Data();
-        pipeline_info.stageCount = (u32)pipeline_stages.Size();
+        m_pipeline_info.pStages = m_pipeline_stages.Data();
+        m_pipeline_info.stageCount = (u32)m_pipeline_stages.Size();
       }
 
       auto GetVertexInputAttributeFormat(VertexDataType data_type, int components, bool normalized) -> VkFormat {
@@ -371,11 +373,11 @@ namespace zephyr {
         std::shared_ptr<ShaderModule> shader_tess_evaluation;
         std::shared_ptr<PipelineLayout> layout;
         std::shared_ptr<RenderPass> render_pass;
-      } own;
+      } m_own;
 
-      VkDevice device;
+      VkDevice m_device;
 
-      VkViewport viewport{
+      VkViewport m_viewport{
         .x = 0.0f,
         .y = 0.0f,
         .width = 1.0f,
@@ -384,7 +386,7 @@ namespace zephyr {
         .maxDepth = 1.0f
       };
 
-      VkRect2D scissor{
+      VkRect2D m_scissor{
         .offset = {
           .x = 0,
           .y = 0
@@ -395,21 +397,21 @@ namespace zephyr {
         }
       };
 
-      bool pipeline_stages_dirty = true;
+      bool m_pipeline_stages_dirty = true;
 
-      Vector_N<VkPipelineShaderStageCreateInfo, 4> pipeline_stages;
+      Vector_N<VkPipelineShaderStageCreateInfo, 4> m_pipeline_stages;
 
-      VkPipelineViewportStateCreateInfo viewport_info{
+      VkPipelineViewportStateCreateInfo m_viewport_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
         .viewportCount = 1,
-        .pViewports = &viewport,
+        .pViewports = &m_viewport,
         .scissorCount = 1,
-        .pScissors = &scissor
+        .pScissors = &m_scissor
       };
 
-      VkPipelineRasterizationStateCreateInfo rasterization_info{
+      VkPipelineRasterizationStateCreateInfo m_rasterization_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -425,7 +427,7 @@ namespace zephyr {
         .lineWidth = 1
       };
 
-      VkPipelineMultisampleStateCreateInfo multisample_info{
+      VkPipelineMultisampleStateCreateInfo m_multisample_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -437,7 +439,7 @@ namespace zephyr {
         .alphaToOneEnable = VK_FALSE
       };
 
-      VkPipelineDepthStencilStateCreateInfo depth_stencil_info{
+      VkPipelineDepthStencilStateCreateInfo m_depth_stencil_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -452,7 +454,7 @@ namespace zephyr {
         .maxDepthBounds = 0
       };
 
-      VkPipelineVertexInputStateCreateInfo vertex_input_info{
+      VkPipelineVertexInputStateCreateInfo m_vertex_input_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -462,7 +464,7 @@ namespace zephyr {
         .pVertexAttributeDescriptions = nullptr
       };
 
-      VkPipelineInputAssemblyStateCreateInfo input_assembly_info{
+      VkPipelineInputAssemblyStateCreateInfo m_input_assembly_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -470,27 +472,27 @@ namespace zephyr {
         .primitiveRestartEnable = VK_FALSE
       };
 
-      VkPipelineTessellationStateCreateInfo tessellation_info{
+      VkPipelineTessellationStateCreateInfo m_tessellation_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
         .patchControlPoints = 1
       };
 
-      std::array<VkPipelineColorBlendAttachmentState, VulkanRenderPass::kMaxColorAttachments> attachment_blend_state;
+      std::array<VkPipelineColorBlendAttachmentState, VulkanRenderPass::k_max_color_attachments> m_attachment_blend_state;
 
-      VkPipelineColorBlendStateCreateInfo color_blend_info{
+      VkPipelineColorBlendStateCreateInfo m_color_blend_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
         .logicOpEnable = VK_FALSE,
         .logicOp = VK_LOGIC_OP_NO_OP,
         .attachmentCount = 1,
-        .pAttachments = attachment_blend_state.data(),
+        .pAttachments = m_attachment_blend_state.data(),
         .blendConstants = {0, 0, 0, 0}
       };
 
-      VkPipelineDynamicStateCreateInfo dynamic_state_info{
+      VkPipelineDynamicStateCreateInfo m_dynamic_state_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -498,24 +500,24 @@ namespace zephyr {
         .pDynamicStates = nullptr
       };
 
-      std::vector<VkVertexInputBindingDescription> vertex_input_bindings;
-      std::vector<VkVertexInputAttributeDescription> vertex_input_attributes;
+      std::vector<VkVertexInputBindingDescription> m_vertex_input_bindings;
+      std::vector<VkVertexInputAttributeDescription> m_vertex_input_attributes;
 
-      VkGraphicsPipelineCreateInfo pipeline_info{
+      VkGraphicsPipelineCreateInfo m_pipeline_info{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
         .stageCount = 0,
         .pStages = nullptr,
-        .pVertexInputState = &vertex_input_info,
-        .pInputAssemblyState = &input_assembly_info,
-        .pTessellationState = &tessellation_info,
-        .pViewportState = &viewport_info,
-        .pRasterizationState = &rasterization_info,
-        .pMultisampleState = &multisample_info,
-        .pDepthStencilState = &depth_stencil_info,
-        .pColorBlendState = &color_blend_info,
-        .pDynamicState = &dynamic_state_info,
+        .pVertexInputState = &m_vertex_input_info,
+        .pInputAssemblyState = &m_input_assembly_info,
+        .pTessellationState = &m_tessellation_info,
+        .pViewportState = &m_viewport_info,
+        .pRasterizationState = &m_rasterization_info,
+        .pMultisampleState = &m_multisample_info,
+        .pDepthStencilState = &m_depth_stencil_info,
+        .pColorBlendState = &m_color_blend_info,
+        .pDynamicState = &m_dynamic_state_info,
         .layout = VK_NULL_HANDLE,
         .renderPass = VK_NULL_HANDLE,
         .subpass = 0,
@@ -523,8 +525,8 @@ namespace zephyr {
         .basePipelineIndex = 0
       };
 
-      bool enable_dynamic_viewport = false;
-      bool enable_dynamic_scissor = false;
+      bool m_enable_dynamic_viewport = false;
+      bool m_enable_dynamic_scissor = false;
   };
 
 } // namespace zephyr

@@ -12,10 +12,12 @@ namespace zephyr {
         VkDevice device,
         VkDescriptorPool descriptor_pool,
         const std::shared_ptr<BindGroupLayout>& layout
-      )   : device(device), descriptor_pool(descriptor_pool), m_layout{layout} {
+      )   : m_device{device}
+          , m_descriptor_pool{descriptor_pool}
+          , m_layout{layout} {
         const void* layout_handle = layout->Handle();
 
-        auto info = VkDescriptorSetAllocateInfo{
+        const VkDescriptorSetAllocateInfo info{
           .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
           .pNext = nullptr,
           .descriptorPool = descriptor_pool,
@@ -23,17 +25,17 @@ namespace zephyr {
           .pSetLayouts = (const VkDescriptorSetLayout*)&layout_handle
         };
 
-        if (vkAllocateDescriptorSets(device, &info, &descriptor_set) != VK_SUCCESS) {
+        if (vkAllocateDescriptorSets(device, &info, &m_descriptor_set) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanBindGroup: failed to allocate descriptor set");
         }
       }
 
      ~VulkanBindGroup() override {
-        vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set);
+        vkFreeDescriptorSets(m_device, m_descriptor_pool, 1, &m_descriptor_set);
       }
 
       void* Handle() override {
-        return (void*)descriptor_set;
+        return (void*)m_descriptor_set;
       }
 
       void Bind(u32 binding, Buffer* buffer, BindingType type) override {
@@ -46,7 +48,7 @@ namespace zephyr {
         const VkWriteDescriptorSet write_descriptor_set{
           .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
           .pNext = nullptr,
-          .dstSet = descriptor_set,
+          .dstSet = m_descriptor_set,
           .dstBinding = binding,
           .dstArrayElement = 0,
           .descriptorCount = 1,
@@ -56,7 +58,7 @@ namespace zephyr {
           .pTexelBufferView = nullptr
         };
 
-        vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, nullptr);
+        vkUpdateDescriptorSets(m_device, 1, &write_descriptor_set, 0, nullptr);
       }
 
       void Bind(
@@ -74,7 +76,7 @@ namespace zephyr {
         const VkWriteDescriptorSet write_descriptor_set{
           .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
           .pNext = nullptr,
-          .dstSet = descriptor_set,
+          .dstSet = m_descriptor_set,
           .dstBinding = binding,
           .dstArrayElement = 0,
           .descriptorCount = 1,
@@ -84,7 +86,7 @@ namespace zephyr {
           .pTexelBufferView = nullptr
         };
 
-        vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, nullptr);
+        vkUpdateDescriptorSets(m_device, 1, &write_descriptor_set, 0, nullptr);
       }
 
       void Bind(
@@ -102,7 +104,7 @@ namespace zephyr {
         const VkWriteDescriptorSet write_descriptor_set{
           .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
           .pNext = nullptr,
-          .dstSet = descriptor_set,
+          .dstSet = m_descriptor_set,
           .dstBinding = binding,
           .dstArrayElement = 0,
           .descriptorCount = 1,
@@ -112,13 +114,13 @@ namespace zephyr {
           .pTexelBufferView = nullptr
         };
 
-        vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, nullptr);
+        vkUpdateDescriptorSets(m_device, 1, &write_descriptor_set, 0, nullptr);
       }
 
     private:
-      VkDevice device;
-      VkDescriptorPool descriptor_pool;
-      VkDescriptorSet descriptor_set;
+      VkDevice m_device;
+      VkDescriptorPool m_descriptor_pool;
+      VkDescriptorSet m_descriptor_set{};
       std::shared_ptr<BindGroupLayout> m_layout;
   };
 
@@ -128,7 +130,8 @@ namespace zephyr {
         VkDevice device,
         VkDescriptorPool descriptor_pool,
         std::span<BindGroupLayout::Entry const> entries
-      )   : device(device), descriptor_pool(descriptor_pool) {
+      )   : m_device{device}
+          , m_descriptor_pool{descriptor_pool} {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
         for (const auto& entry : entries) {
@@ -149,23 +152,23 @@ namespace zephyr {
           .pBindings = bindings.data()
         };
 
-        if (vkCreateDescriptorSetLayout(device, &info, nullptr, &layout) != VK_SUCCESS) {
+        if (vkCreateDescriptorSetLayout(device, &info, nullptr, &m_layout) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanBindGroupLayout: failed to create descriptor set layout");
         }
       }
 
      ~VulkanBindGroupLayout() override {
-        vkDestroyDescriptorSetLayout(device, layout, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_layout, nullptr);
       }
 
       void* Handle() override {
-       return (void*)layout;
+       return (void*)m_layout;
       }
 
     private:
-      VkDevice device;
-      VkDescriptorPool descriptor_pool;
-      VkDescriptorSetLayout layout;
+      VkDevice m_device;
+      VkDescriptorPool m_descriptor_pool;
+      VkDescriptorSetLayout m_layout;
   };
 
 } // namespace zephyr

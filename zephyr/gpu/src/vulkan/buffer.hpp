@@ -16,7 +16,8 @@ class VulkanBuffer final : public Buffer {
       Buffer::Usage usage,
       Buffer::Flags flags,
       size_t size
-    )   : allocator(allocator), size(size), host_visible(false) {
+    )   : m_allocator{allocator}
+        , m_size{size} {
       const VkBufferCreateInfo buffer_info{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .pNext = nullptr,
@@ -33,78 +34,78 @@ class VulkanBuffer final : public Buffer {
         .usage = VMA_MEMORY_USAGE_AUTO
       };
 
-      host_visible = flags & Buffer::Flags::HostVisible;
+      m_host_visible = flags & Buffer::Flags::HostVisible;
 
-      if(host_visible) {
+      if(m_host_visible) {
         alloc_info.flags = flags & Buffer::Flags::HostAccessRandom ?
           VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT :
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
       }
 
-      if(vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &buffer, &allocation, nullptr) != VK_SUCCESS) {
+      if(vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &m_buffer, &m_allocation, nullptr) != VK_SUCCESS) {
         ZEPHYR_PANIC("VulkanBuffer: failed to create buffer");
       }
     }
 
    ~VulkanBuffer() override {
       Unmap();
-      vmaDestroyBuffer(allocator, buffer, allocation);
+      vmaDestroyBuffer(m_allocator, m_buffer, m_allocation);
     }
 
     void* Handle() override {
-      return (void*)buffer;
+      return (void*)m_buffer;
     }
 
     void Map() override {
-      if(host_data == nullptr) {
-        if(!host_visible) {
+      if(m_host_data == nullptr) {
+        if(!m_host_visible) {
           ZEPHYR_PANIC("VulkanBuffer: attempted to map buffer which is not host visible");
         }
 
-        if(vmaMapMemory(allocator, allocation, &host_data) != VK_SUCCESS) {
-          ZEPHYR_PANIC("VulkanBuffer: failed to map buffer to host memory, size={}", size);
+        if(vmaMapMemory(m_allocator, m_allocation, &m_host_data) != VK_SUCCESS) {
+          ZEPHYR_PANIC("VulkanBuffer: failed to map buffer to host memory, size={}", m_size);
         }
       }
     }
 
     void Unmap() override {
-      if(host_data != nullptr) {
-        vmaUnmapMemory(allocator, allocation);
-        host_data = nullptr;
+      if(m_host_data != nullptr) {
+        vmaUnmapMemory(m_allocator, m_allocation);
+        m_host_data = nullptr;
       }
     }
 
     void* Data() override {
-      return host_data;
+      return m_host_data;
     }
 
     size_t Size() const override {
-      return size;
+      return m_size;
     }
 
     void Flush() override {
-      Flush(0, size);
+      Flush(0, m_size);
     }
 
     void Flush(size_t offset, size_t size) override {
       auto range_end = offset + size;
 
-      if(range_end > this->size) {
+      if(range_end > this->m_size) {
         ZEPHYR_PANIC("VulkanBuffer: out-of-bounds flush request, offset={}, size={}", offset, size);
       }
 
-      if(vmaFlushAllocation(allocator, allocation, offset, size) != VK_SUCCESS) {
+      if(vmaFlushAllocation(m_allocator, m_allocation, offset, size) != VK_SUCCESS) {
         ZEPHYR_PANIC("VulkanBuffer: failed to flush range");
       }
     }
 
   private:
-    VkBuffer buffer;
-    VmaAllocator allocator;
-    VmaAllocation allocation;
-    size_t size;
-    bool host_visible;
-    void* host_data = nullptr;
+    VkBuffer m_buffer;
+    VmaAllocator m_allocator;
+    VmaAllocation m_allocation;
+    size_t m_size;
+    bool m_host_visible{false};
+    void* m_host_data{};
 };
 
 } // namespace zephyr

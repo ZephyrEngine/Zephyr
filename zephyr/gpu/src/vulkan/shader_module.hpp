@@ -11,9 +11,9 @@ namespace zephyr {
     public:
       VulkanShaderModule(
         VkDevice device,
-        u32 const* spirv,
+        const u32* spirv,
         size_t size
-      )   : device(device) {
+      )   : m_device{device} {
         const VkShaderModuleCreateInfo info{
           .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
           .pNext = nullptr,
@@ -22,22 +22,22 @@ namespace zephyr {
           .pCode = spirv
         };
 
-        if (vkCreateShaderModule(device, &info, nullptr, &shader_module) != VK_SUCCESS) {
+        if (vkCreateShaderModule(device, &info, nullptr, &m_shader_module) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanShaderModule: failed to create shader module");
         }
       }
 
      ~VulkanShaderModule() override {
-        vkDestroyShaderModule(device, shader_module, nullptr);
+        vkDestroyShaderModule(m_device, m_shader_module, nullptr);
       }
 
       void* Handle() override {
-        return (void*)shader_module;
+        return (void*)m_shader_module;
       }
 
     private:
-      VkDevice device;
-      VkShaderModule shader_module;
+      VkDevice m_device;
+      VkShaderModule m_shader_module;
   };
 
 } // namespace zephyr
