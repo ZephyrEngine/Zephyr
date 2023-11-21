@@ -86,7 +86,7 @@ namespace zephyr {
       }
 
       Sampler* DefaultNearestSampler() override {
-        if (!m_default_nearest_sampler) {
+        if(!m_default_nearest_sampler) {
           m_default_nearest_sampler = CreateSampler(Sampler::Config{
             .mag_filter = Sampler::FilterMode::Nearest,
             .min_filter = Sampler::FilterMode::Nearest,
@@ -98,7 +98,7 @@ namespace zephyr {
       }
 
       Sampler* DefaultLinearSampler() override {
-        if (!m_default_linear_sampler) {
+        if(!m_default_linear_sampler) {
           m_default_linear_sampler = CreateSampler(Sampler::Config{
             .mag_filter = Sampler::FilterMode::Linear,
             .min_filter = Sampler::FilterMode::Linear,
@@ -187,7 +187,7 @@ namespace zephyr {
           .pTypeExternalMemoryHandleTypes = nullptr
         };
 
-        if (vmaCreateAllocator(&info, &m_allocator) != VK_SUCCESS) {
+        if(vmaCreateAllocator(&info, &m_allocator) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanRenderDevice: failed to create the VMA allocator");
         }
       }
@@ -226,7 +226,7 @@ namespace zephyr {
           .pPoolSizes = pool_sizes
         };
 
-        if (vkCreateDescriptorPool(m_device, &info, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
+        if(vkCreateDescriptorPool(m_device, &info, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanRenderDevice: failed to create descriptor pool");
         }
       }

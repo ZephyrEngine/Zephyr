@@ -31,7 +31,7 @@ namespace zephyr {
 
       virtual std::unique_ptr<Buffer> CreateBuffer(Buffer::Usage usage, Buffer::Flags flags, size_t size) = 0;
 
-      virtual std::shared_ptr<ShaderModule> CreateShaderModule(u32 const* spirv, size_t size) = 0;
+      virtual std::shared_ptr<ShaderModule> CreateShaderModule(const u32* spirv, size_t size) = 0;
 
       virtual std::unique_ptr<Texture> CreateTexture2D(
         u32 width,

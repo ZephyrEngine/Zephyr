@@ -45,7 +45,7 @@ namespace zephyr {
       }
 
       void SetClearColor(int index, float r, float g, float b, float a) override {
-        if (index >= m_color_attachment_count) {
+        if(index >= m_color_attachment_count) {
           ZEPHYR_PANIC("VulkanRenderPass: SetClearColor() called with an out-of-bounds index");
         }
 

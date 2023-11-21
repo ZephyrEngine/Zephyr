@@ -64,7 +64,7 @@ namespace zephyr {
         PipelineLayout* pipeline_layout,
         u32 offset,
         u32 size,
-        void const* data
+        const void* data
       ) = 0;
 
       virtual void BeginRenderPass(

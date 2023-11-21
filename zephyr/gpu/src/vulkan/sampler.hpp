@@ -31,7 +31,7 @@ namespace zephyr {
          .unnormalizedCoordinates = VK_FALSE
         };
 
-        if (vkCreateSampler(device, &info, nullptr, &m_sampler) != VK_SUCCESS) {
+        if(vkCreateSampler(device, &info, nullptr, &m_sampler) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanSampler: failed to create sampler");
         }
       }

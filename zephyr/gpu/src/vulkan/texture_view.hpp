@@ -16,8 +16,8 @@ namespace zephyr {
         Texture::Format format,
         u32 width,
         u32 height,
-        Texture::SubresourceRange const& range,
-        ComponentMapping const& mapping
+        const Texture::SubresourceRange& range,
+        const ComponentMapping& mapping
       )   : m_device{device}
           , m_type{type}
           , m_format{format}
@@ -47,7 +47,7 @@ namespace zephyr {
           }
         };
 
-        if (vkCreateImageView(device, &info, nullptr, &m_image_view) != VK_SUCCESS) {
+        if(vkCreateImageView(device, &info, nullptr, &m_image_view) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanTextureView: failed to create image view");
         }
       }

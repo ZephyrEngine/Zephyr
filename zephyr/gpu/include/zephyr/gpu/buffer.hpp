@@ -36,14 +36,14 @@ namespace zephyr {
       virtual void Flush(size_t offset, size_t size) = 0;
 
       template<typename T>
-      void Update(T const* data, size_t count = 1, size_t index = 0) {
+      void Update(const T* data, size_t count = 1, size_t index = 0) {
         auto offset = index * sizeof(T);
         auto size = count * sizeof(T);
         auto range_end = offset + size;
 
         Map();
 
-        if (range_end <= Size()) {
+        if(range_end <= Size()) {
           std::memcpy((u8*)Data() + offset, data, size);
         }
 

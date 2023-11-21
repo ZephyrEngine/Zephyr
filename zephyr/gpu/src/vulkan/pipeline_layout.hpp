@@ -13,7 +13,7 @@ namespace zephyr {
       )   : m_device{device} {
         std::vector<VkDescriptorSetLayout> descriptor_set_layouts{};
 
-        for (auto& bind_group_layout : bind_group_layouts) {
+        for(auto& bind_group_layout : bind_group_layouts) {
           descriptor_set_layouts.push_back((VkDescriptorSetLayout)bind_group_layout->Handle());
         }
 
@@ -33,7 +33,7 @@ namespace zephyr {
           .pPushConstantRanges = &push_constant_rage
         };
 
-        if (vkCreatePipelineLayout(device, &info, nullptr, &m_layout) != VK_SUCCESS) {
+        if(vkCreatePipelineLayout(device, &info, nullptr, &m_layout) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanPipelineLayout: failed to create pipeline layout");
         }
       }

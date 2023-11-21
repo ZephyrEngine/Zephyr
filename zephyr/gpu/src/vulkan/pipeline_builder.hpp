@@ -70,7 +70,7 @@ namespace zephyr {
       }
 
       void SetShaderModule(ShaderStage stage, std::shared_ptr<ShaderModule> shader_module) override {
-        switch (stage) {
+        switch(stage) {
           case ShaderStage::Vertex:
             m_own.shader_vert = std::move(shader_module);
             break;
@@ -218,7 +218,7 @@ namespace zephyr {
       auto Build() -> std::unique_ptr<GraphicsPipeline> override {
         auto number_of_color_attachments = m_own.render_pass->GetNumberOfColorAttachments();
 
-        if (number_of_color_attachments > m_attachment_blend_state.size()) {
+        if(number_of_color_attachments > m_attachment_blend_state.size()) {
           ZEPHYR_PANIC("VulkanGraphicsPipelineBuilder: render pass with more than 32 color attachments is unsupported.");
         }
 
@@ -249,7 +249,7 @@ namespace zephyr {
 
         auto pipeline = VkPipeline{};
 
-        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
+        if(vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanGraphicsPipelineBuilder: failed to create graphics pipeline");
         }
 
@@ -258,7 +258,7 @@ namespace zephyr {
 
     private:
       void UpdatePipelineStages() {
-        const auto PushStage = [this](VkShaderStageFlagBits stage, std::shared_ptr<ShaderModule> const& shader) {
+        const auto PushStage = [this](VkShaderStageFlagBits stage, const std::shared_ptr<ShaderModule>& shader) {
           m_pipeline_stages.PushBack({
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .pNext = nullptr,
@@ -290,75 +290,75 @@ namespace zephyr {
 
       auto GetVertexInputAttributeFormat(VertexDataType data_type, int components, bool normalized) -> VkFormat {
         // @todo: optimise this with a lookup table
-        switch (data_type) {
+        switch(data_type) {
           case VertexDataType::SInt8: {
-            if (normalized) {
-              if (components == 1) return VK_FORMAT_R8_SNORM;
-              if (components == 2) return VK_FORMAT_R8G8_SNORM;
-              if (components == 3) return VK_FORMAT_R8G8B8_SNORM;
-              if (components == 4) return VK_FORMAT_R8G8B8A8_SNORM;
+            if(normalized) {
+              if(components == 1) return VK_FORMAT_R8_SNORM;
+              if(components == 2) return VK_FORMAT_R8G8_SNORM;
+              if(components == 3) return VK_FORMAT_R8G8B8_SNORM;
+              if(components == 4) return VK_FORMAT_R8G8B8A8_SNORM;
             } else {
-              if (components == 1) return VK_FORMAT_R8_SINT;
-              if (components == 2) return VK_FORMAT_R8G8_SINT;
-              if (components == 3) return VK_FORMAT_R8G8B8_SINT;
-              if (components == 4) return VK_FORMAT_R8G8B8A8_SINT;
+              if(components == 1) return VK_FORMAT_R8_SINT;
+              if(components == 2) return VK_FORMAT_R8G8_SINT;
+              if(components == 3) return VK_FORMAT_R8G8B8_SINT;
+              if(components == 4) return VK_FORMAT_R8G8B8A8_SINT;
             }
             break;
           }
           case VertexDataType::UInt8: {
-            if (normalized) {
-              if (components == 1) return VK_FORMAT_R8_UNORM;
-              if (components == 2) return VK_FORMAT_R8G8_UNORM;
-              if (components == 3) return VK_FORMAT_R8G8B8_UNORM;
-              if (components == 4) return VK_FORMAT_R8G8B8A8_UNORM;
+            if(normalized) {
+              if(components == 1) return VK_FORMAT_R8_UNORM;
+              if(components == 2) return VK_FORMAT_R8G8_UNORM;
+              if(components == 3) return VK_FORMAT_R8G8B8_UNORM;
+              if(components == 4) return VK_FORMAT_R8G8B8A8_UNORM;
             } else {
-              if (components == 1) return VK_FORMAT_R8_UINT;
-              if (components == 2) return VK_FORMAT_R8G8_UINT;
-              if (components == 3) return VK_FORMAT_R8G8B8_UINT;
-              if (components == 4) return VK_FORMAT_R8G8B8A8_UINT;
+              if(components == 1) return VK_FORMAT_R8_UINT;
+              if(components == 2) return VK_FORMAT_R8G8_UINT;
+              if(components == 3) return VK_FORMAT_R8G8B8_UINT;
+              if(components == 4) return VK_FORMAT_R8G8B8A8_UINT;
             }
             break;
           }
           case VertexDataType::SInt16: {
-            if (normalized) {
-              if (components == 1) return VK_FORMAT_R16_SNORM;
-              if (components == 2) return VK_FORMAT_R16G16_SNORM;
-              if (components == 3) return VK_FORMAT_R16G16B16_SNORM;
-              if (components == 4) return VK_FORMAT_R16G16B16A16_SNORM;
+            if(normalized) {
+              if(components == 1) return VK_FORMAT_R16_SNORM;
+              if(components == 2) return VK_FORMAT_R16G16_SNORM;
+              if(components == 3) return VK_FORMAT_R16G16B16_SNORM;
+              if(components == 4) return VK_FORMAT_R16G16B16A16_SNORM;
             } else {
-              if (components == 1) return VK_FORMAT_R16_SINT;
-              if (components == 2) return VK_FORMAT_R16G16_SINT;
-              if (components == 3) return VK_FORMAT_R16G16B16_SINT;
-              if (components == 4) return VK_FORMAT_R16G16B16A16_SINT;
+              if(components == 1) return VK_FORMAT_R16_SINT;
+              if(components == 2) return VK_FORMAT_R16G16_SINT;
+              if(components == 3) return VK_FORMAT_R16G16B16_SINT;
+              if(components == 4) return VK_FORMAT_R16G16B16A16_SINT;
             }
             break;
           }
           case VertexDataType::UInt16: {
-            if (normalized) {
-              if (components == 1) return VK_FORMAT_R16_UNORM;
-              if (components == 2) return VK_FORMAT_R16G16_UNORM;
-              if (components == 3) return VK_FORMAT_R16G16B16_UNORM;
-              if (components == 4) return VK_FORMAT_R16G16B16A16_UNORM;
+            if(normalized) {
+              if(components == 1) return VK_FORMAT_R16_UNORM;
+              if(components == 2) return VK_FORMAT_R16G16_UNORM;
+              if(components == 3) return VK_FORMAT_R16G16B16_UNORM;
+              if(components == 4) return VK_FORMAT_R16G16B16A16_UNORM;
             } else {
-              if (components == 1) return VK_FORMAT_R16_UINT;
-              if (components == 2) return VK_FORMAT_R16G16_UINT;
-              if (components == 3) return VK_FORMAT_R16G16B16_UINT;
-              if (components == 4) return VK_FORMAT_R16G16B16A16_UINT;
+              if(components == 1) return VK_FORMAT_R16_UINT;
+              if(components == 2) return VK_FORMAT_R16G16_UINT;
+              if(components == 3) return VK_FORMAT_R16G16B16_UINT;
+              if(components == 4) return VK_FORMAT_R16G16B16A16_UINT;
             }
             break;
           }
           case VertexDataType::Float16: {
-            if (components == 1) return VK_FORMAT_R16_SFLOAT;
-            if (components == 2) return VK_FORMAT_R16G16_SFLOAT;
-            if (components == 3) return VK_FORMAT_R16G16B16_SFLOAT;
-            if (components == 4) return VK_FORMAT_R16G16B16A16_SFLOAT;
+            if(components == 1) return VK_FORMAT_R16_SFLOAT;
+            if(components == 2) return VK_FORMAT_R16G16_SFLOAT;
+            if(components == 3) return VK_FORMAT_R16G16B16_SFLOAT;
+            if(components == 4) return VK_FORMAT_R16G16B16A16_SFLOAT;
             break;
           }
           case VertexDataType::Float32: {
-            if (components == 1) return VK_FORMAT_R32_SFLOAT;
-            if (components == 2) return VK_FORMAT_R32G32_SFLOAT;
-            if (components == 3) return VK_FORMAT_R32G32B32_SFLOAT;
-            if (components == 4) return VK_FORMAT_R32G32B32A32_SFLOAT;
+            if(components == 1) return VK_FORMAT_R32_SFLOAT;
+            if(components == 2) return VK_FORMAT_R32G32_SFLOAT;
+            if(components == 3) return VK_FORMAT_R32G32B32_SFLOAT;
+            if(components == 4) return VK_FORMAT_R32G32B32A32_SFLOAT;
             break;
           }
         }

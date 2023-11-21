@@ -15,7 +15,7 @@ namespace zephyr {
           .flags = (create_signalled == CreateSignalled::Yes) ? VK_FENCE_CREATE_SIGNALED_BIT : 0u
         };
 
-        if (vkCreateFence(m_device, &info, nullptr, &m_fence) != VK_SUCCESS) {
+        if(vkCreateFence(m_device, &info, nullptr, &m_fence) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanFence: failed to create fence :(");
         }
       }

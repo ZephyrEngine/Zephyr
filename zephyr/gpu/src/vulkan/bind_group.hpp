@@ -25,7 +25,7 @@ namespace zephyr {
           .pSetLayouts = (const VkDescriptorSetLayout*)&layout_handle
         };
 
-        if (vkAllocateDescriptorSets(device, &info, &m_descriptor_set) != VK_SUCCESS) {
+        if(vkAllocateDescriptorSets(device, &info, &m_descriptor_set) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanBindGroup: failed to allocate descriptor set");
         }
       }
@@ -134,7 +134,7 @@ namespace zephyr {
           , m_descriptor_pool{descriptor_pool} {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
-        for (const auto& entry : entries) {
+        for(const auto& entry : entries) {
           bindings.push_back({
             .binding = entry.binding,
             .descriptorType = (VkDescriptorType)entry.type,
@@ -152,7 +152,7 @@ namespace zephyr {
           .pBindings = bindings.data()
         };
 
-        if (vkCreateDescriptorSetLayout(device, &info, nullptr, &m_layout) != VK_SUCCESS) {
+        if(vkCreateDescriptorSetLayout(device, &info, nullptr, &m_layout) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanBindGroupLayout: failed to create descriptor set layout");
         }
       }

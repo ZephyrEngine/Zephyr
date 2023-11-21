@@ -22,7 +22,7 @@ namespace zephyr {
           .commandBufferCount = 1
         };
 
-        if (vkAllocateCommandBuffers(device, &info, &m_buffer) != VK_SUCCESS) {
+        if(vkAllocateCommandBuffers(device, &info, &m_buffer) != VK_SUCCESS) {
           ZEPHYR_PANIC("Vulkan: failed to allocate command buffer");
         }
       }
@@ -36,7 +36,7 @@ namespace zephyr {
       }
 
       void Begin(OneTimeSubmit one_time_submit) override {
-        const auto begin_info = VkCommandBufferBeginInfo{
+        const VkCommandBufferBeginInfo begin_info{
           .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
           .pNext = nullptr,
           .flags = (VkCommandBufferUsageFlags)one_time_submit,
@@ -179,7 +179,7 @@ namespace zephyr {
         PipelineLayout* pipeline_layout,
         u32 offset,
         u32 size,
-        void const* data
+        const void* data
       ) override {
         vkCmdPushConstants(m_buffer, (VkPipelineLayout)pipeline_layout->Handle(), VK_SHADER_STAGE_ALL, offset, size, data);
       }
@@ -249,11 +249,11 @@ namespace zephyr {
 
         const VkDeviceSize buffer_offsets[32] = { 0 };
 
-        if (buffers.size() > 32) {
+        if(buffers.size() > 32) {
           ZEPHYR_PANIC("VulkanCommandBuffer: can't bind more than 32 vertex buffers at once");
         }
 
-        for (int i = 0; i < buffers.size(); i++) {
+        for(int i = 0; i < buffers.size(); i++) {
           buffer_handles[i] = (VkBuffer)buffers[i]->Handle();
         }
 

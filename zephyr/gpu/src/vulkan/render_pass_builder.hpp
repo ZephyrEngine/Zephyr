@@ -159,7 +159,7 @@ namespace zephyr {
                 "VulkanRenderPassBuilder: color attachment #{} initial layout requires transition information", i);
             }
 
-            auto const& transition = transitions.initial.value();
+            const auto& transition = transitions.initial.value();
             initial_dependency_stages = initial_dependency_stages | transition.stages;
             initial_dependency_access = initial_dependency_access | transition.access;
 
@@ -177,7 +177,7 @@ namespace zephyr {
                 "VulkanRenderPassBuilder: color attachment #{} final layout requires transition information", i);
             }
 
-            auto const& transition = transitions.final.value();
+            const auto& transition = transitions.final.value();
             final_dependency_stages = final_dependency_stages | transition.stages;
             final_dependency_access = final_dependency_access | transition.access;
 
@@ -207,7 +207,7 @@ namespace zephyr {
                 "VulkanRenderPassBuilder: depth/stencil descriptor initial layout required transition information");
             }
 
-            auto const& transition = transitions.initial.value();
+            const auto& transition = transitions.initial.value();
             initial_dependency_stages = initial_dependency_stages | transition.stages;
             initial_dependency_access = initial_dependency_access | transition.access;
 
@@ -222,7 +222,7 @@ namespace zephyr {
                 "VulkanRenderPassBuilder: depth/stencil descriptor final layout requires transition information");
             }
 
-            auto const& transition = transitions.final.value();
+            const auto& transition = transitions.final.value();
             final_dependency_stages = final_dependency_stages | transition.stages;
             final_dependency_access = final_dependency_access | transition.access;
 

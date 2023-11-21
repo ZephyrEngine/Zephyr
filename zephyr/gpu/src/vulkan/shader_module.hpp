@@ -22,7 +22,7 @@ namespace zephyr {
           .pCode = spirv
         };
 
-        if (vkCreateShaderModule(device, &info, nullptr, &m_shader_module) != VK_SUCCESS) {
+        if(vkCreateShaderModule(device, &info, nullptr, &m_shader_module) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanShaderModule: failed to create shader module");
         }
       }

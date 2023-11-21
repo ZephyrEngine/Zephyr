@@ -21,10 +21,10 @@ namespace zephyr {
 
         Texture::View* first_attachment = nullptr;
 
-        if (color_attachments.empty()) {
+        if(color_attachments.empty()) {
           first_attachment = color_attachments[0];
         } else {
-          if (depth_stencil_attachment == nullptr) {
+          if(depth_stencil_attachment == nullptr) {
             ZEPHYR_PANIC("VulkanRenderTarget: cannot have render target with zero attachments");
           }
 
@@ -35,11 +35,11 @@ namespace zephyr {
         m_height = first_attachment->GetHeight();
         m_render_pass = CreateRenderPass();
 
-        for (auto color_attachment : color_attachments) {
+        for(auto color_attachment : color_attachments) {
           image_views.push_back((VkImageView)color_attachment->Handle());
         }
 
-        if (depth_stencil_attachment) {
+        if(depth_stencil_attachment) {
           image_views.push_back((VkImageView)depth_stencil_attachment->Handle());
         }
 
@@ -55,7 +55,7 @@ namespace zephyr {
           .layers = 1
         };
 
-        if (vkCreateFramebuffer(device, &info, nullptr, &m_framebuffer) != VK_SUCCESS) {
+        if(vkCreateFramebuffer(device, &info, nullptr, &m_framebuffer) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanRenderTarget: failed to create framebuffer");
         }
       }
@@ -81,13 +81,13 @@ namespace zephyr {
         auto color_attachment_count = m_color_attachments.size();
         auto render_pass_builder = VulkanRenderPassBuilder{m_device};
 
-        for (size_t i = 0; i < color_attachment_count; i++) {
+        for(size_t i = 0; i < color_attachment_count; i++) {
           render_pass_builder.SetColorAttachmentFormat(i, m_color_attachments[i]->GetFormat());
           render_pass_builder.SetColorAttachmentSrcLayout(i, Texture::Layout::Undefined, std::nullopt);
           render_pass_builder.SetColorAttachmentDstLayout(i, Texture::Layout::ColorAttachment, std::nullopt);
         }
 
-        if (m_depth_stencil_attachment) {
+        if(m_depth_stencil_attachment) {
           render_pass_builder.SetDepthAttachmentFormat(m_depth_stencil_attachment->GetFormat());
           render_pass_builder.SetDepthAttachmentSrcLayout(Texture::Layout::Undefined, std::nullopt);
           render_pass_builder.SetDepthAttachmentDstLayout(Texture::Layout::DepthStencilAttachment, std::nullopt);

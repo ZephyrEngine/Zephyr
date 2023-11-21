@@ -16,7 +16,7 @@ namespace zephyr {
           .queueFamilyIndex = queue_family_index
         };
 
-        if (vkCreateCommandPool(device, &info, nullptr, &m_pool) != VK_SUCCESS) {
+        if(vkCreateCommandPool(device, &info, nullptr, &m_pool) != VK_SUCCESS) {
           ZEPHYR_PANIC("Vulkan: failed to create a command pool");
         }
       }

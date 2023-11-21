@@ -12,7 +12,7 @@ namespace zephyr {
   class VulkanTexture final : public Texture {
     public:
      ~VulkanTexture() override {
-        if (m_image_owned) {
+        if(m_image_owned) {
           vmaDestroyImage(m_allocator, m_image, m_allocation);
         }
       }
@@ -142,7 +142,7 @@ namespace zephyr {
       ) {
         std::unique_ptr<VulkanTexture> texture{new VulkanTexture{}};
 
-        if (default_view_type == View::Type::Cube || default_view_type == View::Type::CubeArray) {
+        if(default_view_type == View::Type::Cube || default_view_type == View::Type::CubeArray) {
           flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         }
 
@@ -172,7 +172,7 @@ namespace zephyr {
           .usage = VMA_MEMORY_USAGE_AUTO
         };
 
-        if (vmaCreateImage(allocator, &image_info, &alloc_info, &texture->m_image, &texture->m_allocation, nullptr) != VK_SUCCESS) {
+        if(vmaCreateImage(allocator, &image_info, &alloc_info, &texture->m_image, &texture->m_allocation, nullptr) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanTexture: failed to create image");
         }
 
@@ -193,7 +193,7 @@ namespace zephyr {
       }
 
       static VkImageAspectFlags GetAspectBits(Format format) {
-        switch (format) {
+        switch(format) {
           case Format::R8G8B8A8_UNORM:
           case Format::R8G8B8A8_SRGB:
           case Format::B8G8R8A8_SRGB:

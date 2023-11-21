@@ -16,7 +16,7 @@ namespace zephyr {
       void Submit(std::span<CommandBuffer* const> buffers, Fence* fence) override {
         VkCommandBuffer handles[buffers.size()];
 
-        for (size_t i = 0; i < buffers.size(); i++) {
+        for(size_t i = 0; i < buffers.size(); i++) {
           handles[i] = (VkCommandBuffer)buffers[i]->Handle();
         }
 

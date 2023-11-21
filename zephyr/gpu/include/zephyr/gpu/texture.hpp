@@ -109,7 +109,7 @@ namespace zephyr {
             : aspect{aspect}, base_mip{base_mip}, mip_count{mip_count}, base_layer{base_layer}, layer_count{layer_count} {
         }
 
-        SubresourceRange(SubresourceLayers const& layers)
+        SubresourceRange(const SubresourceLayers& layers)
             : aspect{layers.aspect}, base_mip{layers.mip_level}, mip_count{1}, base_layer{layers.base_layer}, layer_count{layers.layer_count} {
         }
 
@@ -173,8 +173,8 @@ namespace zephyr {
       virtual std::unique_ptr<View> CreateView(
         View::Type type,
         Format format,
-        SubresourceRange const& range,
-        ComponentMapping const& mapping = {}
+        const SubresourceRange& range,
+        const ComponentMapping& mapping = {}
       ) = 0;
   };
 
