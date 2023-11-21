@@ -1,6 +1,4 @@
 
-// Copyright (C) 2022 fleroviux. All rights reserved.
-
 #pragma once
 
 #include <zephyr/gpu/buffer.hpp>
@@ -12,62 +10,60 @@
 
 namespace zephyr {
 
-struct BindGroup;
+  struct BindGroup;
 
-struct BindGroupLayout {
-  struct Entry {
-    u32 binding;
-    BindingType type;
-    ShaderStage stages = ShaderStage::All;
+  class BindGroupLayout {
+    public:
+      struct Entry {
+        u32 binding;
+        BindingType type;
+        ShaderStage stages = ShaderStage::All;
+      };
+
+      virtual ~BindGroupLayout() = default;
+
+      virtual void* Handle() = 0;
   };
 
-  virtual ~BindGroupLayout() = default;
+  class BindGroup {
+    public:
+      virtual ~BindGroup() = default;
 
-  virtual auto Handle() -> void* = 0;
-};
+      virtual void* Handle() = 0;
 
-struct BindGroup {
-  virtual ~BindGroup() = default;
+      virtual void Bind(u32 binding, Buffer* buffer, BindingType type) = 0;
 
-  virtual auto Handle() -> void* = 0;
+      virtual void Bind(
+        u32 binding,
+        Texture::View* texture_view,
+        Sampler* sampler,
+        Texture::Layout layout
+      ) = 0;
 
-  virtual void Bind(
-    u32 binding,
-    Buffer* buffer,
-    BindingType type
-  ) = 0;
+      void Bind(
+        u32 binding,
+        Texture* texture,
+        Sampler* sampler,
+        Texture::Layout layout
+      ) {
+        Bind(binding, texture->DefaultView(), sampler, layout);
+      }
 
-  virtual void Bind(
-    u32 binding,
-    Texture::View* texture_view,
-    Sampler* sampler,
-    Texture::Layout layout
-  ) = 0;
+      virtual void Bind(
+        u32 binding,
+        Texture::View* texture_view,
+        Texture::Layout layout,
+        BindingType type
+      ) = 0;
 
-  void Bind(
-    u32 binding,
-    Texture* texture,
-    Sampler* sampler,
-    Texture::Layout layout
-  ) {
-    Bind(binding, texture->DefaultView(), sampler, layout);
-  }
-
-  virtual void Bind(
-    u32 binding,
-    Texture::View* texture_view,
-    Texture::Layout layout,
-    BindingType type
-  ) = 0;
-
-  void Bind(
-    u32 binding,
-    Texture* texture,
-    Texture::Layout layout,
-    BindingType type
-  ) {
-    Bind(binding, texture->DefaultView(), layout, type);
-  }
-};
+      void Bind(
+        u32 binding,
+        Texture* texture,
+        Texture::Layout layout,
+        BindingType type
+      ) {
+        Bind(binding, texture->DefaultView(), layout, type);
+      }
+  };
 
 } // namespace zephyr

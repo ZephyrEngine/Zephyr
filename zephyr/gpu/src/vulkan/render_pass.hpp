@@ -31,11 +31,11 @@ struct VulkanRenderPass final : RenderPass {
 
   auto Handle() -> VkRenderPass { return render_pass_; }
 
-  auto GetNumberOfColorAttachments() -> size_t override {
+  auto GetNumberOfColorAttachments() const -> size_t override {
     return color_attachment_count_;
   }
 
-  bool HasDepthStencilAttachment() override {
+  bool HasDepthStencilAttachment() const override {
     return has_depth_stencil_attachment;
   }
 

@@ -5,12 +5,12 @@
 
 namespace zephyr {
 
-// @todo: consider sharing code between different types of pipelines?
-struct ComputePipeline {
-  virtual ~ComputePipeline() = default;
+  // @todo: consider sharing code between different types of pipelines?
+  struct ComputePipeline {
+    virtual ~ComputePipeline() = default;
 
-  virtual auto Handle() -> void* = 0;
-  virtual auto GetLayout() -> PipelineLayout* = 0;
-};
+    virtual void* Handle() = 0;
+    virtual PipelineLayout* GetLayout() = 0;
+  };
 
 } // namespace zephyr

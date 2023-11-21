@@ -1,6 +1,4 @@
 
-// Copyright (C) 2022 fleroviux. All rights reserved.
-
 #pragma once
 
 #include <zephyr/gpu/render_pass.hpp>
@@ -8,12 +6,13 @@
 
 namespace zephyr {
 
-struct RenderTarget {
-  virtual ~RenderTarget() = default;
+  class RenderTarget {
+    public:
+      virtual ~RenderTarget() = default;
 
-  virtual auto Handle() -> void* = 0;
-  virtual auto GetWidth()  -> u32 = 0;
-  virtual auto GetHeight() -> u32 = 0;
-};
+      virtual void* Handle() = 0;
+      virtual u32 GetWidth() = 0;
+      virtual u32 GetHeight() = 0;
+  };
 
 }; // namespace zephyr

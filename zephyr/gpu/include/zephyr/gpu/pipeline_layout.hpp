@@ -1,14 +1,13 @@
 
-// Copyright (C) 2022 fleroviux. All rights reserved.
-
 #pragma once
 
 namespace zephyr {
 
-struct PipelineLayout {
-  virtual ~PipelineLayout() = default;
+  class PipelineLayout {
+    public:
+      virtual ~PipelineLayout() = default;
 
-  virtual auto Handle() -> void* = 0;
-};
+      virtual void* Handle() = 0;
+  };
 
 } // namespace zephyr
