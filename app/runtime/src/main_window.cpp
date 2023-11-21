@@ -378,7 +378,7 @@ namespace zephyr {
   void MainWindow::CreateTextureCube() {
     int face_size;
 
-    const u8* face_data[6];
+    /*const u8* face_data[6];
 
     const char* paths[6] { "env/px.png", "env/nx.png", "env/py.png", "env/ny.png", "env/pz.png", "env/nz.png" };
 
@@ -400,14 +400,15 @@ namespace zephyr {
       if(width != height || width != face_size) {
         ZEPHYR_PANIC("Bad cube map texture size");
       }
-    }
+    */
+    face_size = 128;
 
     m_texture_cube = std::make_unique<TextureCube>(
       face_size, TextureCube::Format::RGBA, TextureCube::DataType::UnsignedByte, TextureCube::ColorSpace::SRGB);
 
-    for(int i = 0; i < 6; i++) {
+    /*for(int i = 0; i < 6; i++) {
       std::memcpy(m_texture_cube->Data<u8>((TextureCube::Face)i), face_data[i], m_texture_cube->Size()/6);
-    }
+    }*/
   }
 
   void MainWindow::CreateScene() {
