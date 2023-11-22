@@ -146,7 +146,7 @@ namespace zephyr {
           flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         }
 
-        auto image_info = VkImageCreateInfo{
+        const VkImageCreateInfo image_info{
           .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
           .pNext = nullptr,
           .flags = flags,

@@ -247,7 +247,7 @@ namespace zephyr {
         m_dynamic_state_info.pDynamicStates = dynamic_states.Data();
         m_dynamic_state_info.dynamicStateCount = dynamic_states.Size();
 
-        auto pipeline = VkPipeline{};
+        VkPipeline pipeline{};
 
         if(vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
           ZEPHYR_PANIC("VulkanGraphicsPipelineBuilder: failed to create graphics pipeline");

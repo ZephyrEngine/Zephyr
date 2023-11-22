@@ -32,7 +32,7 @@ namespace zephyr {
         return m_render_pass;
       }
 
-      auto GetNumberOfColorAttachments() const -> size_t override {
+      size_t GetNumberOfColorAttachments() const override {
         return m_color_attachment_count;
       }
 
