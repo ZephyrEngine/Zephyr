@@ -1,6 +1,6 @@
 
 set(SOURCES
-  src/placeholder.cpp
+  src/render_engine.cpp
 )
 
 set(HEADERS
@@ -21,11 +21,12 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/texture/texture_cube.hpp
   include/zephyr/renderer/texture/texture_resource.hpp
   include/zephyr/renderer/mesh.hpp
+  include/zephyr/renderer/render_engine.hpp
   include/zephyr/renderer/resource.hpp
 )
 
 add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
-target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-cxx-opts)
+target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-math zephyr-gpu zephyr-scene zephyr-cxx-opts)
 target_include_directories(zephyr-renderer PUBLIC include)
 target_include_directories(zephyr-renderer PRIVATE src)

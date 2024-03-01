@@ -4,6 +4,8 @@
 #include <zephyr/renderer/mesh.hpp>
 #include <memory>
 
+#pragma once
+
 namespace zephyr {
 
   struct MeshComponent : Component {

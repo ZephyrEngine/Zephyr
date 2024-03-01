@@ -9,6 +9,7 @@
 #include <zephyr/renderer/texture/texture_2D.hpp>
 #include <zephyr/renderer/texture/texture_cube.hpp>
 #include <zephyr/renderer/mesh.hpp>
+#include <zephyr/renderer/render_engine.hpp>
 #include <zephyr/scene/mesh.hpp>
 #include <zephyr/scene/node.hpp>
 #include <zephyr/window/window.hpp>
@@ -77,6 +78,8 @@ namespace zephyr {
       std::unique_ptr<TextureCube> m_texture_cube;
 
       std::unique_ptr<SceneNode> m_scene_root;
+
+      std::unique_ptr<RenderEngine> m_render_engine;
 
       Matrix4 m_projection_matrix;
       uint m_frame{0};

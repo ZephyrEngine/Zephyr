@@ -54,6 +54,8 @@ namespace zephyr {
       ZEPHYR_INFO("metalness={}", pbr_material->GetParameter<f32>("metalness"));
       ZEPHYR_INFO("roughness={}", pbr_material->GetParameter<f32>("roughness"));
     }
+
+    m_render_engine = std::make_unique<RenderEngine>();
   }
 
   MainWindow::~MainWindow() {
@@ -83,6 +85,8 @@ namespace zephyr {
       node->GetTransform().UpdateWorld();
       return true;
     });
+
+    m_render_engine->RenderScene(m_scene_root.get());
 
     const Mesh3D* current_mesh = nullptr;
     const Material* current_material = nullptr;
