@@ -1,6 +1,7 @@
 
 set(SOURCES
   src/panic.cpp
+  src/uid.cpp
 )
 
 set(HEADERS
@@ -16,6 +17,7 @@ set(HEADERS_PUBLIC
   include/zephyr/non_moveable.hpp
   include/zephyr/panic.hpp
   include/zephyr/punning.hpp
+  include/zephyr/uid.hpp
   include/zephyr/vector_n.hpp
 )
 

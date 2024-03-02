@@ -15,7 +15,7 @@ namespace zephyr {
   }
 
   Texture* TextureCache::GetDeviceTexture(const TextureResource* texture_resource) {
-    Entry& entry = m_cache[texture_resource];
+    Entry& entry = m_cache[texture_resource->GetUID()];
 
     const bool have_device_texture = (bool)entry.device_texture;
 

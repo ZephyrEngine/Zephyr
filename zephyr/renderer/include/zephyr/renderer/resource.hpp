@@ -5,6 +5,7 @@
 #include <zephyr/panic.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/non_moveable.hpp>
+#include <zephyr/uid.hpp>
 #include <limits>
 
 namespace zephyr {
@@ -18,6 +19,11 @@ namespace zephyr {
   class Resource : public NonCopyable, public NonMoveable {
     public:
       virtual ~Resource() = default;
+
+      /// @returns the Unique ID of this resource
+      [[nodiscard]] u64 GetUID() const {
+        return (u64)m_uid;
+      }
 
       /// @returns the current version of the resource
       [[nodiscard]] u64 CurrentVersion() const {
@@ -35,7 +41,8 @@ namespace zephyr {
       }
 
     private:
-      u64 m_version{}; ///< current 64-bit version number of the resource
+      UID m_uid{};      ///< Unique ID of this resource
+      u64 m_version{};  ///< current 64-bit version number of the resource
   };
 
 } // namespace zephyr

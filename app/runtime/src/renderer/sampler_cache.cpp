@@ -8,7 +8,7 @@ namespace zephyr {
   }
 
   Sampler* SamplerCache::GetDeviceSampler(const zephyr::SamplerResource* sampler_resource) {
-    Entry& entry = m_cache[sampler_resource];
+    Entry& entry = m_cache[sampler_resource->GetUID()];
 
     if(!entry.device_sampler || entry.current_version != sampler_resource->CurrentVersion()) {
       entry.device_sampler = m_render_device->CreateSampler({

@@ -31,7 +31,7 @@ namespace zephyr {
 
       std::shared_ptr<RenderDevice> m_render_device;
       std::shared_ptr<ResourceUploader> m_resource_uploader;
-      std::unordered_map<const BufferResourceBase*, Entry> m_cache;
+      std::unordered_map<u64, Entry> m_cache;
   };
 
 } // namespace zephyr

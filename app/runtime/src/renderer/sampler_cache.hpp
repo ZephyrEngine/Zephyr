@@ -10,7 +10,7 @@ namespace zephyr {
 
   class SamplerCache {
     public:
-      SamplerCache(std::shared_ptr<RenderDevice> render_device);
+      explicit SamplerCache(std::shared_ptr<RenderDevice> render_device);
 
       Sampler* GetDeviceSampler(const SamplerResource* sampler_resource);
 
@@ -21,7 +21,7 @@ namespace zephyr {
       };
 
       std::shared_ptr<RenderDevice> m_render_device;
-      std::unordered_map<const SamplerResource*, Entry> m_cache;
+      std::unordered_map<u64, Entry> m_cache;
   };
 
 } // namespace zephyr

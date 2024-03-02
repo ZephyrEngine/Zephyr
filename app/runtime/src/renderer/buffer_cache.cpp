@@ -15,7 +15,7 @@ namespace zephyr {
   Buffer* BufferCache::GetDeviceBuffer(const BufferResourceBase* buffer_resource) {
     const size_t size = buffer_resource->Size();
 
-    Entry& entry = m_cache[buffer_resource];
+    Entry& entry = m_cache[buffer_resource->GetUID()];
 
     const bool have_device_buffer = (bool)entry.device_buffer;
 
