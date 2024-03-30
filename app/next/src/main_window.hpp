@@ -1,7 +1,8 @@
 #include <algorithm>
 #include <zephyr/logger/sink/console.hpp>
 #include <zephyr/logger/logger.hpp>
-#include <zephyr/math/matrix4.hpp>
+#include <zephyr/renderer2/render_engine.hpp>
+#include <zephyr/scene/node.hpp>
 #include <zephyr/float.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
@@ -17,11 +18,9 @@ namespace zephyr {
 
   class MainWindow {
     public:
-      void Run() {
-        Setup();
-        MainLoop();
-        Cleanup();
-      }
+     ~MainWindow();
+
+      void Run();
 
     private:
       void Setup();
@@ -31,15 +30,13 @@ namespace zephyr {
       VkPhysicalDevice PickPhysicalDevice();
       void CreateLogicalDevice();
       void CreateSurface();
-      void CreateSwapChain();
-      void CreateCommandPool();
-      void CreateCommandBuffer();
-      void CreateSemaphore();
-      void CreateFence();
-      void CreateRenderPass();
-      void CreateFramebuffers();
-      void CreateGraphicsPipeline();
+      void CreateRenderEngine();
+      void CreateScene();
       void Cleanup();
+
+      std::unique_ptr<RenderEngine> m_render_engine{};
+      std::unique_ptr<SceneNode> m_scene_root{};
+      u64 m_frame{};
 
       SDL_Window* m_window{};
       VkInstance m_vk_instance{};
@@ -49,17 +46,6 @@ namespace zephyr {
       std::vector<u32> m_present_queue_family_indices{};
       std::optional<VkQueue> m_vk_dedicated_compute_queue{};
       VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
-      VkSwapchainKHR m_vk_swap_chain{};
-      std::vector<VkImage> m_vk_swap_chain_images{};
-      std::vector<VkImageView> m_vk_swap_chain_views{};
-      VkCommandPool m_vk_command_pool{};
-      VkCommandBuffer m_vk_command_buffer{};
-      VkSemaphore m_vk_semaphore{};
-      VkFence m_vk_fence{};
-      VkRenderPass m_vk_render_pass{};
-      std::vector<VkFramebuffer> m_vk_swap_chain_fbs{};
-      VkPipelineLayout m_vk_pipeline_layout{};
-      VkPipeline m_vk_pipeline{};
   };
 
 } // namespace zephyr

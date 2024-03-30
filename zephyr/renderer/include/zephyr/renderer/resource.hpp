@@ -11,7 +11,7 @@
 namespace zephyr {
 
   /**
-   * This is the base class for all kinds of renderer resources, such as geometries,
+   * This is the base class for all kinds of renderer2 resources, such as geometries,
    * geometry buffers or textures and provides a simple interface for querying the
    * current version of the resource, as well as bumping the resource version to
    * invalidate any caches.
