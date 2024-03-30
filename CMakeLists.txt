@@ -17,6 +17,7 @@ add_subdirectory(zephyr)
 
 option(ZEPHYR_BUILD_TESTS "Build the Zephyr test suite" ON)
 option(ZEPHYR_BUILD_RUNTIME "Build the Zephyr game runtime" ON)
+option(ZEPHYR_BUILD_NEXT "Build Zephyr Next" ON)
 
 if(ZEPHYR_BUILD_TESTS)
   add_subdirectory(test)
@@ -24,4 +25,8 @@ endif()
 
 if(ZEPHYR_BUILD_RUNTIME)
   add_subdirectory(app/runtime)
+endif()
+
+if(ZEPHYR_BUILD_NEXT)
+  add_subdirectory(app/next)
 endif()
