@@ -125,6 +125,8 @@ namespace zephyr {
       SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, required_extension_names.data());
     }
 
+    VkInstanceCreateFlags instance_create_flags = 0;
+
     // Validate that all required extensions are present:
     {
       u32 extension_count;
@@ -133,6 +135,15 @@ namespace zephyr {
       vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
       available_extensions.resize(extension_count);
       vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, available_extensions.data());
+
+      if(std::find_if(
+          available_extensions.begin(), available_extensions.end(), [](const VkExtensionProperties& extension) {
+            return std::strcmp(extension.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0;
+          }) != available_extensions.end()) {
+        required_extension_names.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        required_extension_names.push_back("VK_KHR_get_physical_device_properties2"); // required by VK_KHR_portability_subset
+        instance_create_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+      }
 
       for(const auto required_extension_name : required_extension_names) {
         const auto predicate =
@@ -148,7 +159,7 @@ namespace zephyr {
     const VkInstanceCreateInfo create_info{
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pNext = nullptr,
-      .flags = 0,
+      .flags = instance_create_flags,
       .pApplicationInfo = &app_info,
       .enabledLayerCount = (u32)instance_layers.size(),
       .ppEnabledLayerNames = instance_layers.data(),
@@ -221,10 +232,24 @@ namespace zephyr {
       }
     }
 
-    // TODO: validate that device extensions are present.
-    std::vector<const char*> device_extensions{
+    std::vector<const char*> required_extensions{
       "VK_KHR_swapchain"
     };
+
+    u32 extension_count;
+    std::vector<VkExtensionProperties> available_extensions{};
+    vkEnumerateDeviceExtensionProperties(m_vk_physical_device, nullptr, &extension_count, nullptr);
+    available_extensions.resize(extension_count);
+    vkEnumerateDeviceExtensionProperties(m_vk_physical_device, nullptr, &extension_count, available_extensions.data());
+
+    // TODO: validate that device extensions are present.
+
+    if(std::find_if(
+        available_extensions.begin(), available_extensions.end(), [](const VkExtensionProperties& extension) {
+          return std::strcmp(extension.extensionName, "VK_KHR_portability_subset") == 0;
+        }) != available_extensions.end()) {
+      required_extensions.push_back("VK_KHR_portability_subset");
+    }
 
     std::optional<u32> graphics_plus_compute_queue_family_index;
     std::optional<u32> dedicated_compute_queue_family_index;
@@ -338,8 +363,8 @@ namespace zephyr {
       .pQueueCreateInfos = queue_create_infos.data(),
       .enabledLayerCount = 0,
       .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = (u32)device_extensions.size(),
-      .ppEnabledExtensionNames = device_extensions.data(),
+      .enabledExtensionCount = (u32)required_extensions.size(),
+      .ppEnabledExtensionNames = required_extensions.data(),
       .pEnabledFeatures = nullptr
     };
 
