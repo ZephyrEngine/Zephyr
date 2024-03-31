@@ -24,6 +24,8 @@ namespace zephyr {
         CreateRenderPass();
         CreateFramebuffers();
         CreateGraphicsPipeline();
+
+        PrepareNextFrame();
       }
 
      ~VulkanRenderBackend() override {
@@ -51,61 +53,38 @@ namespace zephyr {
       }
 
       void Render(const Matrix4& projection, std::span<const RenderObject> render_objects) override {
-        u32 image;
-
-        if(vkAcquireNextImageKHR(m_vk_device, m_vk_swap_chain, 0ull, m_vk_semaphore, VK_NULL_HANDLE, &image) != VK_SUCCESS) {
-          ZEPHYR_PANIC("Failed to acquire swap chain image");
-        }
-
-        // Wait until the command buffer has been processed by the GPU and can be used again.
-        vkWaitForFences(m_vk_device, 1u, &m_vk_fence, VK_TRUE, ~0ull);
-        vkResetFences(m_vk_device, 1u, &m_vk_fence);
-
-        // Release any commands that were already recorded into the command buffer back to the command pool.
-        vkResetCommandBuffer(m_vk_command_buffer, 0);
-
-        // Begin recording commands into the command buffer
-        const VkCommandBufferBeginInfo begin_cmd_buffer_info{
-          .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-          .pNext = nullptr,
-          .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-          .pInheritanceInfo = nullptr
-        };
-        vkBeginCommandBuffer(m_vk_command_buffer, &begin_cmd_buffer_info);
-
-        // Record some basic commands
-        {
-          const VkClearValue clear_value{
-            .color = VkClearColorValue{
-              .float32 = {0.01f, 0.01f, 0.01f, 1.0f}
-            }
-          };
-
-          const VkRenderPassBeginInfo render_pass_begin_info{
-            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            .pNext = nullptr,
-            .renderPass = m_vk_render_pass,
-            .framebuffer = m_vk_swap_chain_fbs[image],
-            .renderArea = VkRect2D{
-              .offset = VkOffset2D{0u, 0u},
-              .extent = VkExtent2D{1920u, 1080u}
-            },
-            .clearValueCount = 1u,
-            .pClearValues = &clear_value
-          };
-
-          vkCmdBeginRenderPass(m_vk_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-          vkCmdBindPipeline(m_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vk_pipeline);
-          vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0u, sizeof(Matrix4), &projection);
-
-          for(const RenderObject& render_object : render_objects) {
-            vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
-            vkCmdDraw(m_vk_command_buffer, 3u, 1u, 0u, 0u);
+        const VkClearValue clear_value{
+          .color = VkClearColorValue{
+            .float32 = {0.01f, 0.01f, 0.01f, 1.0f}
           }
+        };
 
-          vkCmdEndRenderPass(m_vk_command_buffer);
+        const VkRenderPassBeginInfo render_pass_begin_info{
+          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+          .pNext = nullptr,
+          .renderPass = m_vk_render_pass,
+          .framebuffer = m_vk_swap_chain_fbs[m_vk_swap_chain_image_index],
+          .renderArea = VkRect2D{
+            .offset = VkOffset2D{0u, 0u},
+            .extent = VkExtent2D{1920u, 1080u}
+          },
+          .clearValueCount = 1u,
+          .pClearValues = &clear_value
+        };
+
+        vkCmdBeginRenderPass(m_vk_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(m_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vk_pipeline);
+        vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0u, sizeof(Matrix4), &projection);
+
+        for(const RenderObject& render_object : render_objects) {
+          vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
+          vkCmdDraw(m_vk_command_buffer, 3u, 1u, 0u, 0u);
         }
 
+        vkCmdEndRenderPass(m_vk_command_buffer);
+      }
+
+      void SwapBuffers() override {
         // Complete command recording and mark the command buffer as ready for queue submission.
         vkEndCommandBuffer(m_vk_command_buffer);
 
@@ -134,13 +113,38 @@ namespace zephyr {
           .pWaitSemaphores = nullptr,
           .swapchainCount = 1u,
           .pSwapchains = &m_vk_swap_chain,
-          .pImageIndices = &image,
+          .pImageIndices = &m_vk_swap_chain_image_index,
           .pResults = nullptr
         };
         vkQueuePresentKHR(m_vk_graphics_compute_queue, &present_info);
+
+        PrepareNextFrame();
       }
 
     private:
+      void PrepareNextFrame() {
+        if(vkAcquireNextImageKHR(m_vk_device, m_vk_swap_chain, 0ull, m_vk_semaphore, VK_NULL_HANDLE, &m_vk_swap_chain_image_index) != VK_SUCCESS) {
+          ZEPHYR_PANIC("Failed to acquire swap chain image");
+        }
+
+        // Wait until the command buffer has been processed by the GPU and can be used again.
+        vkWaitForFences(m_vk_device, 1u, &m_vk_fence, VK_TRUE, ~0ull);
+        vkResetFences(m_vk_device, 1u, &m_vk_fence);
+
+        // Release any commands that were already recorded into the command buffer back to the command pool.
+        vkResetCommandBuffer(m_vk_command_buffer, 0);
+
+        // Begin recording commands into the command buffer
+        const VkCommandBufferBeginInfo begin_cmd_buffer_info{
+          .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+          .pNext = nullptr,
+          .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+          .pInheritanceInfo = nullptr
+        };
+        vkBeginCommandBuffer(m_vk_command_buffer, &begin_cmd_buffer_info);
+      }
+
+      // Initial setup mess below:
 
       void CreateSwapChain(const std::vector<u32>& present_queue_family_indices) {
         // TODO: query for supported swap chain configurations
@@ -519,6 +523,7 @@ namespace zephyr {
       VkSwapchainKHR m_vk_swap_chain{};
       std::vector<VkImage> m_vk_swap_chain_images{};
       std::vector<VkImageView> m_vk_swap_chain_views{};
+      u32 m_vk_swap_chain_image_index{};
 
       // Command Buffer
       VkCommandPool m_vk_command_pool{};

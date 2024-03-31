@@ -58,6 +58,7 @@ namespace zephyr {
       // TODO(fleroviux): do not hardcode the aspect ratio.
       const Matrix4 projection = Matrix4::PerspectiveVK(45.0f, 16.0f/9.0, 0.01f, 100.0f);
       m_render_backend->Render(projection, m_render_objects);
+      m_render_backend->SwapBuffers();
 
       // Signal to the caller thread that we are done reading the internal render structures.
       m_render_thread_semaphore.release();
