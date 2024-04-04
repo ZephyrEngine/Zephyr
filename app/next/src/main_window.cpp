@@ -28,16 +28,9 @@ namespace zephyr {
 
     CreateVkInstance();
 
-    {
-      m_vk_physical_device = PickPhysicalDevice();
-
-      if(m_vk_physical_device == VK_NULL_HANDLE) {
-        ZEPHYR_PANIC("Failed to find a suitable GPU!");
-      }
-
-      VkPhysicalDeviceProperties physical_device_props{};
-      vkGetPhysicalDeviceProperties(m_vk_physical_device, &physical_device_props);
-      ZEPHYR_INFO("GPU: {}", physical_device_props.deviceName);
+    m_vk_physical_device = PickPhysicalDevice();
+    if(m_vk_physical_device == nullptr) {
+      ZEPHYR_PANIC("Failed to find a suitable GPU!");
     }
 
     CreateLogicalDevice();
@@ -89,142 +82,39 @@ namespace zephyr {
       .apiVersion = VK_MAKE_VERSION(1, 0, 0)
     };
 
-    std::vector<const char*> instance_layers{
-    };
-    {
-      if(enable_validation_layers) {
-        const auto validation_layer_name = "VK_LAYER_KHRONOS_validation";
-
-        u32 layer_count;
-        std::vector<VkLayerProperties> available_layers{};
-
-        vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
-        available_layers.resize(layer_count);
-        vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
-
-        const auto predicate =
-          [&](const VkLayerProperties& layer_props) {
-            return std::strcmp(layer_props.layerName, validation_layer_name) == 0; };
-
-        for(auto& prop : available_layers) ZEPHYR_INFO("{}", prop.layerName);
-
-        if(std::ranges::find_if(available_layers, predicate) != available_layers.end()) {
-          instance_layers.push_back(validation_layer_name);
-        } else {
-          ZEPHYR_WARN("Could not enable instance validation layer");
-        }
-      }
-    }
-
-    // Collect all instance extensions that we need
     std::vector<const char*> required_extension_names{};
-    {
-      uint extension_count;
-      SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, nullptr);
-      required_extension_names.resize(extension_count);
-      SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, required_extension_names.data());
-    }
+    uint extension_count;
+    SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, nullptr);
+    required_extension_names.resize(extension_count);
+    SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, required_extension_names.data());
 
-    VkInstanceCreateFlags instance_create_flags = 0;
-
-    // Validate that all required extensions are present:
-    {
-      u32 extension_count;
-      std::vector<VkExtensionProperties> available_extensions{};
-
-      vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
-      available_extensions.resize(extension_count);
-      vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, available_extensions.data());
-
-      if(std::find_if(
-          available_extensions.begin(), available_extensions.end(), [](const VkExtensionProperties& extension) {
-            return std::strcmp(extension.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0;
-          }) != available_extensions.end()) {
-        required_extension_names.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-        required_extension_names.push_back("VK_KHR_get_physical_device_properties2"); // required by VK_KHR_portability_subset
-        instance_create_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-      }
-
-      for(const auto required_extension_name : required_extension_names) {
-        const auto predicate =
-          [&](const VkExtensionProperties& extensions_props) {
-            return std::strcmp(extensions_props.extensionName, required_extension_name) == 0; };
-
-        if(std::ranges::find_if(available_extensions, predicate) == available_extensions.end()) {
-          ZEPHYR_PANIC("Could not find required Vulkan instance extension: {}", required_extension_name);
-        }
-      }
-    }
-
-    const VkInstanceCreateInfo create_info{
-      .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = instance_create_flags,
-      .pApplicationInfo = &app_info,
-      .enabledLayerCount = (u32)instance_layers.size(),
-      .ppEnabledLayerNames = instance_layers.data(),
-      .enabledExtensionCount = (u32)required_extension_names.size(),
-      .ppEnabledExtensionNames = required_extension_names.data()
-    };
-
-    if(vkCreateInstance(&create_info, nullptr, &m_vk_instance) != VK_SUCCESS) {
-      ZEPHYR_PANIC("Failed to create Vulkan instance!");
-    }
+    // TODO(fleroviux): add error handling
+    m_vk_instance = VulkanInstance::Create(app_info, required_extension_names, {"VK_LAYER_KHRONOS_validation"});
   }
 
-  VkPhysicalDevice MainWindow::PickPhysicalDevice() {
-    u32 device_count;
-    std::vector<VkPhysicalDevice> physical_devices{};
+  VulkanPhysicalDevice* MainWindow::PickPhysicalDevice() {
+    std::optional<VulkanPhysicalDevice*> discrete_gpu;
+    std::optional<VulkanPhysicalDevice*> integrated_gpu;
 
-    vkEnumeratePhysicalDevices(m_vk_instance, &device_count, nullptr);
-    physical_devices.resize(device_count);
-    vkEnumeratePhysicalDevices(m_vk_instance, &device_count, physical_devices.data());
-
-    std::optional<VkPhysicalDevice> discrete_gpu;
-    std::optional<VkPhysicalDevice> integrated_gpu;
-
-    for(VkPhysicalDevice physical_device : physical_devices) {
-      VkPhysicalDeviceProperties physical_device_props;
-
-      vkGetPhysicalDeviceProperties(physical_device, &physical_device_props);
-
-      // TODO: pick a suitable GPU based on score.
-      // TODO: check if the GPU supports all the features that our render backend will need.
-
-      if(physical_device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-        discrete_gpu = physical_device;
-      }
-
-      if(physical_device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-        integrated_gpu = physical_device;
+    for(auto& physical_device : m_vk_instance->EnumeratePhysicalDevices()) {
+      switch(physical_device->GetProperties().deviceType) {
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:     discrete_gpu = physical_device.get(); break;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: integrated_gpu = physical_device.get(); break;
+        default: break;
       }
     }
 
-    return discrete_gpu.value_or(integrated_gpu.value_or((VkPhysicalDevice)VK_NULL_HANDLE));
+    return discrete_gpu.value_or(integrated_gpu.value_or(nullptr));
   }
 
   void MainWindow::CreateLogicalDevice() {
     // This is pretty much the same logic that we also used for instance layers
-    std::vector<const char*> device_layers{
-    };
+    std::vector<const char*> device_layers{};
     {
       if(enable_validation_layers) {
         const auto validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
-        u32 layer_count;
-        std::vector<VkLayerProperties> available_layers{};
-
-        vkEnumerateDeviceLayerProperties(m_vk_physical_device, &layer_count, nullptr);
-        available_layers.resize(layer_count);
-        vkEnumerateDeviceLayerProperties(m_vk_physical_device, &layer_count, available_layers.data());
-
-        const auto predicate =
-          [&](const VkLayerProperties& layer_props) {
-            return std::strcmp(layer_props.layerName, validation_layer_name) == 0; };
-
-        for(auto& prop : available_layers) ZEPHYR_INFO("{}", prop.layerName);
-
-        if(std::ranges::find_if(available_layers, predicate) != available_layers.end()) {
+        if(m_vk_physical_device->QueryDeviceLayerSupport(validation_layer_name)) {
           device_layers.push_back(validation_layer_name);
         } else {
           ZEPHYR_WARN("Could not enable device validation layer");
@@ -236,18 +126,13 @@ namespace zephyr {
       "VK_KHR_swapchain"
     };
 
-    u32 extension_count;
-    std::vector<VkExtensionProperties> available_extensions{};
-    vkEnumerateDeviceExtensionProperties(m_vk_physical_device, nullptr, &extension_count, nullptr);
-    available_extensions.resize(extension_count);
-    vkEnumerateDeviceExtensionProperties(m_vk_physical_device, nullptr, &extension_count, available_extensions.data());
+    for(auto extension_name : required_extensions) {
+      if(!m_vk_physical_device->QueryDeviceExtensionSupport(extension_name)) {
+        ZEPHYR_PANIC("Could not find device extension: {}", extension_name);
+      }
+    }
 
-    // TODO: validate that device extensions are present.
-
-    if(std::find_if(
-        available_extensions.begin(), available_extensions.end(), [](const VkExtensionProperties& extension) {
-          return std::strcmp(extension.extensionName, "VK_KHR_portability_subset") == 0;
-        }) != available_extensions.end()) {
+    if(m_vk_physical_device->QueryDeviceExtensionSupport("VK_KHR_portability_subset")) {
       required_extensions.push_back("VK_KHR_portability_subset");
     }
 
@@ -257,13 +142,6 @@ namespace zephyr {
     // Figure out what queues we can create
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
     {
-      u32 queue_family_count;
-      std::vector<VkQueueFamilyProperties> queue_family_props{};
-
-      vkGetPhysicalDeviceQueueFamilyProperties(m_vk_physical_device, &queue_family_count, nullptr);
-      queue_family_props.resize(queue_family_count);
-      vkGetPhysicalDeviceQueueFamilyProperties(m_vk_physical_device, &queue_family_count, queue_family_props.data());
-
       /**
        * Info about queues present on the common vendors, gathered from:
        *   http://vulkan.gpuinfo.org/listreports.php
@@ -301,8 +179,9 @@ namespace zephyr {
        *   - 1x compute + transfer + presentation (if present)
        */
 
-      for(u32 queue_family_index = 0; queue_family_index < queue_family_count; queue_family_index++) {
-        const auto& queue_family = queue_family_props[queue_family_index];
+      u32 queue_family_index = 0;
+
+      for(const auto& queue_family : m_vk_physical_device->EnumerateQueueFamilies()) {
         const VkQueueFlags queue_flags = queue_family.queueFlags;
 
         /**
@@ -320,6 +199,8 @@ namespace zephyr {
             break;
           }
         }
+
+        queue_family_index++;
       }
 
       const f32 queue_priority = 0.0f;
@@ -355,22 +236,7 @@ namespace zephyr {
       }
     }
 
-    const VkDeviceCreateInfo create_info{
-      .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .queueCreateInfoCount = (u32)queue_create_infos.size(),
-      .pQueueCreateInfos = queue_create_infos.data(),
-      .enabledLayerCount = 0,
-      .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = (u32)required_extensions.size(),
-      .ppEnabledExtensionNames = required_extensions.data(),
-      .pEnabledFeatures = nullptr
-    };
-
-    if(vkCreateDevice(m_vk_physical_device, &create_info, nullptr, &m_vk_device) != VK_SUCCESS) {
-      ZEPHYR_PANIC("Failed to create a logical device");
-    }
+    m_vk_device = m_vk_physical_device->CreateLogicalDevice(queue_create_infos, required_extensions);
 
     vkGetDeviceQueue(m_vk_device, graphics_plus_compute_queue_family_index.value(), 0u, &m_vk_graphics_compute_queue);
 
@@ -382,7 +248,7 @@ namespace zephyr {
   }
 
   void MainWindow::CreateSurface() {
-    if(!SDL_Vulkan_CreateSurface(m_window, m_vk_instance, &m_vk_surface)) {
+    if(!SDL_Vulkan_CreateSurface(m_window, m_vk_instance->Handle(), &m_vk_surface)) {
       ZEPHYR_PANIC("Failed to create a Vulkan surface for the window");
     }
   }
@@ -414,9 +280,8 @@ namespace zephyr {
 
   void MainWindow::Cleanup() {
     vkDeviceWaitIdle(m_vk_device);
-    vkDestroySurfaceKHR(m_vk_instance, m_vk_surface, nullptr);
+    vkDestroySurfaceKHR(m_vk_instance->Handle(), m_vk_surface, nullptr);
     vkDestroyDevice(m_vk_device, nullptr);
-    vkDestroyInstance(m_vk_instance, nullptr);
     SDL_DestroyWindow(m_window);
   }
 

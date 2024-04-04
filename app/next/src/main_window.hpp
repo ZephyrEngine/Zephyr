@@ -12,6 +12,8 @@
 #include <vector>
 #include <optional>
 
+#include "vulkan_instance.hpp"
+
 #undef main
 
 namespace zephyr {
@@ -27,7 +29,7 @@ namespace zephyr {
       void MainLoop();
       void RenderFrame();
       void CreateVkInstance();
-      VkPhysicalDevice PickPhysicalDevice();
+      VulkanPhysicalDevice* PickPhysicalDevice();
       void CreateLogicalDevice();
       void CreateSurface();
       void CreateRenderEngine();
@@ -39,8 +41,8 @@ namespace zephyr {
       u64 m_frame{};
 
       SDL_Window* m_window{};
-      VkInstance m_vk_instance{};
-      VkPhysicalDevice m_vk_physical_device{};
+      std::unique_ptr<VulkanInstance> m_vk_instance{};
+      VulkanPhysicalDevice* m_vk_physical_device{};
       VkDevice m_vk_device{};
       VkQueue m_vk_graphics_compute_queue{};
       std::vector<u32> m_present_queue_family_indices{};
