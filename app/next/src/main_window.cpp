@@ -88,7 +88,6 @@ namespace zephyr {
     required_extension_names.resize(extension_count);
     SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, required_extension_names.data());
 
-    // TODO(fleroviux): add error handling
     m_vk_instance = VulkanInstance::Create(app_info, required_extension_names, {"VK_LAYER_KHRONOS_validation"});
   }
 
@@ -108,32 +107,28 @@ namespace zephyr {
   }
 
   void MainWindow::CreateLogicalDevice() {
-    // This is pretty much the same logic that we also used for instance layers
-    std::vector<const char*> device_layers{};
-    {
-      if(enable_validation_layers) {
-        const auto validation_layer_name = "VK_LAYER_KHRONOS_validation";
+    std::vector<const char*> required_device_layers{};
 
-        if(m_vk_physical_device->QueryDeviceLayerSupport(validation_layer_name)) {
-          device_layers.push_back(validation_layer_name);
-        } else {
-          ZEPHYR_WARN("Could not enable device validation layer");
-        }
+    if(enable_validation_layers) {
+      const auto validation_layer_name = "VK_LAYER_KHRONOS_validation";
+
+      if(m_vk_physical_device->QueryDeviceLayerSupport(validation_layer_name)) {
+        required_device_layers.push_back(validation_layer_name);
+      } else {
+        ZEPHYR_WARN("Could not enable device validation layer");
       }
     }
 
-    std::vector<const char*> required_extensions{
-      "VK_KHR_swapchain"
-    };
+    std::vector<const char*> required_device_extensions{"VK_KHR_swapchain"};
 
-    for(auto extension_name : required_extensions) {
+    for(auto extension_name : required_device_extensions) {
       if(!m_vk_physical_device->QueryDeviceExtensionSupport(extension_name)) {
         ZEPHYR_PANIC("Could not find device extension: {}", extension_name);
       }
     }
 
     if(m_vk_physical_device->QueryDeviceExtensionSupport("VK_KHR_portability_subset")) {
-      required_extensions.push_back("VK_KHR_portability_subset");
+      required_device_extensions.push_back("VK_KHR_portability_subset");
     }
 
     std::optional<u32> graphics_plus_compute_queue_family_index;
@@ -236,7 +231,7 @@ namespace zephyr {
       }
     }
 
-    m_vk_device = m_vk_physical_device->CreateLogicalDevice(queue_create_infos, required_extensions);
+    m_vk_device = m_vk_physical_device->CreateLogicalDevice(queue_create_infos, required_device_extensions);
 
     vkGetDeviceQueue(m_vk_device, graphics_plus_compute_queue_family_index.value(), 0u, &m_vk_graphics_compute_queue);
 

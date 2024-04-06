@@ -7,7 +7,7 @@ set(SOURCES
 )
 
 set(HEADERS
-  src/renderer2/render_backend/vulkan/render_backend.cpp
+  src/renderer2/backend/vulkan/render_backend.cpp
   src/shader/triangle.frag.h
   src/shader/triangle.vert.h
   src/main_window.hpp
