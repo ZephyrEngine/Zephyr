@@ -1,9 +1,9 @@
 
 set(SOURCES
+  src/renderer2/vulkan/vulkan_instance.cpp
   src/renderer2/render_engine.cpp
   src/main.cpp
   src/main_window.cpp
-  src/vulkan_instance.cpp
 )
 
 set(HEADERS
@@ -11,13 +11,13 @@ set(HEADERS
   src/shader/triangle.frag.h
   src/shader/triangle.vert.h
   src/main_window.hpp
-  src/vulkan_instance.hpp
-  src/vulkan_physical_device.hpp
 )
 
 set(HEADERS_PUBLIC
   include/zephyr/renderer2/backend/render_backend.hpp
   include/zephyr/renderer2/backend/render_backend_vk.hpp
+  include/zephyr/renderer2/vulkan/vulkan_instance.hpp
+  include/zephyr/renderer2/vulkan/src/vulkan_physical_device.hpp
   include/zephyr/renderer2/render_engine.hpp
 )
 

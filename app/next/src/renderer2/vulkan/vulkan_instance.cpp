@@ -1,5 +1,5 @@
 
-#include "vulkan_instance.hpp"
+#include <zephyr/renderer2/vulkan/vulkan_instance.hpp>
 
 namespace zephyr {
 
