@@ -88,7 +88,12 @@ namespace zephyr {
     required_extension_names.resize(extension_count);
     SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, required_extension_names.data());
 
-    m_vk_instance = VulkanInstance::Create(app_info, required_extension_names, {"VK_LAYER_KHRONOS_validation"});
+    std::vector<const char*> required_layer_names{};
+    if(enable_validation_layers && VulkanInstance::QueryInstanceLayerSupport("VK_LAYER_KHRONOS_validation")) {
+      required_layer_names.push_back("VK_LAYER_KHRONOS_validation");
+    }
+
+    m_vk_instance = VulkanInstance::Create(app_info, required_extension_names, required_layer_names);
   }
 
   VulkanPhysicalDevice* MainWindow::PickPhysicalDevice() {
