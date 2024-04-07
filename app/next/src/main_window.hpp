@@ -15,6 +15,8 @@
 
 #undef main
 
+#define ZEPHYR_OPENGL
+
 namespace zephyr {
 
   class MainWindow {
@@ -27,11 +29,13 @@ namespace zephyr {
       void Setup();
       void MainLoop();
       void RenderFrame();
-      void CreateVkInstance();
-      void CreateSurface();
-      void CreateRenderEngine();
       void CreateScene();
-      void Cleanup();
+
+      void CreateVulkanEngine();
+      void CleanupVulkan();
+
+      void CreateOpenGLEngine();
+      void CleanupOpenGL();
 
       std::unique_ptr<RenderEngine> m_render_engine{};
       std::unique_ptr<SceneNode> m_scene_root{};

@@ -1,4 +1,5 @@
 
+#include <zephyr/renderer2/backend/render_backend_ogl.hpp>
 #include <zephyr/renderer2/backend/render_backend_vk.hpp>
 
 #include "main_window.hpp"
@@ -8,7 +9,11 @@ static const bool enable_validation_layers = true;
 namespace zephyr {
 
   MainWindow::~MainWindow() {
-    Cleanup();
+    #ifdef ZEPHYR_OPENGL
+      CleanupOpenGL();
+    #else
+      CleanupVulkan();
+    #endif
   }
 
   void MainWindow::Run() {
@@ -17,19 +22,13 @@ namespace zephyr {
   }
 
   void MainWindow::Setup() {
-    m_window = SDL_CreateWindow(
-      "Zephyr Next",
-      SDL_WINDOWPOS_CENTERED,
-      SDL_WINDOWPOS_CENTERED,
-      1920,
-      1080,
-      SDL_WINDOW_VULKAN
-    );
-
-    CreateVkInstance();
-    CreateSurface();
-    CreateRenderEngine();
     CreateScene();
+
+    #ifdef ZEPHYR_OPENGL
+      CreateOpenGLEngine();
+    #else
+      CreateVulkanEngine();
+    #endif
   }
 
   void MainWindow::MainLoop() {
@@ -64,7 +63,7 @@ namespace zephyr {
     m_frame++;
   }
 
-  void MainWindow::CreateVkInstance() {
+  void MainWindow::CreateVulkanEngine() {
     const VkApplicationInfo app_info{
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pNext = nullptr,
@@ -74,6 +73,15 @@ namespace zephyr {
       .engineVersion = VK_MAKE_VERSION(1, 0, 0),
       .apiVersion = VK_MAKE_VERSION(1, 0, 0)
     };
+
+    m_window = SDL_CreateWindow(
+      "Zephyr Next (Vulkan)",
+      SDL_WINDOWPOS_CENTERED,
+      SDL_WINDOWPOS_CENTERED,
+      1920,
+      1080,
+      SDL_WINDOW_VULKAN
+    );
 
     std::vector<const char*> required_extension_names{};
     uint extension_count;
@@ -87,15 +95,11 @@ namespace zephyr {
     }
 
     m_vk_instance = VulkanInstance::Create(app_info, required_extension_names, required_layer_names);
-  }
 
-  void MainWindow::CreateSurface() {
     if(!SDL_Vulkan_CreateSurface(m_window, m_vk_instance->Handle(), &m_vk_surface)) {
       ZEPHYR_PANIC("Failed to create a Vulkan surface for the window");
     }
-  }
 
-  void MainWindow::CreateRenderEngine() {
     m_render_engine = std::make_unique<RenderEngine>(CreateVulkanRenderBackend({
       .vk_instance = m_vk_instance,
       .vk_surface = m_vk_surface
@@ -118,9 +122,25 @@ namespace zephyr {
     cube_b->GetTransform().GetScale() = Vector3{0.25f, 0.25f, 0.25f};
   }
 
-  void MainWindow::Cleanup() {
+  void MainWindow::CleanupVulkan() {
     vkDestroySurfaceKHR(m_vk_instance->Handle(), m_vk_surface, nullptr);
     SDL_DestroyWindow(m_window);
+  }
+
+  void MainWindow::CreateOpenGLEngine() {
+    m_window = SDL_CreateWindow(
+      "Zephyr Next (OpenGL)",
+      SDL_WINDOWPOS_CENTERED,
+      SDL_WINDOWPOS_CENTERED,
+      1920,
+      1080,
+      SDL_WINDOW_OPENGL
+    );
+
+    m_render_engine = std::make_unique<RenderEngine>(CreateOpenGLRenderBackendForSDL2(m_window));
+  }
+
+  void MainWindow::CleanupOpenGL() {
   }
 
 } // namespace zephyr
