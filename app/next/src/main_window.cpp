@@ -9,6 +9,9 @@ static const bool enable_validation_layers = true;
 namespace zephyr {
 
   MainWindow::~MainWindow() {
+    // HACK: make sure that render engine and render backend are cleanly destroyed first, before we destroy the VkInstance etc.
+    m_render_engine = nullptr;
+
     #ifdef ZEPHYR_OPENGL
       CleanupOpenGL();
     #else

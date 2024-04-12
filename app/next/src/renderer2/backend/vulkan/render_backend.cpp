@@ -15,7 +15,9 @@ namespace zephyr {
       explicit VulkanRenderBackend(const VulkanRenderBackendProps& props)
           : m_vk_instance{props.vk_instance}
           , m_vk_surface{props.vk_surface} {
-        // @todo: move this into a static Create() method?
+      }
+
+      void InitializeContext() override {
         CreateLogicalDevice(true);
         CreateSwapChain(m_vk_present_queue_family_indices);
         CreateCommandPool(m_vk_graphics_compute_queue_family_index);
@@ -29,7 +31,7 @@ namespace zephyr {
         PrepareNextFrame();
       }
 
-     ~VulkanRenderBackend() override {
+      void DestroyContext() override {
         vkDeviceWaitIdle(m_vk_device);
 
         vkDestroyPipeline(m_vk_device, m_vk_pipeline, nullptr);
@@ -51,6 +53,8 @@ namespace zephyr {
           vkDestroyImageView(m_vk_device, view, nullptr);
         }
         vkDestroySwapchainKHR(m_vk_device, m_vk_swap_chain, nullptr);
+
+        vkDestroyDevice(m_vk_device, nullptr);
       }
 
       void Render(const Matrix4& projection, std::span<const RenderObject> render_objects) override {
@@ -665,12 +669,12 @@ namespace zephyr {
       }
 
       std::shared_ptr<VulkanInstance> m_vk_instance;
-      VkDevice m_vk_device;
+      VkDevice m_vk_device{};
       VkSurfaceKHR m_vk_surface;
-      u32 m_vk_graphics_compute_queue_family_index;
-      std::vector<u32> m_vk_present_queue_family_indices;
-      VkQueue m_vk_graphics_compute_queue;
-      std::optional<VkQueue> m_vk_dedicated_compute_queue;
+      u32 m_vk_graphics_compute_queue_family_index{};
+      std::vector<u32> m_vk_present_queue_family_indices{};
+      VkQueue m_vk_graphics_compute_queue{};
+      std::optional<VkQueue> m_vk_dedicated_compute_queue{};
 
       // Swap Chain
       VkSwapchainKHR m_vk_swap_chain{};

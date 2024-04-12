@@ -49,6 +49,8 @@ namespace zephyr {
   }
 
   void RenderEngine::RenderThreadMain() {
+    m_render_backend->InitializeContext();
+
     while(m_render_thread_running) {
       // Wait for the caller thread to prepare the internal render structures for the next frame.
       m_render_thread_is_waiting = true;
@@ -63,6 +65,8 @@ namespace zephyr {
       // Signal to the caller thread that we are done reading the internal render structures.
       m_render_thread_semaphore.release();
     }
+
+    m_render_backend->DestroyContext();
   }
 
 } // namespace zephyr
