@@ -4,9 +4,3 @@
 [submodule "external/VulkanMemoryAllocator"]
 	path = external/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/
-[submodule "external/stb"]
-	path = external/stb
-	url = https://github.com/nothings/stb
-[submodule "external/glslang"]
-	path = external/glslang
-	url = https://github.com/KhronosGroup/glslang/
