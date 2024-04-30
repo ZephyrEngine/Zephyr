@@ -11,8 +11,6 @@
 
 namespace zephyr {
 
-  struct MeshComponent : Component {};
-
   class RenderEngine {
     public:
       explicit RenderEngine(std::unique_ptr<RenderBackend> render_backend);
@@ -25,7 +23,8 @@ namespace zephyr {
       void JoinRenderThread();
       void RenderThreadMain();
 
-      std::unique_ptr<RenderBackend> m_render_backend;
+      std::shared_ptr<RenderBackend> m_render_backend;
+
       std::thread m_render_thread;
       std::atomic_bool m_render_thread_running;
       std::atomic_bool m_render_thread_is_waiting;

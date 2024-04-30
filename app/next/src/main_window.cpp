@@ -1,6 +1,7 @@
 
 #include <zephyr/renderer/backend/render_backend_ogl.hpp>
 #include <zephyr/renderer/backend/render_backend_vk.hpp>
+#include <zephyr/renderer/component/mesh.hpp>
 
 #include "main_window.hpp"
 
@@ -112,16 +113,60 @@ namespace zephyr {
   void MainWindow::CreateScene() {
     m_scene_root = std::make_unique<SceneNode>();
 
-    //std::shared_ptr<Material> pbr_material = std::make_shared<Material>(std::make_shared<PBRMaterialShader>());
+    /**
+     *   4-------5
+     *  /|      /|
+     * 0-------1 |
+     * | 6-----|-7
+     * |/      |/
+     * 2-------3
+     */
+    std::shared_ptr<Geometry> cube_geometry = std::make_shared<Geometry>();
+    cube_geometry->m_positions = {
+      // front face
+      /*0*/ -1.0, -1.0,  1.0,
+      /*1*/  1.0, -1.0,  1.0,
+      /*2*/ -1.0,  1.0,  1.0,
+      /*3*/  1.0,  1.0,  1.0,
+
+      // back face
+      /*4*/ -1.0, -1.0, -1.0,
+      /*5*/  1.0, -1.0, -1.0,
+      /*6*/ -1.0,  1.0, -1.0,
+      /*7*/  1.0,  1.0, -1.0,
+    };
+    cube_geometry->m_indices = {
+      // front
+      0, 1, 2,
+      1, 3, 2,
+
+      // back
+      4, 5, 6,
+      5, 7, 6,
+
+      // left
+      0, 4, 6,
+      0, 6, 2,
+
+      // right
+      1, 5, 7,
+      1, 7, 3,
+
+      // top
+      4, 1, 0,
+      4, 5, 1,
+
+      // bottom
+      6, 3, 2,
+      6, 7, 3
+    };
 
     SceneNode* cube_a = m_scene_root->CreateChild("Cube A");
-    //cube_a->CreateComponent<MeshComponent>(m_cube_mesh, pbr_material);
-    cube_a->CreateComponent<MeshComponent>();
+    cube_a->CreateComponent<MeshComponent>(cube_geometry);
     cube_a->GetTransform().GetPosition() = Vector3{0.0f, 0.0f, -5.0f};
 
     SceneNode* cube_b = cube_a->CreateChild("Cube B");
-    //cube_b->CreateComponent<MeshComponent>(m_cube_mesh, pbr_material);
-    cube_b->CreateComponent<MeshComponent>();
+    cube_b->CreateComponent<MeshComponent>(cube_geometry);
     cube_b->GetTransform().GetScale() = Vector3{0.25f, 0.25f, 0.25f};
   }
 

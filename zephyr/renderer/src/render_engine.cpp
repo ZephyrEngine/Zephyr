@@ -1,10 +1,12 @@
 
+#include <zephyr/renderer/component/mesh.hpp>
 #include <zephyr/renderer/render_engine.hpp>
 #include <fmt/format.h>
 
 namespace zephyr {
 
-  RenderEngine::RenderEngine(std::unique_ptr<RenderBackend> render_backend) : m_render_backend{std::move(render_backend)} {
+  RenderEngine::RenderEngine(std::unique_ptr<RenderBackend> render_backend)
+      : m_render_backend{std::move(render_backend)} {
     CreateRenderThread();
   }
 
@@ -22,9 +24,14 @@ namespace zephyr {
       if(!node->IsVisible()) return false;
 
       if(node->HasComponent<MeshComponent>()) {
-        m_render_objects.push_back({
-          .local_to_world = node->GetTransform().GetWorld()
-        });
+        const MeshComponent& mesh_component = node->GetComponent<MeshComponent>();
+        const auto& geometry = mesh_component.geometry;
+
+        if(geometry) {
+          m_render_objects.push_back({
+            .local_to_world = node->GetTransform().GetWorld()
+          });
+        }
       }
 
       return true;

@@ -18,6 +18,8 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/backend/render_backend.hpp
   include/zephyr/renderer/backend/render_backend_ogl.hpp
   include/zephyr/renderer/backend/render_backend_vk.hpp
+  include/zephyr/renderer/component/mesh.hpp
+  include/zephyr/renderer/resource/geometry.hpp
   include/zephyr/renderer/vulkan/vulkan_instance.hpp
   include/zephyr/renderer/vulkan/vulkan_physical_device.hpp
   include/zephyr/renderer/render_engine.hpp
