@@ -2,7 +2,7 @@
 #pragma once
 
 #include <zephyr/math/matrix4.hpp>
-#include <zephyr/renderer2/backend/render_backend.hpp>
+#include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/scene/node.hpp>
 #include <atomic>
 #include <semaphore>
@@ -15,7 +15,7 @@ namespace zephyr {
 
   class RenderEngine {
     public:
-      RenderEngine(std::unique_ptr<RenderBackend> render_backend);
+      explicit RenderEngine(std::unique_ptr<RenderBackend> render_backend);
      ~RenderEngine();
 
       void RenderScene(SceneNode* scene_root);

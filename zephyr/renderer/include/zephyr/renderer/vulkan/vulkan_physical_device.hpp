@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include "zephyr/integer.hpp"
-#include "zephyr/panic.hpp"
+#include <zephyr/integer.hpp>
+#include <zephyr/panic.hpp>
 #include <algorithm>
 #include <cstring>
 #include <span>

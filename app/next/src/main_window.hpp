@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <zephyr/logger/sink/console.hpp>
 #include <zephyr/logger/logger.hpp>
-#include <zephyr/renderer2/vulkan/vulkan_instance.hpp>
-#include <zephyr/renderer2/render_engine.hpp>
+#include <zephyr/renderer/vulkan/vulkan_instance.hpp>
+#include <zephyr/renderer/render_engine.hpp>
 #include <zephyr/scene/node.hpp>
 #include <zephyr/float.hpp>
 #include <zephyr/integer.hpp>
@@ -15,7 +15,7 @@
 
 #undef main
 
-//#define ZEPHYR_OPENGL
+#define ZEPHYR_OPENGL
 
 namespace zephyr {
 
@@ -43,7 +43,6 @@ namespace zephyr {
 
       SDL_Window* m_window{};
       std::shared_ptr<VulkanInstance> m_vk_instance{};
-      VulkanPhysicalDevice* m_vk_physical_device{};
       VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
   };
 

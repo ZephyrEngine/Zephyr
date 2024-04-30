@@ -1,6 +1,6 @@
 
-#include <zephyr/renderer2/backend/render_backend_ogl.hpp>
-#include <zephyr/renderer2/backend/render_backend_vk.hpp>
+#include <zephyr/renderer/backend/render_backend_ogl.hpp>
+#include <zephyr/renderer/backend/render_backend_vk.hpp>
 
 #include "main_window.hpp"
 

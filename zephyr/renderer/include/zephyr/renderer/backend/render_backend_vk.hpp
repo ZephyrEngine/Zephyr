@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include <zephyr/renderer2/backend/render_backend.hpp>
-#include <zephyr/renderer2/vulkan/vulkan_instance.hpp>
+#include <zephyr/renderer/backend/render_backend.hpp>
+#include <zephyr/renderer/vulkan/vulkan_instance.hpp>
 #include <zephyr/integer.hpp>
 #include <memory>
 #include <vulkan/vulkan.h>
