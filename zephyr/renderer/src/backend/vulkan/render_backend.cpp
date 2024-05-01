@@ -57,6 +57,22 @@ namespace zephyr {
         vkDestroyDevice(m_vk_device, nullptr);
       }
 
+      RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) override {
+        ZEPHYR_PANIC("unimplemented");
+      }
+
+      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, size_t base_index, std::span<const u32> data) override {
+        ZEPHYR_PANIC("unimplemented");
+      }
+
+      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, size_t base_vertex, std::span<const f32> data) override {
+        ZEPHYR_PANIC("unimplemented");
+      }
+
+      void DestroyRenderGeometry(RenderGeometry* geometry) override {
+        ZEPHYR_PANIC("unimplemented");
+      }
+
       void Render(const Matrix4& projection, std::span<const RenderObject> render_objects) override {
         const VkClearValue clear_value{
           .color = VkClearColorValue{

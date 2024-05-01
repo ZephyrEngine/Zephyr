@@ -5,7 +5,98 @@
 #include <GL/gl.h>
 #include <SDL_opengl.h>
 
+#include <array>
+#include <optional>
+#include <vector>
+
 namespace zephyr {
+
+  class OpenGLRenderGeometry final : public RenderGeometry {
+    public:
+      static OpenGLRenderGeometry* Build(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) {
+        GLuint gl_vao;
+        glCreateVertexArrays(1u, &gl_vao);
+
+        std::optional<GLuint> maybe_gl_ibo{};
+
+        if(number_of_indices > 0) {
+          // @todo: use GL_STATIC_DRAW when possible.
+          GLuint gl_ibo;
+          glCreateBuffers(1u, &gl_ibo);
+          glNamedBufferData(gl_ibo, (GLsizeiptr)(sizeof(u32) * number_of_indices), nullptr, GL_DYNAMIC_DRAW);
+          glVertexArrayElementBuffer(gl_vao, gl_ibo);
+          maybe_gl_ibo = gl_ibo;
+        }
+
+        size_t vbo_stride = 0u;
+        std::array<size_t, 32> vbo_attribute_offsets{};
+
+        const auto PackAttribute = [&](RenderGeometryAttribute attribute, int number_of_components) {
+          if(layout.HasAttribute(attribute)) {
+            glEnableVertexArrayAttrib(gl_vao, (int)attribute);
+            glVertexArrayAttribFormat(gl_vao, (int)attribute, number_of_components, GL_FLOAT, GL_FALSE, vbo_stride);
+            glVertexArrayAttribBinding(gl_vao, (int)attribute, 0u);
+
+            vbo_attribute_offsets[(int)attribute] = vbo_stride;
+            vbo_stride += sizeof(f32) * number_of_components;
+          }
+        };
+
+        PackAttribute(RenderGeometryAttribute::Position, 3);
+        PackAttribute(RenderGeometryAttribute::Normal, 3);
+        PackAttribute(RenderGeometryAttribute::UV, 2);
+        PackAttribute(RenderGeometryAttribute::Color, 3);
+
+        // @todo: use GL_STATIC_DRAW when possible.
+        GLuint gl_vbo;
+        glCreateBuffers(1u, &gl_vbo);
+        glNamedBufferData(gl_vbo, (GLsizeiptr)(vbo_stride * number_of_vertices), nullptr, GL_DYNAMIC_DRAW);
+        glVertexArrayVertexBuffer(gl_vao, 0u, gl_vbo, 0u, (GLsizei)vbo_stride);
+
+        OpenGLRenderGeometry* render_geometry = new OpenGLRenderGeometry{};
+        render_geometry->m_gl_vao = gl_vao;
+        render_geometry->m_gl_ibo = maybe_gl_ibo;
+        render_geometry->m_gl_vbo = gl_vbo;
+        render_geometry->m_vbo_stride = vbo_stride;
+        render_geometry->m_vbo_attribute_offsets = vbo_attribute_offsets;
+        render_geometry->m_number_of_indices = number_of_indices;
+        render_geometry->m_number_of_vertices = number_of_vertices;
+        return render_geometry;
+      }
+
+      void UpdateIndices(size_t base_index, std::span<const u32> data) {
+        // @todo: validation
+        glNamedBufferSubData(m_gl_ibo.value(), (GLintptr)(base_index * sizeof(u32)), (GLsizeiptr)data.size_bytes(), data.data());
+      }
+
+      void UpdateVertices(size_t base_vertex, std::span<const f32> data) {
+        //@todo: validation
+        glNamedBufferSubData(m_gl_vbo, (GLintptr)(base_vertex * m_vbo_stride), (GLsizeiptr)data.size_bytes(), data.data());
+      }
+
+      void Draw() {
+        glBindVertexArray(m_gl_vao);
+
+        if(m_gl_ibo.has_value()) {
+          glDrawElements(GL_TRIANGLES, (GLsizei)m_number_of_indices, GL_UNSIGNED_INT, nullptr);
+        } else {
+          glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_number_of_vertices);
+        }
+      }
+
+    private:
+      static_assert((int)RenderGeometryAttribute::Count <= 32);
+
+      OpenGLRenderGeometry() = default;
+
+      GLuint m_gl_vao{};
+      std::optional<GLuint> m_gl_ibo{};
+      GLuint m_gl_vbo{};
+      size_t m_vbo_stride{};
+      std::array<size_t, 32> m_vbo_attribute_offsets{};
+      size_t m_number_of_indices{};
+      size_t m_number_of_vertices{};
+  };
 
   class OpenGLRenderBackend final : public RenderBackend {
     public:
@@ -27,7 +118,56 @@ namespace zephyr {
 
         glCreateBuffers(1u, &m_gl_ubo);
         glNamedBufferData(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_DRAW);
+
+        // - GEOMETRY TEST -
+        std::vector<f32> vertices{
+          // front face
+          /*0*/ -1.0, -1.0,  1.0,  0.0, 0.0,  1.0, 0.0, 0.0,
+          /*1*/  1.0, -1.0,  1.0,  1.0, 0.0,  0.0, 1.0, 0.0,
+          /*2*/ -1.0,  1.0,  1.0,  1.0, 1.0,  0.0, 0.0, 1.0,
+          /*3*/  1.0,  1.0,  1.0,  0.0, 1.0,  1.0, 1.0, 1.0,
+
+          // back face
+          /*4*/ -1.0, -1.0, -1.0,  0.0, 0.0,  1.0, 0.0, 0.0,
+          /*5*/  1.0, -1.0, -1.0,  1.0, 0.0,  0.0, 1.0, 1.0,
+          /*6*/ -1.0,  1.0, -1.0,  1.0, 1.0,  1.0, 1.0, 0.0,
+          /*7*/  1.0,  1.0, -1.0,  0.0, 1.0,  1.0, 0.0, 1.0
+        };
+        std::vector<u32> indices{
+          // front
+          0, 1, 2,
+          1, 3, 2,
+
+          // back
+          4, 5, 6,
+          5, 7, 6,
+
+          // left
+          0, 4, 6,
+          0, 6, 2,
+
+          // right
+          1, 5, 7,
+          1, 7, 3,
+
+          // top
+          4, 1, 0,
+          4, 5, 1,
+
+          // bottom
+          6, 3, 2,
+          6, 7, 3
+        };
+        RenderGeometryLayout layout{};
+        layout.AddAttribute(RenderGeometryAttribute::Position);
+        layout.AddAttribute(RenderGeometryAttribute::UV);
+        layout.AddAttribute(RenderGeometryAttribute::Color);
+        m_test_geometry = CreateRenderGeometry(layout, 8, 36);
+        UpdateRenderGeometryIndices(m_test_geometry, 0u, indices);
+        UpdateRenderGeometryVertices(m_test_geometry, 0u, vertices);
       }
+
+      RenderGeometry* m_test_geometry{};
 
       void DestroyContext() override {
         glDeleteBuffers(1u, &m_gl_ubo);
@@ -37,11 +177,26 @@ namespace zephyr {
         SDL_GL_DeleteContext(m_gl_context);
       }
 
+      RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) override {
+        return OpenGLRenderGeometry::Build(layout, number_of_vertices, number_of_indices);
+      }
+
+      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, size_t base_index, std::span<const u32> data) override {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateIndices(base_index, data);
+      }
+
+      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, size_t base_vertex, std::span<const f32> data) override {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateVertices(base_vertex, data);
+      }
+
+      void DestroyRenderGeometry(RenderGeometry* geometry) override {
+        delete geometry;
+      }
+
       void Render(const Matrix4& projection, std::span<const RenderObject> render_objects) override {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glBindVertexArray(m_gl_vao);
         glUseProgram(m_gl_shader_program);
 
         glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
@@ -49,7 +204,7 @@ namespace zephyr {
 
         for(const RenderObject& render_object : render_objects) {
           glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
-          glDrawArrays(GL_TRIANGLES, 0, 3);
+          dynamic_cast<OpenGLRenderGeometry*>(m_test_geometry)->Draw();
         }
       }
 
@@ -67,12 +222,15 @@ namespace zephyr {
             mat4 local_to_world;
           } u_transform;
 
+          layout(location = 0) in vec3 a_position;
+          layout(location = 2) in vec2 a_uv;
+          layout(location = 3) in vec3 a_color;
+
+          out vec3 v_color;
+
           void main() {
-            switch(gl_VertexID) {
-              case 0: gl_Position = u_transform.projection * u_transform.local_to_world * vec4(-0.5,  0.5, 0.0, 1.0); break;
-              case 1: gl_Position = u_transform.projection * u_transform.local_to_world * vec4( 0.5,  0.5, 0.0, 1.0); break;
-              case 2: gl_Position = u_transform.projection * u_transform.local_to_world * vec4( 0.0, -0.5, 0.0, 1.0); break;
-            }
+            v_color = a_color;
+            gl_Position = u_transform.projection * u_transform.local_to_world * vec4(a_position, 1.0);
           }
         )", GL_VERTEX_SHADER);
 
@@ -81,8 +239,10 @@ namespace zephyr {
 
           layout(location = 0) out vec4 f_frag_color;
 
+          in vec3 v_color;
+
           void main() {
-            f_frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+            f_frag_color = vec4(v_color, 1.0);
           }
         )", GL_FRAGMENT_SHADER);
 
