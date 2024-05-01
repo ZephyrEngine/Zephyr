@@ -18,7 +18,7 @@ namespace zephyr {
     // Wait for the render thread to complete reading the internal render structures.
     m_render_thread_semaphore.acquire();
 
-    m_render_objects.clear();
+    m_game_thread_render_objects.clear();
 
     scene_root->Traverse([&](SceneNode* node) -> bool {
       if(!node->IsVisible()) return false;
@@ -28,8 +28,9 @@ namespace zephyr {
         const auto& geometry = mesh_component.geometry;
 
         if(geometry) {
-          m_render_objects.push_back({
-            .local_to_world = node->GetTransform().GetWorld()
+          m_game_thread_render_objects.push_back({
+            .local_to_world = node->GetTransform().GetWorld(),
+            .geometry = geometry.get()
           });
         }
       }
@@ -59,21 +60,33 @@ namespace zephyr {
     m_render_backend->InitializeContext();
 
     while(m_render_thread_running) {
-      // Wait for the caller thread to prepare the internal render structures for the next frame.
-      m_render_thread_is_waiting = true;
-      m_caller_thread_semaphore.acquire();
-      m_render_thread_is_waiting = false;
+      ReadyRenderThreadData();
 
       // TODO(fleroviux): do not hardcode the aspect ratio.
       const Matrix4 projection = Matrix4::PerspectiveVK(45.0f, 16.0f/9.0, 0.01f, 100.0f);
       m_render_backend->Render(projection, m_render_objects);
       m_render_backend->SwapBuffers();
-
-      // Signal to the caller thread that we are done reading the internal render structures.
-      m_render_thread_semaphore.release();
     }
 
     m_render_backend->DestroyContext();
+  }
+
+  void RenderEngine::ReadyRenderThreadData() {
+    // Wait for the caller thread to prepare the internal render structures for the next frame.
+    m_render_thread_is_waiting = true;
+    m_caller_thread_semaphore.acquire();
+    m_render_thread_is_waiting = false;
+
+    m_render_objects.clear();
+
+    for(const auto& game_thread_render_object : m_game_thread_render_objects) {
+      m_render_objects.push_back({
+        .local_to_world = game_thread_render_object.local_to_world
+      });
+    }
+
+    // Signal to the caller thread that we are done reading the internal render structures.
+    m_render_thread_semaphore.release();
   }
 
 } // namespace zephyr
