@@ -55,7 +55,7 @@ namespace zephyr {
         RegisterAttribute(RenderGeometryAttribute::Position, 3, sizeof(f32));
         RegisterAttribute(RenderGeometryAttribute::Normal,   3, sizeof(f32));
         RegisterAttribute(RenderGeometryAttribute::UV,       2, sizeof(f32));
-        RegisterAttribute(RenderGeometryAttribute::Color,    3, sizeof(f32));
+        RegisterAttribute(RenderGeometryAttribute::Color,    4, sizeof(f32));
         m_vertex_stride = next_attribute_offset;
 
         SetNumberOfVertices(number_of_vertices);
@@ -74,6 +74,10 @@ namespace zephyr {
 
       [[nodiscard]] bool HasAttribute(RenderGeometryAttribute attribute) const {
         return m_layout.HasAttribute(attribute);
+      }
+
+      [[nodiscard]] bool IsIndexed() const {
+        return GetNumberOfIndices() > 0;
       }
 
       [[nodiscard]] size_t GetNumberOfIndices() const {
@@ -116,8 +120,8 @@ namespace zephyr {
         return GetAccessor<Vector2>(RenderGeometryAttribute::UV);
       }
 
-      [[nodiscard]] Accessor<Vector3> GetColors() {
-        return GetAccessor<Vector3>(RenderGeometryAttribute::Color);
+      [[nodiscard]] Accessor<Vector4> GetColors() {
+        return GetAccessor<Vector4>(RenderGeometryAttribute::Color);
       }
 
       [[nodiscard]] RenderGeometryLayout GetLayout() const {

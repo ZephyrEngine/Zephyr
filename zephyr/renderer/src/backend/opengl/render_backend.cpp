@@ -45,7 +45,7 @@ namespace zephyr {
         PackAttribute(RenderGeometryAttribute::Position, 3);
         PackAttribute(RenderGeometryAttribute::Normal, 3);
         PackAttribute(RenderGeometryAttribute::UV, 2);
-        PackAttribute(RenderGeometryAttribute::Color, 3);
+        PackAttribute(RenderGeometryAttribute::Color, 4);
 
         // @todo: use GL_STATIC_DRAW when possible.
         GLuint gl_vbo;
@@ -124,16 +124,16 @@ namespace zephyr {
         // - GEOMETRY TEST -
         std::vector<f32> vertices{
           // front face
-          /*0*/ -1.0, -1.0,  1.0,  0.0, 0.0,  1.0, 0.0, 0.0,
-          /*1*/  1.0, -1.0,  1.0,  1.0, 0.0,  0.0, 1.0, 0.0,
-          /*2*/ -1.0,  1.0,  1.0,  1.0, 1.0,  0.0, 0.0, 1.0,
-          /*3*/  1.0,  1.0,  1.0,  0.0, 1.0,  1.0, 1.0, 1.0,
+          /*0*/ -1.0, -1.0,  1.0,  0.0, 0.0,  1.0, 0.0, 0.0, 1.0,
+          /*1*/  1.0, -1.0,  1.0,  1.0, 0.0,  0.0, 1.0, 0.0, 1.0,
+          /*2*/ -1.0,  1.0,  1.0,  1.0, 1.0,  0.0, 0.0, 1.0, 1.0,
+          /*3*/  1.0,  1.0,  1.0,  0.0, 1.0,  1.0, 1.0, 1.0, 1.0,
 
           // back face
-          /*4*/ -1.0, -1.0, -1.0,  0.0, 0.0,  1.0, 0.0, 0.0,
-          /*5*/  1.0, -1.0, -1.0,  1.0, 0.0,  0.0, 1.0, 1.0,
-          /*6*/ -1.0,  1.0, -1.0,  1.0, 1.0,  1.0, 1.0, 0.0,
-          /*7*/  1.0,  1.0, -1.0,  0.0, 1.0,  1.0, 0.0, 1.0
+          /*4*/ -1.0, -1.0, -1.0,  0.0, 0.0,  1.0, 0.0, 0.0, 1.0,
+          /*5*/  1.0, -1.0, -1.0,  1.0, 0.0,  0.0, 1.0, 1.0, 1.0,
+          /*6*/ -1.0,  1.0, -1.0,  1.0, 1.0,  1.0, 1.0, 0.0, 1.0,
+          /*7*/  1.0,  1.0, -1.0,  0.0, 1.0,  1.0, 0.0, 1.0, 1.0
         };
         std::vector<u32> indices{
           // front
