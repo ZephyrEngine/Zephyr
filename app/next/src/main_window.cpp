@@ -121,21 +121,25 @@ namespace zephyr {
      * |/      |/
      * 2-------3
      */
-    std::shared_ptr<Geometry> cube_geometry = std::make_shared<Geometry>();
-    cube_geometry->m_positions = {
-      // front face
-      /*0*/ -1.0, -1.0,  1.0,
-      /*1*/  1.0, -1.0,  1.0,
-      /*2*/ -1.0,  1.0,  1.0,
-      /*3*/  1.0,  1.0,  1.0,
+    RenderGeometryLayout layout{};
+    layout.AddAttribute(RenderGeometryAttribute::Position);
 
-      // back face
-      /*4*/ -1.0, -1.0, -1.0,
-      /*5*/  1.0, -1.0, -1.0,
-      /*6*/ -1.0,  1.0, -1.0,
-      /*7*/  1.0,  1.0, -1.0,
-    };
-    cube_geometry->m_indices = {
+    std::shared_ptr<Geometry> cube_geometry = std::make_shared<Geometry>(layout, 8, 36);
+
+    auto positions = cube_geometry->GetPositions();
+    positions[0] = Vector3{-1.0, -1.0,  1.0};
+    positions[1] = Vector3{ 1.0, -1.0,  1.0};
+    positions[2] = Vector3{-1.0,  1.0,  1.0};
+    positions[3] = Vector3{ 1.0,  1.0,  1.0};
+    positions[4] = Vector3{-1.0, -1.0, -1.0};
+    positions[5] = Vector3{ 1.0, -1.0, -1.0};
+    positions[6] = Vector3{-1.0,  1.0, -1.0};
+    positions[7] = Vector3{ 1.0,  1.0, -1.0};
+
+
+
+    auto indices = cube_geometry->GetIndices();
+    u32 index_data[] {
       // front
       0, 1, 2,
       1, 3, 2,
@@ -160,6 +164,7 @@ namespace zephyr {
       6, 3, 2,
       6, 7, 3
     };
+    std::copy_n(index_data, sizeof(index_data) / sizeof(u32), indices.begin());
 
     SceneNode* cube_a = m_scene_root->CreateChild("Cube A");
     cube_a->CreateComponent<MeshComponent>(cube_geometry);
