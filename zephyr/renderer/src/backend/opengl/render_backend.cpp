@@ -119,6 +119,8 @@ namespace zephyr {
         glCreateBuffers(1u, &m_gl_ubo);
         glNamedBufferData(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_DRAW);
 
+        glEnable(GL_DEPTH_TEST);
+
         // - GEOMETRY TEST -
         std::vector<f32> vertices{
           // front face
