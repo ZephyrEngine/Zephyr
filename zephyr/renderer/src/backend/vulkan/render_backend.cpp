@@ -61,11 +61,11 @@ namespace zephyr {
         ZEPHYR_PANIC("unimplemented");
       }
 
-      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, size_t base_index, std::span<const u32> data) override {
+      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) override {
         ZEPHYR_PANIC("unimplemented");
       }
 
-      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, size_t base_vertex, std::span<const f32> data) override {
+      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) override {
         ZEPHYR_PANIC("unimplemented");
       }
 

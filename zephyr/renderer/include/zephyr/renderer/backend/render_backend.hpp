@@ -37,6 +37,7 @@ namespace zephyr {
   };
 
   struct RenderObject {
+    RenderGeometry* render_geometry{};
     Matrix4 local_to_world;
   };
 
@@ -51,8 +52,8 @@ namespace zephyr {
       virtual void DestroyContext() = 0;
 
       virtual RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) = 0;
-      virtual void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, size_t base_index, std::span<const u32> data) = 0;
-      virtual void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, size_t base_vertex, std::span<const f32> data) = 0;
+      virtual void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) = 0;
+      virtual void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) = 0;
       virtual void DestroyRenderGeometry(RenderGeometry* geometry) = 0;
 
       /// Just a quick thing for testing the rendering.

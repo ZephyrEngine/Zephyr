@@ -6,7 +6,8 @@
 namespace zephyr {
 
   RenderEngine::RenderEngine(std::unique_ptr<RenderBackend> render_backend)
-      : m_render_backend{std::move(render_backend)} {
+      : m_render_backend{std::move(render_backend)}
+      , m_geometry_cache{m_render_backend} {
     CreateRenderThread();
   }
 
@@ -28,6 +29,8 @@ namespace zephyr {
         const auto& geometry = mesh_component.geometry;
 
         if(geometry) {
+          m_geometry_cache.ScheduleUploadIfNeeded(geometry.get());
+
           m_game_thread_render_objects.push_back({
             .local_to_world = node->GetTransform().GetWorld(),
             .geometry = geometry.get()
@@ -77,10 +80,13 @@ namespace zephyr {
     m_caller_thread_semaphore.acquire();
     m_render_thread_is_waiting = false;
 
+    m_geometry_cache.ProcessPendingUpdates();
+
     m_render_objects.clear();
 
     for(const auto& game_thread_render_object : m_game_thread_render_objects) {
       m_render_objects.push_back({
+        .render_geometry = m_geometry_cache.GetCachedRenderGeometry(game_thread_render_object.geometry),
         .local_to_world = game_thread_render_object.local_to_world
       });
     }

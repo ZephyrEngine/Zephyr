@@ -5,6 +5,7 @@
 set(SOURCES
   src/backend/opengl/render_backend.cpp
   src/backend/vulkan/render_backend.cpp
+  src/engine/geometry_cache.cpp
   src/vulkan/vulkan_instance.cpp
   src/render_engine.cpp
 )
@@ -19,6 +20,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/backend/render_backend_ogl.hpp
   include/zephyr/renderer/backend/render_backend_vk.hpp
   include/zephyr/renderer/component/mesh.hpp
+  include/zephyr/renderer/engine/geometry_cache.hpp
   include/zephyr/renderer/resource/geometry.hpp
   include/zephyr/renderer/resource/resource.hpp
   include/zephyr/renderer/vulkan/vulkan_instance.hpp

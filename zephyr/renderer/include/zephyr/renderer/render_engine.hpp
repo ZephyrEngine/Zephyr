@@ -3,6 +3,7 @@
 
 #include <zephyr/math/matrix4.hpp>
 #include <zephyr/renderer/backend/render_backend.hpp>
+#include <zephyr/renderer/engine/geometry_cache.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
 #include <zephyr/scene/node.hpp>
 #include <atomic>
@@ -32,6 +33,8 @@ namespace zephyr {
       std::atomic_bool m_render_thread_is_waiting;
       std::binary_semaphore m_caller_thread_semaphore{0}; //> Semaphore signalled by the calling thread
       std::binary_semaphore m_render_thread_semaphore{1}; //> Semaphore signalled by the rendering thread
+
+      GeometryCache m_geometry_cache;
 
       struct GameThreadRenderObject {
         Matrix4 local_to_world;

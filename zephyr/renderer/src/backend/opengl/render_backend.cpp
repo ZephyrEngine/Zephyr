@@ -64,14 +64,14 @@ namespace zephyr {
         return render_geometry;
       }
 
-      void UpdateIndices(size_t base_index, std::span<const u32> data) {
+      void UpdateIndices(std::span<const u8> data) {
         // @todo: validation
-        glNamedBufferSubData(m_gl_ibo.value(), (GLintptr)(base_index * sizeof(u32)), (GLsizeiptr)data.size_bytes(), data.data());
+        glNamedBufferSubData(m_gl_ibo.value(), 0u, (GLsizeiptr)data.size_bytes(), data.data());
       }
 
-      void UpdateVertices(size_t base_vertex, std::span<const f32> data) {
+      void UpdateVertices(std::span<const u8> data) {
         //@todo: validation
-        glNamedBufferSubData(m_gl_vbo, (GLintptr)(base_vertex * m_vbo_stride), (GLsizeiptr)data.size_bytes(), data.data());
+        glNamedBufferSubData(m_gl_vbo, 0u, (GLsizeiptr)data.size_bytes(), data.data());
       }
 
       void Draw() {
@@ -120,56 +120,7 @@ namespace zephyr {
         glNamedBufferData(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_DRAW);
 
         glEnable(GL_DEPTH_TEST);
-
-        // - GEOMETRY TEST -
-        std::vector<f32> vertices{
-          // front face
-          /*0*/ -1.0, -1.0,  1.0,  0.0, 0.0,  1.0, 0.0, 0.0, 1.0,
-          /*1*/  1.0, -1.0,  1.0,  1.0, 0.0,  0.0, 1.0, 0.0, 1.0,
-          /*2*/ -1.0,  1.0,  1.0,  1.0, 1.0,  0.0, 0.0, 1.0, 1.0,
-          /*3*/  1.0,  1.0,  1.0,  0.0, 1.0,  1.0, 1.0, 1.0, 1.0,
-
-          // back face
-          /*4*/ -1.0, -1.0, -1.0,  0.0, 0.0,  1.0, 0.0, 0.0, 1.0,
-          /*5*/  1.0, -1.0, -1.0,  1.0, 0.0,  0.0, 1.0, 1.0, 1.0,
-          /*6*/ -1.0,  1.0, -1.0,  1.0, 1.0,  1.0, 1.0, 0.0, 1.0,
-          /*7*/  1.0,  1.0, -1.0,  0.0, 1.0,  1.0, 0.0, 1.0, 1.0
-        };
-        std::vector<u32> indices{
-          // front
-          0, 1, 2,
-          1, 3, 2,
-
-          // back
-          4, 5, 6,
-          5, 7, 6,
-
-          // left
-          0, 4, 6,
-          0, 6, 2,
-
-          // right
-          1, 5, 7,
-          1, 7, 3,
-
-          // top
-          4, 1, 0,
-          4, 5, 1,
-
-          // bottom
-          6, 3, 2,
-          6, 7, 3
-        };
-        RenderGeometryLayout layout{};
-        layout.AddAttribute(RenderGeometryAttribute::Position);
-        layout.AddAttribute(RenderGeometryAttribute::UV);
-        layout.AddAttribute(RenderGeometryAttribute::Color);
-        m_test_geometry = CreateRenderGeometry(layout, 8, 36);
-        UpdateRenderGeometryIndices(m_test_geometry, 0u, indices);
-        UpdateRenderGeometryVertices(m_test_geometry, 0u, vertices);
       }
-
-      RenderGeometry* m_test_geometry{};
 
       void DestroyContext() override {
         glDeleteBuffers(1u, &m_gl_ubo);
@@ -183,12 +134,12 @@ namespace zephyr {
         return OpenGLRenderGeometry::Build(layout, number_of_vertices, number_of_indices);
       }
 
-      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, size_t base_index, std::span<const u32> data) override {
-        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateIndices(base_index, data);
+      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) override {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateIndices(data);
       }
 
-      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, size_t base_vertex, std::span<const f32> data) override {
-        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateVertices(base_vertex, data);
+      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) override {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateVertices(data);
       }
 
       void DestroyRenderGeometry(RenderGeometry* geometry) override {
@@ -206,7 +157,7 @@ namespace zephyr {
 
         for(const RenderObject& render_object : render_objects) {
           glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
-          dynamic_cast<OpenGLRenderGeometry*>(m_test_geometry)->Draw();
+          dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry)->Draw();
         }
       }
 

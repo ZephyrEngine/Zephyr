@@ -123,6 +123,7 @@ namespace zephyr {
      */
     RenderGeometryLayout layout{};
     layout.AddAttribute(RenderGeometryAttribute::Position);
+    layout.AddAttribute(RenderGeometryAttribute::Color);
 
     std::shared_ptr<Geometry> cube_geometry = std::make_shared<Geometry>(layout, 8, 36);
 
@@ -136,6 +137,17 @@ namespace zephyr {
     positions[6] = Vector3{-1.0,  1.0, -1.0};
     positions[7] = Vector3{ 1.0,  1.0, -1.0};
 
+    auto colors = cube_geometry->GetColors();
+    if(colors.IsValid()) {
+      colors[0] = Vector4{1.0, 0.0, 0.0, 1.0};
+      colors[1] = Vector4{0.0, 1.0, 0.0, 1.0};
+      colors[2] = Vector4{0.0, 0.0, 1.0, 1.0};
+      colors[3] = Vector4{1.0, 0.0, 1.0, 1.0};
+      colors[4] = Vector4{1.0, 1.0, 0.0, 1.0};
+      colors[5] = Vector4{0.0, 1.0, 1.0, 1.0};
+      colors[6] = Vector4{1.0, 1.0, 1.0, 1.0};
+      colors[7] = Vector4{0.0, 0.0, 0.0, 1.0};
+    }
 
 
     auto indices = cube_geometry->GetIndices();

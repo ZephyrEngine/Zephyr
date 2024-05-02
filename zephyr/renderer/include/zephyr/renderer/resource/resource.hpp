@@ -19,7 +19,7 @@ namespace zephyr {
    */
   class Resource : NonCopyable, NonMoveable {
     public:
-      using DeleteCallback = std::function<void (Resource*)>;
+      using DeleteCallback = std::function<void (const Resource*)>;
 
       virtual ~Resource() {
         for(const auto& delete_callback : m_delete_cbs) delete_callback(this);
@@ -41,13 +41,13 @@ namespace zephyr {
       }
 
       /// Register a callback to run when this resource is deleted.
-      void RegisterDeleteCallback(DeleteCallback callback) {
+      void RegisterDeleteCallback(DeleteCallback callback) const {
         m_delete_cbs.push_back(std::move(callback));
       }
 
     private:
       u64 m_version{}; ///< current 64-bit version number of the resource
-      std::vector<DeleteCallback> m_delete_cbs{}; ///< list of callbacks to run when this resource is deleted
+      mutable std::vector<DeleteCallback> m_delete_cbs{}; ///< list of callbacks to run when this resource is deleted
   };
 
 } // namespace zephyr
