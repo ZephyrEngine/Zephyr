@@ -34,6 +34,9 @@ namespace zephyr {
   class RenderGeometry {
     public:
       virtual ~RenderGeometry() = default;
+
+      [[nodiscard]] virtual size_t GetNumberOfVertices() const = 0;
+      [[nodiscard]] virtual size_t GetNumberOfIndices() const = 0;
   };
 
   struct RenderObject {

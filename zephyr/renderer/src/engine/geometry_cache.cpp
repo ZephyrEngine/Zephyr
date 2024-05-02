@@ -62,10 +62,15 @@ namespace zephyr {
       const Geometry* geometry = upload_task.geometry;
       RenderGeometry* render_geometry = m_render_geometry_table[geometry];
 
-      if(!render_geometry) {
-        render_geometry = m_render_backend->CreateRenderGeometry(
-          upload_task.layout, upload_task.number_of_vertices, upload_task.number_of_indices);
-        m_render_geometry_table[upload_task.geometry] = render_geometry;
+      const size_t new_number_of_vertices = upload_task.number_of_vertices;
+      const size_t new_number_of_indices  = upload_task.number_of_indices;
+
+      if(!render_geometry || new_number_of_vertices != render_geometry->GetNumberOfVertices() || new_number_of_indices != render_geometry->GetNumberOfIndices()) {
+        if(render_geometry) {
+          m_render_backend->DestroyRenderGeometry(render_geometry);
+        }
+        render_geometry = m_render_backend->CreateRenderGeometry(upload_task.layout, new_number_of_vertices, new_number_of_indices);
+        m_render_geometry_table[geometry] = render_geometry;
       }
 
       m_render_backend->UpdateRenderGeometryVertices(render_geometry, upload_task.raw_vbo_data);

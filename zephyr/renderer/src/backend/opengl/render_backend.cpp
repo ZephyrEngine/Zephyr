@@ -64,6 +64,14 @@ namespace zephyr {
         return render_geometry;
       }
 
+      [[nodiscard]] size_t GetNumberOfVertices() const override {
+        return m_number_of_vertices;
+      }
+
+      [[nodiscard]] size_t GetNumberOfIndices() const override {
+        return m_number_of_indices;
+      }
+
       void UpdateIndices(std::span<const u8> data) {
         // @todo: validation
         glNamedBufferSubData(m_gl_ibo.value(), 0u, (GLsizeiptr)data.size_bytes(), data.data());
