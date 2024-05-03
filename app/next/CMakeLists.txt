@@ -5,6 +5,7 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/gltf_loader.hpp
   src/main_window.hpp
 )
 

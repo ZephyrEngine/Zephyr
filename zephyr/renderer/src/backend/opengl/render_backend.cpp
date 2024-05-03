@@ -184,12 +184,15 @@ namespace zephyr {
           } u_transform;
 
           layout(location = 0) in vec3 a_position;
+          layout(location = 1) in vec3 a_normal;
           layout(location = 2) in vec2 a_uv;
           layout(location = 3) in vec3 a_color;
 
+          out vec3 v_normal;
           out vec3 v_color;
 
           void main() {
+            v_normal = a_normal;
             v_color = a_color;
             gl_Position = u_transform.projection * u_transform.local_to_world * vec4(a_position, 1.0);
           }
@@ -200,10 +203,11 @@ namespace zephyr {
 
           layout(location = 0) out vec4 f_frag_color;
 
+          in vec3 v_normal;
           in vec3 v_color;
 
           void main() {
-            f_frag_color = vec4(v_color, 1.0);
+            f_frag_color = vec4(v_normal * 0.5 + 0.5, 1.0);
           }
         )", GL_FRAGMENT_SHADER);
 
