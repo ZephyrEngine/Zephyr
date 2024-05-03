@@ -109,10 +109,17 @@ namespace zephyr {
     m_scene_root = std::make_unique<SceneNode>();
 
     GLTFLoader gltf_loader{};
-    std::unique_ptr<SceneNode> gltf_scene = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");
-    gltf_scene->GetTransform().GetPosition() = Vector3{0.0f, 0.0f, -5.0f};
-    gltf_scene->GetTransform().GetRotation().SetFromEuler(1.5f, 0.0f, 0.0f);
-    m_scene_root->Add(std::move(gltf_scene));
+
+    std::unique_ptr<SceneNode> gltf_scene_1 = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");
+    gltf_scene_1->GetTransform().GetPosition() = {1.0f, 0.0f, -5.0f};
+    gltf_scene_1->GetTransform().GetRotation().SetFromEuler(1.5f, 0.0f, 0.0f);
+    m_scene_root->Add(std::move(gltf_scene_1));
+
+    std::unique_ptr<SceneNode> gltf_scene_2 = gltf_loader.Parse("models/Behemoth/scene.gltf");
+    gltf_scene_2->GetTransform().GetPosition() = Vector3{-1.0f, 0.0f, -5.0f};
+    gltf_scene_2->GetTransform().GetRotation().SetFromEuler(-M_PI * 0.5, M_PI, 0.0f);
+    gltf_scene_2->GetTransform().GetScale() = {0.5f, 0.5f, 0.5f};
+    m_scene_root->Add(std::move(gltf_scene_2));
   }
 
   void MainWindow::CleanupVulkan() {

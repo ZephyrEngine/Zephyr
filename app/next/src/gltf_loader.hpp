@@ -25,6 +25,10 @@ namespace zephyr {
         const nlohmann::json gltf_json = nlohmann::json::parse(gltf_file);
 
         m_base_path = std::filesystem::path{path}.remove_filename();
+        m_buffers.clear();
+        m_buffer_views.clear();
+        m_accessors.clear();
+        m_meshes.clear();
 
         LoadBuffers(gltf_json);
         LoadBufferViews(gltf_json);
