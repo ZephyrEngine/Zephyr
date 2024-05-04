@@ -13,7 +13,7 @@ namespace zephyr {
   }
 
   void Transform3D::UpdateWorld() {
-    SceneNode* parent = m_node->GetParent();
+    std::shared_ptr<SceneNode> parent = m_node->GetParent();
 
     if(parent) {
       m_world_matrix = parent->GetTransform().GetWorld() * m_local_matrix;

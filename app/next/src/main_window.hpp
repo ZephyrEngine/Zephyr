@@ -38,14 +38,14 @@ namespace zephyr {
       void CleanupOpenGL();
 
       std::unique_ptr<RenderEngine> m_render_engine{};
-      std::unique_ptr<SceneNode> m_scene_root{};
-      u64 m_frame{};
+      std::shared_ptr<SceneNode> m_scene_root{};
+      std::shared_ptr<SceneNode> m_behemoth_scene{};
 
+      u64 m_frame{};
       SDL_Window* m_window{};
       std::shared_ptr<VulkanInstance> m_vk_instance{};
-      VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
 
-      SceneNode* m_behemoth_scene{};
+      VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
   };
 
 } // namespace zephyr

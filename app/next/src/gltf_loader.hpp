@@ -15,7 +15,7 @@ namespace zephyr {
 
   class GLTFLoader {
     public:
-      std::unique_ptr<SceneNode> Parse(const std::filesystem::path& path) {
+      std::shared_ptr<SceneNode> Parse(const std::filesystem::path& path) {
         std::ifstream gltf_file{path};
         if(!gltf_file.good()) {
           ZEPHYR_PANIC("Failed to open GLTF file: {}", path.string());
@@ -358,7 +358,7 @@ namespace zephyr {
         }
       }
 
-      std::unique_ptr<SceneNode> LoadNodeHierarchy(const nlohmann::json& gltf_json, size_t node_index) {
+      std::shared_ptr<SceneNode> LoadNodeHierarchy(const nlohmann::json& gltf_json, size_t node_index) {
         // TODO(fleroviux): error handling and everything
         // TODO: handle graph cycles
         // TODO(fleroviux): load transform
@@ -373,7 +373,7 @@ namespace zephyr {
           name = fmt::format("GLTFNode{}", node_index);
         }
 
-        std::unique_ptr<SceneNode> node = std::make_unique<SceneNode>(name);
+        std::shared_ptr<SceneNode> node = SceneNode::New(name);
 
         if(node_json.contains("mesh")) {
           Mesh& mesh = m_meshes[node_json["mesh"].get<size_t>()];
@@ -381,9 +381,8 @@ namespace zephyr {
             node->CreateComponent<MeshComponent>(mesh.primitives[0].geometry);
           } else {
             for(size_t i = 0; i < mesh.primitives.size(); i++) {
-              std::unique_ptr<SceneNode> primitive_node = std::make_unique<SceneNode>(fmt::format("{}#{}", name, i));
+              std::shared_ptr<SceneNode> primitive_node = node->CreateChild(fmt::format("{}#{}", name, i));
               primitive_node->CreateComponent<MeshComponent>(mesh.primitives[i].geometry);
-              node->Add(std::move(primitive_node));
             }
           }
         }

@@ -16,34 +16,48 @@
 
 namespace zephyr {
 
-  class SceneNode : public NonCopyable, public NonMoveable {
+  class SceneNode : public std::enable_shared_from_this<SceneNode>, NonCopyable, NonMoveable {
+      struct Private {};
+
     public:
-      SceneNode() = default;
+      explicit SceneNode(Private) {};
+      SceneNode(Private, std::string name) : m_name{std::move(name)} {}
 
-      explicit SceneNode(std::string name) : m_name{std::move(name)} {}
-
-      [[nodiscard]] SceneNode* GetParent() const {
-        return m_parent;
-      }
-
-      [[nodiscard]] std::span<const std::unique_ptr<SceneNode>> GetChildren() const {
-        return m_children;
-      }
-
-      SceneNode* Add(std::unique_ptr<SceneNode> node) {
-        node->RemoveFromParent();
-        node->m_parent = this;
-        m_children.push_back(std::move(node));
-        return m_children.back().get();
+      ~SceneNode() {
+        for(const auto& child : m_children) {
+          child->m_parent.reset();
+        }
       }
 
       template<typename... Args>
-      SceneNode* CreateChild(Args&&... args) {
-        return Add(std::make_unique<SceneNode>(args...));
+      static std::shared_ptr<SceneNode> New(Args&&... args) {
+        return std::make_shared<SceneNode>(Private{}, std::forward<Args>(args)...);
       }
 
-      std::unique_ptr<SceneNode> Remove(SceneNode* node) {
-        const auto it = std::find_if(m_children.begin(), m_children.end(), [&](const std::unique_ptr<SceneNode>& current_node) {
+      [[nodiscard]] std::shared_ptr<SceneNode> GetParent() const {
+        return m_parent.lock();
+      }
+
+      [[nodiscard]] std::span<const std::shared_ptr<SceneNode>> GetChildren() const {
+        return m_children;
+      }
+
+      void Add(std::shared_ptr<SceneNode> node) {
+        node->RemoveFromParent();
+        node->m_parent = shared_from_this();
+        m_children.push_back(std::move(node));
+      }
+
+      template<typename... Args>
+      std::shared_ptr<SceneNode> CreateChild(Args&&... args) {
+        std::shared_ptr<SceneNode> node = New(std::forward<Args>(args)...);
+        node->m_parent = shared_from_this();
+        m_children.push_back(node);
+        return std::move(node);
+      }
+
+      std::shared_ptr<SceneNode> Remove(SceneNode* node) {
+        const auto it = std::find_if(m_children.begin(), m_children.end(), [&](const std::shared_ptr<SceneNode>& current_node) {
           return current_node.get() == node;
         });
 
@@ -51,15 +65,16 @@ namespace zephyr {
           ZEPHYR_PANIC("The node to be removed is not a child of this node");
         }
 
-        std::unique_ptr<SceneNode> node_ptr = std::move(*it);
-        node_ptr->m_parent = nullptr;
+        std::shared_ptr<SceneNode> node_ptr = std::move(*it);
+        node_ptr->m_parent.reset();
         m_children.erase(it);
         return std::move(node_ptr);
       }
 
       void RemoveFromParent() {
-        if(m_parent) {
-          m_parent->Remove(this);
+        std::shared_ptr<SceneNode> parent = m_parent.lock();
+        if(parent) {
+          parent->Remove(this);
         }
       }
 
@@ -113,7 +128,6 @@ namespace zephyr {
         if(!HasComponent<T>()) {
           ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
         }
-
         return (T&)*m_components[std::type_index{typeid(T)}];
       }
 
@@ -135,17 +149,16 @@ namespace zephyr {
         if(!HasComponent<T>()) {
           ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
         }
-
         m_components.erase(m_components.find(std::type_index{typeid(T)}));
       }
 
     private:
-      SceneNode* m_parent{};
-      std::vector<std::unique_ptr<SceneNode>> m_children;
-      std::string m_name;
+      std::weak_ptr<SceneNode> m_parent{};
+      std::vector<std::shared_ptr<SceneNode>> m_children{};
+      std::string m_name{};
       bool m_is_visible{true};
       Transform3D m_transform{this};
-      std::unordered_map<std::type_index, std::unique_ptr<Component>> m_components;
+      std::unordered_map<std::type_index, std::unique_ptr<Component>> m_components{};
   };
 
 } // namespace zephyr
