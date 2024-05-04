@@ -19,12 +19,11 @@ namespace zephyr {
     // Wait for the render thread to complete reading the internal render structures.
     m_render_thread_semaphore.acquire();
 
-    m_game_thread_render_objects.clear();
-
     // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
     m_geometry_cache.CommitPendingDeleteTaskList();
 
     // Build a list of objects to render and instruct the geometry cache to update (if necessary) any geometries we might need to render.
+    m_game_thread_render_objects.clear();
     scene_root->Traverse([&](SceneNode* node) -> bool {
       if(!node->IsVisible()) return false;
 
