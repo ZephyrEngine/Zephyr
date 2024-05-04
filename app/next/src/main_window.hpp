@@ -39,6 +39,7 @@ namespace zephyr {
 
       std::unique_ptr<RenderEngine> m_render_engine{};
       std::shared_ptr<SceneNode> m_scene_root{};
+      std::shared_ptr<SceneNode> m_camera_node{};
       std::shared_ptr<SceneNode> m_behemoth_scene{};
 
       u64 m_frame{};

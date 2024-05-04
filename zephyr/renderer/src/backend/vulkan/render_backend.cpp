@@ -73,7 +73,7 @@ namespace zephyr {
         ZEPHYR_PANIC("unimplemented");
       }
 
-      void Render(const Matrix4& projection, std::span<const RenderObject> render_objects) override {
+      void Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) override {
         const VkClearValue clear_value{
           .color = VkClearColorValue{
             .float32 = {0.01f, 0.01f, 0.01f, 1.0f}
@@ -95,7 +95,7 @@ namespace zephyr {
 
         vkCmdBeginRenderPass(m_vk_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(m_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vk_pipeline);
-        vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0u, sizeof(Matrix4), &projection);
+        vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0u, sizeof(Matrix4), &view_projection);
 
         for(const RenderObject& render_object : render_objects) {
           vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);

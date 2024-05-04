@@ -19,6 +19,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/backend/render_backend.hpp
   include/zephyr/renderer/backend/render_backend_ogl.hpp
   include/zephyr/renderer/backend/render_backend_vk.hpp
+  include/zephyr/renderer/component/camera.hpp
   include/zephyr/renderer/component/mesh.hpp
   include/zephyr/renderer/engine/geometry_cache.hpp
   include/zephyr/renderer/resource/geometry.hpp

@@ -154,14 +154,14 @@ namespace zephyr {
         delete geometry;
       }
 
-      void Render(const Matrix4& projection, std::span<const RenderObject> render_objects) override {
+      void Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) override {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(m_gl_shader_program);
 
         glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
-        glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &projection);
+        glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
 
         for(const RenderObject& render_object : render_objects) {
           glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);

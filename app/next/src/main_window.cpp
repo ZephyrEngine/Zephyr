@@ -1,7 +1,7 @@
 
 #include <zephyr/renderer/backend/render_backend_ogl.hpp>
 #include <zephyr/renderer/backend/render_backend_vk.hpp>
-#include <zephyr/renderer/component/mesh.hpp>
+#include <zephyr/renderer/component/camera.hpp>
 
 #include "gltf_loader.hpp"
 #include "main_window.hpp"
@@ -39,6 +39,9 @@ namespace zephyr {
   void MainWindow::MainLoop() {
     SDL_Event event{};
 
+    f32 euler_x = 0.0f;
+    f32 euler_y = 0.0f;
+
     while(true) {
       while(SDL_PollEvent(&event)) {
         if(event.type == SDL_QUIT) {
@@ -62,6 +65,21 @@ namespace zephyr {
           }
         }
       }
+
+      const u8* key_state = SDL_GetKeyboardState(nullptr);
+
+      Vector3&  camera_position = m_camera_node->GetTransform().GetPosition();
+      const f32 delta_p = 0.075f;
+      const f32 delta_r = 0.01f;
+      if(key_state[SDL_SCANCODE_W]) camera_position -= m_camera_node->GetTransform().GetLocal().Z().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_S]) camera_position += m_camera_node->GetTransform().GetLocal().Z().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_A]) camera_position -= m_camera_node->GetTransform().GetLocal().X().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_D]) camera_position += m_camera_node->GetTransform().GetLocal().X().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_LEFT])  euler_y += delta_r;
+      if(key_state[SDL_SCANCODE_RIGHT]) euler_y -= delta_r;
+      if(key_state[SDL_SCANCODE_UP])    euler_x += delta_r;
+      if(key_state[SDL_SCANCODE_DOWN])  euler_x -= delta_r;
+      m_camera_node->GetTransform().GetRotation().SetFromEuler(euler_x, euler_y, 0.0f);
 
       RenderFrame();
     }
@@ -124,6 +142,10 @@ namespace zephyr {
 
   void MainWindow::CreateScene() {
     m_scene_root = SceneNode::New();
+
+    m_camera_node = m_scene_root->CreateChild("RenderCamera");
+    m_camera_node->CreateComponent<PerspectiveCameraComponent>(45.0f, 16.f / 9.f, 0.01f, 100.f);
+    m_camera_node->GetTransform().GetPosition() = {0.f, 0.f, 5.f};
 
     GLTFLoader gltf_loader{};
     std::shared_ptr<SceneNode> gltf_scene_1 = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");

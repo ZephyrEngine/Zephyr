@@ -1,4 +1,5 @@
 
+#include <zephyr/renderer/component/camera.hpp>
 #include <zephyr/renderer/component/mesh.hpp>
 #include <zephyr/renderer/render_engine.hpp>
 #include <fmt/format.h>
@@ -22,8 +23,10 @@ namespace zephyr {
     // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
     m_geometry_cache.CommitPendingDeleteTaskList();
 
-    // Build a list of objects to render and instruct the geometry cache to update (if necessary) any geometries we might need to render.
+    // Traverse the scene and update any data structures (such as render lists and resource caches) needed to render the frame.
     m_game_thread_render_objects.clear();
+    m_render_camera.view = Matrix4::Identity();
+    m_render_camera.projection = Matrix4::Identity();
     scene_root->Traverse([&](SceneNode* node) -> bool {
       if(!node->IsVisible()) return false;
 
@@ -39,6 +42,13 @@ namespace zephyr {
             .geometry = geometry.get()
           });
         }
+      }
+
+      // TODO(fleroviux): think of a better way to mark the camera we actually want to use.
+      if(node->HasComponent<PerspectiveCameraComponent>()) {
+        const PerspectiveCameraComponent& camera_component = node->GetComponent<PerspectiveCameraComponent>();
+        m_render_camera.view = node->GetTransform().GetWorld().Inverse();
+        m_render_camera.projection = camera_component.GetProjectionMatrix();
       }
 
       return true;
@@ -68,9 +78,8 @@ namespace zephyr {
     while(m_render_thread_running) {
       ReadyRenderThreadData();
 
-      // TODO(fleroviux): do not hardcode the aspect ratio.
-      const Matrix4 projection = Matrix4::PerspectiveVK(45.0f, 16.0f/9.0, 0.01f, 100.0f);
-      m_render_backend->Render(projection, m_render_objects);
+      const Matrix4 view_projection = m_render_camera.projection * m_render_camera.view;
+      m_render_backend->Render(view_projection, m_render_objects);
       m_render_backend->SwapBuffers();
     }
 
