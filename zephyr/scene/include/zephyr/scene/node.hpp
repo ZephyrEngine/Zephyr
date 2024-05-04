@@ -79,14 +79,6 @@ namespace zephyr {
         m_is_visible = visible;
       }
 
-      [[nodiscard]] bool IsRendererStatic() const {
-        return m_is_renderer_static;
-      }
-
-      void MakeRendererStatic() {
-        m_is_renderer_static = true;
-      }
-
       [[nodiscard]] const Transform3D& GetTransform() const {
         return m_transform;
       }
@@ -152,7 +144,6 @@ namespace zephyr {
       std::vector<std::unique_ptr<SceneNode>> m_children;
       std::string m_name;
       bool m_is_visible{true};
-      bool m_is_renderer_static{false};
       Transform3D m_transform{this};
       std::unordered_map<std::type_index, std::unique_ptr<Component>> m_components;
   };
