@@ -13,6 +13,8 @@ namespace zephyr {
     public:
       explicit GeometryCache(std::shared_ptr<RenderBackend> render_backend) : m_render_backend{std::move(render_backend)} {}
 
+     ~GeometryCache();
+
       // Game Thread API:
       void CommitPendingDeleteTaskList();
       void UpdateGeometry(const Geometry* geometry);
@@ -25,6 +27,7 @@ namespace zephyr {
       struct GeometryState {
         bool uploaded{false};
         u64 current_version{};
+        VoidEvent::SubID destruct_event_subscription;
       };
 
       struct UploadTask {

@@ -9,6 +9,7 @@ set(HEADERS
 
 set(HEADERS_PUBLIC
   include/zephyr/bit.hpp
+  include/zephyr/event.hpp
   include/zephyr/float.hpp
   include/zephyr/integer.hpp
   include/zephyr/literal.hpp

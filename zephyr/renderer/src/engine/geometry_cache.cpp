@@ -6,6 +6,13 @@
 
 namespace zephyr {
 
+  GeometryCache::~GeometryCache() {
+    // Ensure that we do not receive any destruction callbacks from geometries that outlive this geometry cache.
+    for(const auto& [geometry, state] : m_geometry_state_table) {
+      geometry->OnBeforeDestruct().Unsubscribe(state.destruct_event_subscription);
+    }
+  }
+
   void GeometryCache::CommitPendingDeleteTaskList() {
     std::swap(m_delete_tasks[0], m_delete_tasks[1]);
   }
@@ -31,7 +38,7 @@ namespace zephyr {
       });
 
       if(!state.uploaded) {
-        geometry->RegisterDeleteCallback([this](const Resource* geometry) {
+        state.destruct_event_subscription = geometry->OnBeforeDestruct().Subscribe([this, geometry]() {
           /**
            * This callback is called from the game thread and may be called outside the frame submission phase.
            * To avoid deleting geometries too early, we have to push the delete task to an intermediate list,
