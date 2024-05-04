@@ -13,7 +13,11 @@ namespace zephyr {
     public:
       explicit GeometryCache(std::shared_ptr<RenderBackend> render_backend) : m_render_backend{std::move(render_backend)} {}
 
-      void ScheduleUploadIfNeeded(const Geometry* geometry);
+      // Game Thread API:
+      void CommitPendingDeleteTaskList();
+      void UpdateGeometry(const Geometry* geometry);
+
+      // Render Thread API:
       void ProcessPendingUpdates();
       RenderGeometry* GetCachedRenderGeometry(const Geometry* geometry);
 
@@ -43,7 +47,7 @@ namespace zephyr {
       std::unordered_map<const Geometry*, GeometryState> m_geometry_state_table{};
       std::unordered_map<const Geometry*, RenderGeometry*> m_render_geometry_table{};
       std::vector<UploadTask> m_upload_tasks{};
-      std::vector<DeleteTask> m_delete_tasks{};
+      std::vector<DeleteTask> m_delete_tasks[2]{};
   };
 
 } // namespace zephyr

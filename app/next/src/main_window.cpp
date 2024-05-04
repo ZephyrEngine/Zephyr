@@ -44,6 +44,20 @@ namespace zephyr {
         if(event.type == SDL_QUIT) {
           return;
         }
+
+        if(event.type == SDL_KEYUP) {
+          SDL_KeyboardEvent* key_event = (SDL_KeyboardEvent*)&event;
+          switch(key_event->keysym.sym) {
+            case SDLK_z: {
+              m_scene_root->Remove(m_behemoth_scene);
+              break;
+            }
+            case SDLK_x: {
+              m_behemoth_scene->SetVisible(!m_behemoth_scene->IsVisible());
+              break;
+            }
+          }
+        }
       }
 
       RenderFrame();
@@ -119,6 +133,7 @@ namespace zephyr {
     gltf_scene_2->GetTransform().GetPosition() = Vector3{-1.0f, 0.0f, -5.0f};
     gltf_scene_2->GetTransform().GetRotation().SetFromEuler(-M_PI * 0.5, M_PI, 0.0f);
     gltf_scene_2->GetTransform().GetScale() = {0.5f, 0.5f, 0.5f};
+    m_behemoth_scene = gltf_scene_2.get();
     m_scene_root->Add(std::move(gltf_scene_2));
   }
 

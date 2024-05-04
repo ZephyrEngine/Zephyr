@@ -1,10 +1,16 @@
 
 #include <zephyr/renderer/engine/geometry_cache.hpp>
+#include <zephyr/panic.hpp>
+#include <algorithm>
 #include <cstring>
 
 namespace zephyr {
 
-  void GeometryCache::ScheduleUploadIfNeeded(const Geometry* geometry) {
+  void GeometryCache::CommitPendingDeleteTaskList() {
+    std::swap(m_delete_tasks[0], m_delete_tasks[1]);
+  }
+
+  void GeometryCache::UpdateGeometry(const Geometry* geometry) {
     GeometryState& state = m_geometry_state_table[geometry];
 
     if(!state.uploaded || state.current_version != geometry->CurrentVersion()) {
@@ -26,8 +32,13 @@ namespace zephyr {
 
       if(!state.uploaded) {
         geometry->RegisterDeleteCallback([this](const Resource* geometry) {
+          /**
+           * This callback is called from the game thread and may be called outside the frame submission phase.
+           * To avoid deleting geometries too early, we have to push the delete task to an intermediate list,
+           * which is then committed for execution for the next frame submission.
+           */
+          m_delete_tasks[1].push_back({.geometry = (const Geometry*)geometry});
           m_geometry_state_table.erase((const Geometry*)geometry);
-          m_delete_tasks.push_back({.geometry = (const Geometry*)geometry});
         });
       }
 
@@ -42,11 +53,14 @@ namespace zephyr {
   }
 
   RenderGeometry* GeometryCache::GetCachedRenderGeometry(const Geometry* geometry) {
+    if(!m_render_geometry_table.contains(geometry)) {
+      ZEPHYR_PANIC("Bad attempt to retrieve cached render geometry of a geometry which isn't cached.")
+    }
     return m_render_geometry_table[geometry];
   }
 
   void GeometryCache::ProcessPendingDeletes() {
-    for(const auto& delete_task : m_delete_tasks) {
+    for(const auto& delete_task : m_delete_tasks[0]) {
       RenderGeometry* render_geometry = m_render_geometry_table[delete_task.geometry];
       if(render_geometry) {
         m_render_backend->DestroyRenderGeometry(render_geometry);
@@ -54,7 +68,7 @@ namespace zephyr {
       m_render_geometry_table.erase(delete_task.geometry);
     }
 
-    m_delete_tasks.clear();
+    m_delete_tasks[0].clear();
   }
 
   void GeometryCache::ProcessPendingUploads() {

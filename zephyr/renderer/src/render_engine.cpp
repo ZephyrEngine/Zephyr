@@ -21,6 +21,10 @@ namespace zephyr {
 
     m_game_thread_render_objects.clear();
 
+    // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
+    m_geometry_cache.CommitPendingDeleteTaskList();
+
+    // Build a list of objects to render and instruct the geometry cache to update (if necessary) any geometries we might need to render.
     scene_root->Traverse([&](SceneNode* node) -> bool {
       if(!node->IsVisible()) return false;
 
@@ -29,7 +33,7 @@ namespace zephyr {
         const auto& geometry = mesh_component.geometry;
 
         if(geometry) {
-          m_geometry_cache.ScheduleUploadIfNeeded(geometry.get());
+          m_geometry_cache.UpdateGeometry(geometry.get());
 
           m_game_thread_render_objects.push_back({
             .local_to_world = node->GetTransform().GetWorld(),

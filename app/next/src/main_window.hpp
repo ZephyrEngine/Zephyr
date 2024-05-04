@@ -44,6 +44,8 @@ namespace zephyr {
       SDL_Window* m_window{};
       std::shared_ptr<VulkanInstance> m_vk_instance{};
       VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
+
+      SceneNode* m_behemoth_scene{};
   };
 
 } // namespace zephyr
