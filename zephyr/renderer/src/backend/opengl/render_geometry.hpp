@@ -20,6 +20,13 @@ namespace zephyr {
     GLuint base_instance;
   };
 
+  struct OpenGLDrawArraysIndirectCommand {
+    GLuint count;
+    GLuint instance_count;
+    GLuint first;
+    GLuint base_instance;
+  };
+
   class OpenGLRenderGeometry final : public RenderGeometry {
     public:
       OpenGLRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices, std::shared_ptr<OpenGLDynamicGPUArray> vbo, std::shared_ptr<OpenGLDynamicGPUArray> ibo)
@@ -58,10 +65,19 @@ namespace zephyr {
       [[nodiscard]] OpenGLDrawElementsIndirectCommand GetDrawElementsIndirectCommand() const {
         return {
           .count = (GLuint)m_number_of_indices,
-          .instance_count = 0u,
+          .instance_count = 1u,
           .first_index = (GLuint)m_ibo_allocation.base_element,
           .base_vertex = (GLint)m_vbo_allocation.base_element,
-          .base_instance = 0u
+          .base_instance = 0u,
+        };
+      }
+
+      [[nodiscard]] OpenGLDrawArraysIndirectCommand GetDrawArraysIndirectCommand() const {
+        return {
+          .count = (GLuint)m_number_of_vertices,
+          .instance_count = 1u,
+          .first = (GLuint)m_vbo_allocation.base_element,
+          .base_instance = 0u,
         };
       }
 

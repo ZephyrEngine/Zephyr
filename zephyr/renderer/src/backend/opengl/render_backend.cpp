@@ -25,8 +25,6 @@ namespace zephyr {
     glEnable(GL_DEPTH_TEST);
 
     m_render_geometry_manager = std::make_unique<OpenGLRenderGeometryManager>();
-
-    m_test_dyn_gpu_array = std::make_unique<OpenGLDynamicGPUArray>(sizeof(f32) * 3u);
   }
 
   void OpenGLRenderBackend::DestroyContext() {
@@ -73,11 +71,10 @@ namespace zephyr {
       glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(render_geometry->GetLayout()));
       if(render_geometry->GetNumberOfIndices() > 0) {
         const auto command = render_geometry->GetDrawElementsIndirectCommand();
-        //glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, &command);
-        glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, command.count, GL_UNSIGNED_INT, (void*)(sizeof(u32) * command.first_index), 1u, command.base_vertex, 0u);
+        glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, command.count, GL_UNSIGNED_INT, (void*)(sizeof(u32) * command.first_index), command.instance_count, command.base_vertex, command.base_instance);
       } else {
-        // TODO
-        ZEPHYR_PANIC("unimplemented");
+        const auto command = render_geometry->GetDrawArraysIndirectCommand();
+        glDrawArraysInstancedBaseInstance(GL_TRIANGLES, command.first, command.count, command.instance_count, command.base_instance);
       }
     }
   }

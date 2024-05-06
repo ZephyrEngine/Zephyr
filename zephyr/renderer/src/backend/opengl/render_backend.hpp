@@ -40,8 +40,6 @@ namespace zephyr {
       GLuint m_gl_vao{};
       GLuint m_gl_ubo{};
       std::unique_ptr<OpenGLRenderGeometryManager> m_render_geometry_manager{};
-
-      std::unique_ptr<OpenGLDynamicGPUArray> m_test_dyn_gpu_array{};
   };
 
   std::unique_ptr<RenderBackend> CreateOpenGLRenderBackendForSDL2(SDL_Window* sdl2_window) {
