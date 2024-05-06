@@ -3,64 +3,48 @@
 
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/integer.hpp>
-#include <optional>
-#include <GL/glew.h>
-#include <GL/gl.h>
-#include <SDL_opengl.h>
+#include <zephyr/panic.hpp>
+#include <memory>
+#include <span>
+#include <unordered_map>
+
+#include "dynamic_gpu_array.hpp"
 
 namespace zephyr {
 
+  struct OpenGLDrawElementsIndirectCommand {
+    GLuint count;
+    GLuint instance_count;
+    GLuint first_index;
+    GLint  base_vertex;
+    GLuint base_instance;
+  };
+
   class OpenGLRenderGeometry final : public RenderGeometry {
     public:
-      static OpenGLRenderGeometry* Build(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) {
-        GLuint gl_vao;
-        glCreateVertexArrays(1u, &gl_vao);
+      OpenGLRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices, std::shared_ptr<OpenGLDynamicGPUArray> vbo, std::shared_ptr<OpenGLDynamicGPUArray> ibo)
+          : m_layout{layout}
+          , m_number_of_vertices{number_of_vertices}
+          , m_number_of_indices{number_of_indices}
+          , m_vbo{std::move(vbo)} {
+        m_vbo_allocation = m_vbo->AllocateRange(number_of_vertices);
 
-        std::optional<GLuint> maybe_gl_ibo{};
-
-        if(number_of_indices > 0) {
-          // @todo: use GL_STATIC_DRAW when possible.
-          GLuint gl_ibo;
-          glCreateBuffers(1u, &gl_ibo);
-          glNamedBufferData(gl_ibo, (GLsizeiptr)(sizeof(u32) * number_of_indices), nullptr, GL_DYNAMIC_DRAW);
-          glVertexArrayElementBuffer(gl_vao, gl_ibo);
-          maybe_gl_ibo = gl_ibo;
+        if(number_of_indices > 0u) {
+          m_ibo = std::move(ibo);
+          m_ibo_allocation = m_ibo->AllocateRange(number_of_indices);
         }
+      }
 
-        size_t vbo_stride = 0u;
-        std::array<size_t, 32> vbo_attribute_offsets{};
+     ~OpenGLRenderGeometry() override {
+        m_vbo->ReleaseRange(m_vbo_allocation);
 
-        const auto PackAttribute = [&](RenderGeometryAttribute attribute, int number_of_components) {
-          if(layout.HasAttribute(attribute)) {
-            glEnableVertexArrayAttrib(gl_vao, (int)attribute);
-            glVertexArrayAttribFormat(gl_vao, (int)attribute, number_of_components, GL_FLOAT, GL_FALSE, vbo_stride);
-            glVertexArrayAttribBinding(gl_vao, (int)attribute, 0u);
+        if(m_ibo) {
+          m_ibo->ReleaseRange(m_ibo_allocation);
+        }
+      }
 
-            vbo_attribute_offsets[(int)attribute] = vbo_stride;
-            vbo_stride += sizeof(f32) * number_of_components;
-          }
-        };
-
-        PackAttribute(RenderGeometryAttribute::Position, 3);
-        PackAttribute(RenderGeometryAttribute::Normal, 3);
-        PackAttribute(RenderGeometryAttribute::UV, 2);
-        PackAttribute(RenderGeometryAttribute::Color, 4);
-
-        // @todo: use GL_STATIC_DRAW when possible.
-        GLuint gl_vbo;
-        glCreateBuffers(1u, &gl_vbo);
-        glNamedBufferData(gl_vbo, (GLsizeiptr)(vbo_stride * number_of_vertices), nullptr, GL_DYNAMIC_DRAW);
-        glVertexArrayVertexBuffer(gl_vao, 0u, gl_vbo, 0u, (GLsizei)vbo_stride);
-
-        OpenGLRenderGeometry* render_geometry = new OpenGLRenderGeometry{};
-        render_geometry->m_gl_vao = gl_vao;
-        render_geometry->m_gl_ibo = maybe_gl_ibo;
-        render_geometry->m_gl_vbo = gl_vbo;
-        render_geometry->m_vbo_stride = vbo_stride;
-        render_geometry->m_vbo_attribute_offsets = vbo_attribute_offsets;
-        render_geometry->m_number_of_indices = number_of_indices;
-        render_geometry->m_number_of_vertices = number_of_vertices;
-        return render_geometry;
+      [[nodiscard]] RenderGeometryLayout GetLayout() const {
+        return m_layout;
       }
 
       [[nodiscard]] size_t GetNumberOfVertices() const override {
@@ -71,38 +55,117 @@ namespace zephyr {
         return m_number_of_indices;
       }
 
-      void UpdateIndices(std::span<const u8> data) {
-        // @todo: validation
-        glNamedBufferSubData(m_gl_ibo.value(), 0u, (GLsizeiptr)data.size_bytes(), data.data());
+      [[nodiscard]] OpenGLDrawElementsIndirectCommand GetDrawElementsIndirectCommand() const {
+        return {
+          .count = (GLuint)m_number_of_indices,
+          .instance_count = 0u,
+          .first_index = (GLuint)m_ibo_allocation.base_element,
+          .base_vertex = (GLint)m_vbo_allocation.base_element,
+          .base_instance = 0u
+        };
       }
 
-      void UpdateVertices(std::span<const u8> data) {
-        //@todo: validation
-        glNamedBufferSubData(m_gl_vbo, 0u, (GLsizeiptr)data.size_bytes(), data.data());
+      void WriteVBO(std::span<const u8> data) {
+        // TODO(fleroviux): this does not protect against writing into neighbouring allocations.
+        m_vbo->Write(data, m_vbo_allocation.base_element);
       }
 
-      void Draw() {
-        glBindVertexArray(m_gl_vao);
-
-        if(m_gl_ibo.has_value()) {
-          glDrawElements(GL_TRIANGLES, (GLsizei)m_number_of_indices, GL_UNSIGNED_INT, nullptr);
-        } else {
-          glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_number_of_vertices);
+      void WriteIBO(std::span<const u8> data) {
+        // TODO(fleroviux): this does not protect against writing into neighbouring allocations.
+        if(!m_ibo) {
+          ZEPHYR_PANIC("Attempted to write IBO of non-indexed render geometry");
         }
+        m_ibo->Write(data, m_ibo_allocation.base_element);
       }
 
     private:
-      static_assert((int)RenderGeometryAttribute::Count <= 32);
+      RenderGeometryLayout m_layout;
+      size_t m_number_of_vertices;
+      size_t m_number_of_indices;
+      std::shared_ptr<OpenGLDynamicGPUArray> m_vbo;
+      std::shared_ptr<OpenGLDynamicGPUArray> m_ibo{};
+      OpenGLDynamicGPUArray::BufferRange m_vbo_allocation{};
+      OpenGLDynamicGPUArray::BufferRange m_ibo_allocation{};
+  };
 
-      OpenGLRenderGeometry() = default;
+  class OpenGLRenderGeometryManager {
+    public:
+      OpenGLRenderGeometryManager() {
+        m_ibo = std::make_shared<OpenGLDynamicGPUArray>(sizeof(u32));
+      }
 
-      GLuint m_gl_vao{};
-      std::optional<GLuint> m_gl_ibo{};
-      GLuint m_gl_vbo{};
-      size_t m_vbo_stride{};
-      std::array<size_t, 32> m_vbo_attribute_offsets{};
-      size_t m_number_of_indices{};
-      size_t m_number_of_vertices{};
+      GLuint GetVAOFromLayout(RenderGeometryLayout layout) {
+        // TODO(fleroviux): do not create the bucket if it does not exist.
+        // TODO(fleroviux): avoid unnecessary rebinding of the vertex and index buffers.
+        Bucket& bucket = GetBucketFromLayout(layout);
+        glVertexArrayVertexBuffer(bucket.vao, 0u, bucket.vbo->GetBufferHandle(), 0u, (GLsizei)bucket.vbo->GetByteStride());
+        glVertexArrayElementBuffer(bucket.vao, m_ibo->GetBufferHandle());
+        return bucket.vao;
+      }
+
+      RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) {
+        const Bucket& bucket = GetBucketFromLayout(layout);
+        return new OpenGLRenderGeometry{layout, number_of_vertices, number_of_indices, bucket.vbo, m_ibo};
+      }
+
+      void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->WriteIBO(data);
+      }
+
+      void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->WriteVBO(data);
+      }
+
+      void DestroyRenderGeometry(RenderGeometry* render_geometry) {
+        delete render_geometry;
+      }
+
+    private:
+      struct Bucket {
+       ~Bucket() { glDeleteVertexArrays(1u, &vao); }
+        GLuint vao{};
+        std::shared_ptr<OpenGLDynamicGPUArray> vbo{};
+      };
+
+      Bucket& GetBucketFromLayout(RenderGeometryLayout layout) {
+        Bucket& bucket = m_layout_to_bucket_table[layout.key];
+
+        if(!bucket.vbo) {
+          size_t next_attribute_offset = 0u;
+
+          const auto RegisterAttribute = [&](RenderGeometryAttribute attribute, int number_of_components) {
+            if(!layout.HasAttribute(attribute)) {
+              return;
+            }
+            glEnableVertexArrayAttrib(bucket.vao, (int)attribute);
+            glVertexArrayAttribFormat(bucket.vao, (int)attribute, number_of_components, GL_FLOAT, GL_FALSE, next_attribute_offset);
+            glVertexArrayAttribBinding(bucket.vao, (int)attribute, 0u);
+            next_attribute_offset += sizeof(f32) * number_of_components;
+          };
+
+          glCreateVertexArrays(1u, &bucket.vao);
+          RegisterAttribute(RenderGeometryAttribute::Position, 3);
+          RegisterAttribute(RenderGeometryAttribute::Normal, 3);
+          RegisterAttribute(RenderGeometryAttribute::UV, 2);
+          RegisterAttribute(RenderGeometryAttribute::Color, 3);
+
+          const size_t byte_stride = next_attribute_offset;
+          bucket.vbo = GetVBOFromByteStride(byte_stride);
+        }
+
+        return bucket;
+      }
+
+      std::shared_ptr<OpenGLDynamicGPUArray> GetVBOFromByteStride(size_t byte_stride) {
+        if(!m_layout_to_bucket_table.contains(byte_stride)) {
+          m_byte_stride_to_vbo_table[byte_stride] = std::make_shared<OpenGLDynamicGPUArray>(byte_stride);
+        }
+        return m_byte_stride_to_vbo_table[byte_stride];
+      }
+
+      std::shared_ptr<OpenGLDynamicGPUArray> m_ibo{};
+      std::unordered_map<size_t, std::shared_ptr<OpenGLDynamicGPUArray>> m_byte_stride_to_vbo_table{};
+      std::unordered_map<decltype(RenderGeometryLayout::key), Bucket> m_layout_to_bucket_table{};
   };
 
 } // namespace zephyr

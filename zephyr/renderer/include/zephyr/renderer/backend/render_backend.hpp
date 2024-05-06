@@ -57,7 +57,7 @@ namespace zephyr {
       virtual RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) = 0;
       virtual void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) = 0;
       virtual void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) = 0;
-      virtual void DestroyRenderGeometry(RenderGeometry* geometry) = 0;
+      virtual void DestroyRenderGeometry(RenderGeometry* render_geometry) = 0;
 
       /// Just a quick thing for testing the rendering.
       virtual void Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) = 0;
