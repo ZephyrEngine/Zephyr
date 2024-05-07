@@ -62,21 +62,23 @@ namespace zephyr {
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
     glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
 
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_render_geometry_manager->GetDrawCommandBuffer());
+
     for(const RenderObject& render_object : render_objects) {
       glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
-      //dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry)->Draw();
 
       // TODO(fleroviux): avoid constant rebinding of VAO
       auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
+      auto indirect_buffer_offset = (const void*)(render_geometry->GetDrawCommandID() * sizeof(OpenGLDrawElementsIndirectCommand));
       glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(render_geometry->GetLayout()));
       if(render_geometry->GetNumberOfIndices() > 0) {
-        const auto command = render_geometry->GetDrawElementsIndirectCommand();
-        glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, command.count, GL_UNSIGNED_INT, (void*)(sizeof(u32) * command.first_index), command.instance_count, command.base_vertex, command.base_instance);
+        glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, indirect_buffer_offset);
       } else {
-        const auto command = render_geometry->GetDrawArraysIndirectCommand();
-        glDrawArraysInstancedBaseInstance(GL_TRIANGLES, command.first, command.count, command.instance_count, command.base_instance);
+        glDrawArraysIndirect(GL_TRIANGLES, indirect_buffer_offset);
       }
     }
+
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
   }
 
   void OpenGLRenderBackend::SwapBuffers() {

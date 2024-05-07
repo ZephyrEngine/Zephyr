@@ -9,6 +9,12 @@
 
 namespace zephyr {
 
+  /**
+   * TODO:
+   * - improve grow strategy (i.e. configurable grow factor)
+   * - implement shrinking
+   */
+
   class OpenGLDynamicGPUArray {
     public:
       struct BufferRange {
