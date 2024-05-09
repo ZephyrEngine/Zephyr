@@ -59,7 +59,9 @@ namespace zephyr {
               break;
             }
             case SDLK_x: {
-              m_behemoth_scene->SetVisible(!m_behemoth_scene->IsVisible());
+              if(m_behemoth_scene) {
+                m_behemoth_scene->SetVisible(!m_behemoth_scene->IsVisible());
+              }
               break;
             }
           }

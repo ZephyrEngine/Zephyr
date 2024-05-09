@@ -35,7 +35,9 @@ namespace zephyr {
         Matrix4 local_to_world;
         u32 draw_command_id;
         u32 padding[3]; // Padding for std430 buffer layout
-      } __attribute__((packed));
+      };
+
+      static constexpr int k_max_draws_per_draw_call = 16384;
 
       void CreateDrawShaderProgram();
       void CreateDrawListBuilderShaderProgram();

@@ -20,9 +20,10 @@ namespace zephyr {
     CreateDrawListBuilderShaderProgram();
 
     glCreateBuffers(1u, &m_gl_render_bundle_ssbo);
+    glNamedBufferStorage(m_gl_render_bundle_ssbo, sizeof(RenderBundleItem) * k_max_draws_per_draw_call, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     glCreateBuffers(1u, &m_gl_draw_list_ssbo);
-    glNamedBufferStorage(m_gl_draw_list_ssbo, sizeof(OpenGLDrawElementsIndirectCommand) * 16384, nullptr, 0);
+    glNamedBufferStorage(m_gl_draw_list_ssbo, sizeof(OpenGLDrawElementsIndirectCommand) * k_max_draws_per_draw_call, nullptr, 0);
 
     glCreateBuffers(1u, &m_gl_ubo);
     glNamedBufferStorage(m_gl_ubo, sizeof(Matrix4), nullptr, GL_DYNAMIC_STORAGE_BIT);
@@ -80,49 +81,53 @@ namespace zephyr {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // TODO(fleroviux): attempt to keep buffers bound throughout the entire rendering process for minimal number of OpenGL calls.
+
     for(const auto& [key, render_bundle] : render_bundles) {
-      // TODO(fleroviux): !!! ensure to not overrun the capacity of the Draw List SSBO (16384 commands) !!!
+      const size_t render_bundle_size = render_bundle.size();
 
-      const size_t number_of_items = render_bundle.size();
+      for(size_t base_draw = 0u; base_draw < render_bundle_size; base_draw += k_max_draws_per_draw_call) {
+        const size_t number_of_draws = std::min<size_t>(render_bundle_size - base_draw, k_max_draws_per_draw_call);
 
-      // 1. upload render bundle items into the render bundle buffer
-      // TODO(fleroviux): this is probably fairly inefficient (especially because of the resizing). Try use persistently mapped buffers (PMBs)?
-      glNamedBufferData(m_gl_render_bundle_ssbo, (GLsizeiptr)(number_of_items * sizeof(RenderBundleItem)), render_bundle.data(), GL_DYNAMIC_DRAW);
+        // TODO(fleroviux): use persistently mapped buffers (PMBs) for this and see if they are faster?
+        // 1. upload render bundle items into the render bundle buffer
+        glNamedBufferSubData(m_gl_render_bundle_ssbo, 0u, (GLsizeiptr)(number_of_draws * sizeof(RenderBundleItem)), &render_bundle[base_draw]);
 
-      // 2. generate multi-draw indirect command buffer from the render bundle buffer and geometry descriptor buffer
-      {
-        // TODO(fleroviux): adjust local work group size
-        glUseProgram(m_gl_draw_list_builder_program);
+        // 2. generate multi-draw indirect command buffer from the render bundle buffer and geometry descriptor buffer
+        {
+          // TODO(fleroviux): adjust local work group size
+          glUseProgram(m_gl_draw_list_builder_program);
 
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_draw_list_ssbo);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_draw_list_ssbo);
 
-        glDispatchCompute(number_of_items, 1u, 1u);
+          glDispatchCompute(number_of_draws, 1u, 1u);
 
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
-      }
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
+        }
 
-      // 3. draw everything written to the Draw List SSBO
-      {
-        glUseProgram(m_gl_draw_program);
+        // 3. draw everything written to the Draw List SSBO
+        {
+          glUseProgram(m_gl_draw_program);
 
-        glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
+          glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
 
-        glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
-        glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_ubo);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
+          glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
+          glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
+          glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_ubo);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
 
-        glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
-        glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, (GLsizei)number_of_items, sizeof(OpenGLDrawElementsIndirectCommand));
+          glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
+          glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
 
-        glBindVertexArray(0u);
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
-        glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+          glBindVertexArray(0u);
+          glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
+          glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+        }
       }
     }
   }
