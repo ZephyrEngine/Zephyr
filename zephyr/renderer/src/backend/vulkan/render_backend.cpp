@@ -69,7 +69,7 @@ namespace zephyr {
         ZEPHYR_PANIC("unimplemented");
       }
 
-      void DestroyRenderGeometry(RenderGeometry* geometry) override {
+      void DestroyRenderGeometry(RenderGeometry* render_geometry) override {
         ZEPHYR_PANIC("unimplemented");
       }
 

@@ -95,7 +95,9 @@ namespace zephyr {
       }
 
       m_render_backend->UpdateRenderGeometryVertices(render_geometry, upload_task.raw_vbo_data);
-      m_render_backend->UpdateRenderGeometryIndices(render_geometry, upload_task.raw_ibo_data);
+      if(new_number_of_indices > 0) {
+        m_render_backend->UpdateRenderGeometryIndices(render_geometry, upload_task.raw_ibo_data);
+      }
 
       delete[] upload_task.raw_vbo_data.data();
       delete[] upload_task.raw_ibo_data.data();

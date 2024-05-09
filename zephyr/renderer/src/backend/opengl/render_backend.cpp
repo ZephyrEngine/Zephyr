@@ -23,9 +23,13 @@ namespace zephyr {
     glNamedBufferData(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_DRAW);
 
     glEnable(GL_DEPTH_TEST);
+
+    m_render_geometry_manager = std::make_unique<OpenGLRenderGeometryManager>();
   }
 
   void OpenGLRenderBackend::DestroyContext() {
+    m_render_geometry_manager.reset();
+
     glDeleteBuffers(1u, &m_gl_ubo);
     glDeleteVertexArrays(1u, &m_gl_vao);
     glDeleteProgram(m_gl_shader_program);
@@ -34,19 +38,19 @@ namespace zephyr {
   }
 
   RenderGeometry* OpenGLRenderBackend::CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) {
-    return OpenGLRenderGeometry::Build(layout, number_of_vertices, number_of_indices);
+    return m_render_geometry_manager->CreateRenderGeometry(layout, number_of_vertices, number_of_indices);
   }
 
   void OpenGLRenderBackend::UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) {
-    dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateIndices(data);
+    m_render_geometry_manager->UpdateRenderGeometryIndices(render_geometry, data);
   }
 
   void OpenGLRenderBackend::UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) {
-    dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->UpdateVertices(data);
+    m_render_geometry_manager->UpdateRenderGeometryVertices(render_geometry, data);
   }
 
-  void OpenGLRenderBackend::DestroyRenderGeometry(RenderGeometry* geometry) {
-    delete geometry;
+  void OpenGLRenderBackend::DestroyRenderGeometry(RenderGeometry* render_geometry) {
+    m_render_geometry_manager->DestroyRenderGeometry(render_geometry);
   }
 
   void OpenGLRenderBackend::Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) {
@@ -58,10 +62,23 @@ namespace zephyr {
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
     glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
 
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_render_geometry_manager->GetDrawCommandBuffer());
+
     for(const RenderObject& render_object : render_objects) {
       glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
-      dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry)->Draw();
+
+      // TODO(fleroviux): avoid constant rebinding of VAO
+      auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
+      auto indirect_buffer_offset = (const void*)(render_geometry->GetDrawCommandID() * sizeof(OpenGLDrawElementsIndirectCommand));
+      glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(render_geometry->GetLayout()));
+      if(render_geometry->GetNumberOfIndices() > 0) {
+        glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, indirect_buffer_offset);
+      } else {
+        glDrawArraysIndirect(GL_TRIANGLES, indirect_buffer_offset);
+      }
     }
+
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
   }
 
   void OpenGLRenderBackend::SwapBuffers() {
