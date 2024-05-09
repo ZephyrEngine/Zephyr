@@ -7,6 +7,7 @@
 #include <GL/gl.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <unordered_map>
 
 #include "render_geometry.hpp"
 
@@ -29,10 +30,12 @@ namespace zephyr {
       void SwapBuffers() override;
 
     private:
-      struct RenderItem {
+      struct RenderBundleItem {
+        RenderBundleItem(const Matrix4& local_to_world, u32 draw_command_id) : local_to_world{local_to_world}, draw_command_id{draw_command_id} {}
         Matrix4 local_to_world;
-        u32 geometry_id;
-      };
+        u32 draw_command_id;
+        u32 padding[3]; // Padding for std430 buffer layout
+      } __attribute__((packed));
 
       void CreateDrawShaderProgram();
       void CreateDrawListBuilderShaderProgram();
@@ -44,6 +47,7 @@ namespace zephyr {
       SDL_GLContext m_gl_context{};
       GLuint m_gl_draw_program{};
       GLuint m_gl_draw_list_builder_program{};
+      GLuint m_gl_render_bundle_ssbo{};
       GLuint m_gl_draw_list_ssbo{};
       GLuint m_gl_ubo{};
 

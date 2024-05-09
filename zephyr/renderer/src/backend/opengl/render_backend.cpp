@@ -8,7 +8,7 @@ namespace zephyr {
 
   void OpenGLRenderBackend::InitializeContext() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     m_gl_context = SDL_GL_CreateContext(m_window);
     if(m_gl_context == nullptr) {
@@ -19,11 +19,13 @@ namespace zephyr {
     CreateDrawShaderProgram();
     CreateDrawListBuilderShaderProgram();
 
+    glCreateBuffers(1u, &m_gl_render_bundle_ssbo);
+
     glCreateBuffers(1u, &m_gl_draw_list_ssbo);
-    glNamedBufferStorage(m_gl_draw_list_ssbo, sizeof(OpenGLDrawElementsIndirectCommand), nullptr, 0);
+    glNamedBufferStorage(m_gl_draw_list_ssbo, sizeof(OpenGLDrawElementsIndirectCommand) * 16384, nullptr, 0);
 
     glCreateBuffers(1u, &m_gl_ubo);
-    glNamedBufferStorage(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    glNamedBufferStorage(m_gl_ubo, sizeof(Matrix4), nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -35,6 +37,7 @@ namespace zephyr {
 
     glDeleteBuffers(1u, &m_gl_ubo);
     glDeleteBuffers(1u, &m_gl_draw_list_ssbo);
+    glDeleteBuffers(1u, &m_gl_render_bundle_ssbo);
     glDeleteProgram(m_gl_draw_list_builder_program);
     glDeleteProgram(m_gl_draw_program);
 
@@ -58,51 +61,70 @@ namespace zephyr {
   }
 
   void OpenGLRenderBackend::Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) {
-    glUseProgram(m_gl_draw_list_builder_program);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_draw_list_ssbo);
-    glDispatchCompute(1u, 1u, 1u);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
+    std::unordered_map<decltype(RenderGeometryLayout::key), std::vector<RenderBundleItem>> render_bundles;
+
+    for(const RenderObject& render_object : render_objects) {
+      // TODO(fleroviux): get rid of unsafe size_t to u32 conversion.
+      // TODO(fleroviux): deal with non-indexed geometries
+      auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
+      if(render_geometry->GetNumberOfIndices() == 0u) {
+        continue;
+      }
+      render_bundles[render_geometry->GetLayout().key].emplace_back(render_object.local_to_world, (u32)render_geometry->GetDrawCommandID());
+    }
+
+    // TODO(fleroviux): apply Z-sorting on the render bundles here
+
+    // ----------------------------------------------------------------
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    Matrix4 test_transform = Matrix4::Translation(0, 0, -4);
-    glUseProgram(m_gl_draw_program);
-    glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(dynamic_cast<OpenGLRenderGeometry*>(render_objects[0].render_geometry)->GetLayout())); // TODO(fleroviux): fix this lo
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
-    glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
-    glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &test_transform); // TODO(fleroviux): remove me
-    glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
-    glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr);
-    glBindVertexArray(0u);
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, 0u);
+    for(const auto& [key, render_bundle] : render_bundles) {
+      // TODO(fleroviux): !!! ensure to not overrun the capacity of the Draw List SSBO (16384 commands) !!!
 
-    /*glUseProgram(m_gl_draw_program);
+      const size_t number_of_items = render_bundle.size();
 
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
-    glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
+      // 1. upload render bundle items into the render bundle buffer
+      // TODO(fleroviux): this is probably fairly inefficient (especially because of the resizing). Try use persistently mapped buffers (PMBs)?
+      glNamedBufferData(m_gl_render_bundle_ssbo, (GLsizeiptr)(number_of_items * sizeof(RenderBundleItem)), render_bundle.data(), GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_render_geometry_manager->GetDrawCommandBuffer());
+      // 2. generate multi-draw indirect command buffer from the render bundle buffer and geometry descriptor buffer
+      {
+        // TODO(fleroviux): adjust local work group size
+        glUseProgram(m_gl_draw_list_builder_program);
 
-    for(const RenderObject& render_object : render_objects) {
-      glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_draw_list_ssbo);
 
-      // TODO(fleroviux): avoid constant rebinding of VAO
-      auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
-      auto indirect_buffer_offset = (const void*)(render_geometry->GetDrawCommandID() * sizeof(OpenGLDrawElementsIndirectCommand));
-      glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(render_geometry->GetLayout()));
-      if(render_geometry->GetNumberOfIndices() > 0) {
-        glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, indirect_buffer_offset);
-      } else {
-        glDrawArraysIndirect(GL_TRIANGLES, indirect_buffer_offset);
+        glDispatchCompute(number_of_items, 1u, 1u);
+
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
+      }
+
+      // 3. draw everything written to the Draw List SSBO
+      {
+        glUseProgram(m_gl_draw_program);
+
+        glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
+
+        glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_ubo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
+
+        glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
+        glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, (GLsizei)number_of_items, sizeof(OpenGLDrawElementsIndirectCommand));
+
+        glBindVertexArray(0u);
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
       }
     }
-
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);*/
   }
 
   void OpenGLRenderBackend::SwapBuffers() {
@@ -111,12 +133,20 @@ namespace zephyr {
 
   void OpenGLRenderBackend::CreateDrawShaderProgram() {
     GLuint vert_shader = CreateShader(R"(
-      #version 450 core
+      #version 460 core
 
-      layout(binding = 0, std140) uniform Transform {
-        mat4 projection;
+      struct RenderBundleItem {
         mat4 local_to_world;
-      } u_transform;
+        uint draw_command_id;
+      };
+
+      layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
+        RenderBundleItem rb_render_bundle_items[];
+      };
+
+      layout(std140, binding = 0) uniform Transform {
+        mat4 u_projection;
+      };
 
       layout(location = 0) in vec3 a_position;
       layout(location = 1) in vec3 a_normal;
@@ -129,12 +159,12 @@ namespace zephyr {
       void main() {
         v_normal = a_normal;
         v_color = a_color;
-        gl_Position = u_transform.projection * u_transform.local_to_world * vec4(a_position, 1.0);
+        gl_Position = u_projection * rb_render_bundle_items[gl_DrawID].local_to_world * vec4(a_position, 1.0);
       }
     )", GL_VERTEX_SHADER);
 
     GLuint frag_shader = CreateShader(R"(
-      #version 450 core
+      #version 460 core
 
       layout(location = 0) out vec4 f_frag_color;
 
@@ -153,9 +183,9 @@ namespace zephyr {
 
   void OpenGLRenderBackend::CreateDrawListBuilderShaderProgram() {
     GLuint compute_shader = CreateShader(R"(
-      #version 450 core
+      #version 460 core
 
-      // TODO(fleroviux): figure out if it makes sense to increase the local workgroup size.
+      // TODO(fleroviux): increase the local workgroup size.
       layout(local_size_x = 1) in;
 
       struct DrawElementsIndirectCommand {
@@ -166,17 +196,25 @@ namespace zephyr {
         uint base_instance;
       };
 
+      struct RenderBundleItem {
+        mat4 local_to_world;
+        uint draw_command_id;
+      };
+
       layout(std430, binding = 0) readonly buffer GeometryBuffer {
         DrawElementsIndirectCommand rb_geometry_commands[];
       };
 
-      layout(std430, binding = 1) buffer CommandBuffer {
+      layout(std430, binding = 1) readonly buffer RenderBundleBuffer {
+        RenderBundleItem rb_render_bundle_items[];
+      };
+
+      layout(std430, binding = 2) buffer CommandBuffer {
         DrawElementsIndirectCommand b_command_buffer[];
       };
 
       void main() {
-        //b_command_buffer[0] = DrawElementsIndirectCommand(3u, 1u, 0u, 0, 0u);
-        b_command_buffer[0] = rb_geometry_commands[0];
+        b_command_buffer[gl_GlobalInvocationID.x] = rb_geometry_commands[rb_render_bundle_items[gl_GlobalInvocationID.x].draw_command_id];
       }
     )", GL_COMPUTE_SHADER);
 

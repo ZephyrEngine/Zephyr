@@ -19,6 +19,9 @@ namespace zephyr {
   struct RenderGeometryLayout {
     static_assert((int)RenderGeometryAttribute::Count <= 32);
 
+    RenderGeometryLayout() = default;
+    explicit RenderGeometryLayout(u32 key) : key{key} {}
+
     void AddAttribute(RenderGeometryAttribute attribute) {
       key |= 1ul << (int)attribute;
     }
