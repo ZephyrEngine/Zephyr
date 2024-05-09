@@ -16,11 +16,14 @@ namespace zephyr {
     }
     glewInit();
 
-    CreateShaderProgram();
-    glGenVertexArrays(1u, &m_gl_vao);
+    CreateDrawShaderProgram();
+    CreateDrawListBuilderShaderProgram();
+
+    glCreateBuffers(1u, &m_gl_draw_list_ssbo);
+    glNamedBufferStorage(m_gl_draw_list_ssbo, sizeof(OpenGLDrawElementsIndirectCommand), nullptr, 0);
 
     glCreateBuffers(1u, &m_gl_ubo);
-    glNamedBufferData(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_DRAW);
+    glNamedBufferStorage(m_gl_ubo, sizeof(Matrix4) * 2, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -31,8 +34,9 @@ namespace zephyr {
     m_render_geometry_manager.reset();
 
     glDeleteBuffers(1u, &m_gl_ubo);
-    glDeleteVertexArrays(1u, &m_gl_vao);
-    glDeleteProgram(m_gl_shader_program);
+    glDeleteBuffers(1u, &m_gl_draw_list_ssbo);
+    glDeleteProgram(m_gl_draw_list_builder_program);
+    glDeleteProgram(m_gl_draw_program);
 
     SDL_GL_DeleteContext(m_gl_context);
   }
@@ -54,10 +58,30 @@ namespace zephyr {
   }
 
   void OpenGLRenderBackend::Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) {
+    glUseProgram(m_gl_draw_list_builder_program);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_draw_list_ssbo);
+    glDispatchCompute(1u, 1u, 1u);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
+
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(m_gl_shader_program);
+    Matrix4 test_transform = Matrix4::Translation(0, 0, -4);
+    glUseProgram(m_gl_draw_program);
+    glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(dynamic_cast<OpenGLRenderGeometry*>(render_objects[0].render_geometry)->GetLayout())); // TODO(fleroviux): fix this lo
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
+    glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
+    glNamedBufferSubData(m_gl_ubo, sizeof(Matrix4), sizeof(Matrix4), &test_transform); // TODO(fleroviux): remove me
+    glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
+    glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0u);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, 0u);
+
+    /*glUseProgram(m_gl_draw_program);
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_gl_ubo);
     glNamedBufferSubData(m_gl_ubo, 0, sizeof(Matrix4), &view_projection);
@@ -78,14 +102,14 @@ namespace zephyr {
       }
     }
 
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);*/
   }
 
   void OpenGLRenderBackend::SwapBuffers() {
     SDL_GL_SwapWindow(m_window);
   }
 
-  void OpenGLRenderBackend::CreateShaderProgram() {
+  void OpenGLRenderBackend::CreateDrawShaderProgram() {
     GLuint vert_shader = CreateShader(R"(
       #version 450 core
 
@@ -122,9 +146,42 @@ namespace zephyr {
       }
     )", GL_FRAGMENT_SHADER);
 
-    m_gl_shader_program = CreateProgram({{vert_shader, frag_shader}});
+    m_gl_draw_program = CreateProgram({{vert_shader, frag_shader}});
     glDeleteShader(vert_shader);
     glDeleteShader(frag_shader);
+  }
+
+  void OpenGLRenderBackend::CreateDrawListBuilderShaderProgram() {
+    GLuint compute_shader = CreateShader(R"(
+      #version 450 core
+
+      // TODO(fleroviux): figure out if it makes sense to increase the local workgroup size.
+      layout(local_size_x = 1) in;
+
+      struct DrawElementsIndirectCommand {
+        uint count;
+        uint instance_count;
+        uint first_index;
+        int  base_vertex;
+        uint base_instance;
+      };
+
+      layout(std430, binding = 0) readonly buffer GeometryBuffer {
+        DrawElementsIndirectCommand rb_geometry_commands[];
+      };
+
+      layout(std430, binding = 1) buffer CommandBuffer {
+        DrawElementsIndirectCommand b_command_buffer[];
+      };
+
+      void main() {
+        //b_command_buffer[0] = DrawElementsIndirectCommand(3u, 1u, 0u, 0, 0u);
+        b_command_buffer[0] = rb_geometry_commands[0];
+      }
+    )", GL_COMPUTE_SHADER);
+
+    m_gl_draw_list_builder_program = CreateProgram({{compute_shader}});
+    glDeleteShader(compute_shader);
   }
 
   GLuint OpenGLRenderBackend::CreateShader(const char* glsl_code, GLenum type) {
@@ -158,7 +215,19 @@ namespace zephyr {
     }
     glLinkProgram(gl_program);
 
-    // TODO: handle program link error?
+    GLint link_succeeded;
+    glGetProgramiv(gl_program, GL_LINK_STATUS, &link_succeeded);
+    if(link_succeeded == GL_FALSE) {
+      // TODO(fleroviux): let the caller decide how to deal with the error.
+      GLint info_log_length;
+      glGetProgramiv(gl_program, GL_INFO_LOG_LENGTH, &info_log_length);
+
+      GLchar* info_log = new GLchar[info_log_length];
+      glGetProgramInfoLog(gl_program, info_log_length, &info_log_length, info_log);
+      ZEPHYR_PANIC("OpenGL: failed to link GLSL program:\n{}", info_log);
+      delete[] info_log;
+    }
+
     return gl_program;
   }
 

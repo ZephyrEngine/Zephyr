@@ -29,16 +29,24 @@ namespace zephyr {
       void SwapBuffers() override;
 
     private:
-      void CreateShaderProgram();
+      struct RenderItem {
+        Matrix4 local_to_world;
+        u32 geometry_id;
+      };
+
+      void CreateDrawShaderProgram();
+      void CreateDrawListBuilderShaderProgram();
 
       static GLuint CreateShader(const char* glsl_code, GLenum type);
       static GLuint CreateProgram(std::span<const GLuint> shaders);
 
       SDL_Window* m_window;
       SDL_GLContext m_gl_context{};
-      GLuint m_gl_shader_program{};
-      GLuint m_gl_vao{};
+      GLuint m_gl_draw_program{};
+      GLuint m_gl_draw_list_builder_program{};
+      GLuint m_gl_draw_list_ssbo{};
       GLuint m_gl_ubo{};
+
       std::unique_ptr<OpenGLRenderGeometryManager> m_render_geometry_manager{};
   };
 
