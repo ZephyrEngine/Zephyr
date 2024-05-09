@@ -37,7 +37,7 @@ namespace zephyr {
         u32 padding[3]; // Padding for std430 buffer layout
       };
 
-      static constexpr int k_max_draws_per_draw_call = 16384;
+      static constexpr u32 k_max_draws_per_draw_call = 16384;
 
       void CreateDrawShaderProgram();
       void CreateDrawListBuilderShaderProgram();
@@ -51,7 +51,8 @@ namespace zephyr {
       GLuint m_gl_draw_list_builder_program{};
       GLuint m_gl_render_bundle_ssbo{};
       GLuint m_gl_draw_list_ssbo{};
-      GLuint m_gl_ubo{};
+      GLuint m_gl_camera_ubo{};
+      GLuint m_gl_draw_count_ubo{};
 
       std::unique_ptr<OpenGLRenderGeometryManager> m_render_geometry_manager{};
   };
