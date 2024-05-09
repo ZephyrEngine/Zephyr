@@ -14,7 +14,7 @@ jobs:
           submodules: true
       - uses: msys2/setup-msys2@v2
         with:
-          install: mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-vulkan-devel
+          install: mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-glew mingw-w64-x86_64-vulkan-devel
       - name: Build Zephyr
         run: |
           cmake -B build \
