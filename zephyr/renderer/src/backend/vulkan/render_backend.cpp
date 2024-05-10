@@ -69,6 +69,10 @@ namespace zephyr {
         ZEPHYR_PANIC("unimplemented");
       }
 
+      void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) override {
+        ZEPHYR_PANIC("unimplemented");
+      }
+
       void DestroyRenderGeometry(RenderGeometry* render_geometry) override {
         ZEPHYR_PANIC("unimplemented");
       }

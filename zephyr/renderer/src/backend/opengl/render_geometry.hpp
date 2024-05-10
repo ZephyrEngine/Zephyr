@@ -1,9 +1,11 @@
 
 #pragma once
 
+#include <zephyr/math/box3.hpp>
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
+#include <limits>
 #include <memory>
 #include <span>
 #include <unordered_map>
@@ -27,36 +29,47 @@ namespace zephyr {
     GLuint base_instance;
   };
 
+  struct OpenGLRenderGeometryRenderData {
+    Vector4 aabb_min;
+    Vector4 aabb_max;
+    union {
+      OpenGLDrawElementsIndirectCommand draw_elements;
+      OpenGLDrawArraysIndirectCommand draw_arrays;
+    } cmd;
+    u32 padding[3]; // Padding for std430 layout
+  };
+
   class OpenGLRenderGeometry final : public RenderGeometry {
     public:
       OpenGLRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices, std::shared_ptr<OpenGLDynamicGPUArray> vbo, std::shared_ptr<OpenGLDynamicGPUArray> ibo, std::shared_ptr<OpenGLDynamicGPUArray> draw_command_buffer)
           : m_layout{layout}
           , m_vbo{std::move(vbo)}
-          , m_draw_command_buffer{std::move(draw_command_buffer)} {
+          , m_geometry_render_data_buffer{std::move(draw_command_buffer)} {
         m_vbo_allocation = m_vbo->AllocateRange(number_of_vertices);
-        m_draw_command_allocation = m_draw_command_buffer->AllocateRange(1u);
+        m_geometry_render_data_allocation = m_geometry_render_data_buffer->AllocateRange(1u);
 
         if(number_of_indices > 0u) {
           m_ibo = std::move(ibo);
           m_ibo_allocation = m_ibo->AllocateRange(number_of_indices);
-
-          const OpenGLDrawElementsIndirectCommand command = {
+          m_geometry_render_data.cmd.draw_elements = {
             .count = (GLuint)number_of_indices,
             .instance_count = 1u,
             .first_index = (GLuint)m_ibo_allocation.base_element,
             .base_vertex = (GLint)m_vbo_allocation.base_element,
             .base_instance = 0u,
           };
-          m_draw_command_buffer->Write({(const u8*)&command, sizeof(command)}, m_draw_command_allocation.base_element);
         } else {
-          const OpenGLDrawArraysIndirectCommand command = {
+          m_geometry_render_data.cmd.draw_arrays = {
             .count = (GLuint)number_of_vertices,
             .instance_count = 1u,
             .first = (GLuint)m_vbo_allocation.base_element,
             .base_instance = 0u,
           };
-          m_draw_command_buffer->Write({(const u8*)&command, sizeof(command)}, m_draw_command_allocation.base_element);
         }
+
+        m_geometry_render_data.aabb_min = {-std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity(), 0};
+        m_geometry_render_data.aabb_max = { std::numeric_limits<f32>::infinity(),  std::numeric_limits<f32>::infinity(),  std::numeric_limits<f32>::infinity(), 0};
+        WriteGeometryRenderDataToBuffer();
       }
 
      ~OpenGLRenderGeometry() override {
@@ -64,15 +77,15 @@ namespace zephyr {
         if(m_ibo) {
           m_ibo->ReleaseRange(m_ibo_allocation);
         }
-        m_draw_command_buffer->ReleaseRange(m_draw_command_allocation);
+        m_geometry_render_data_buffer->ReleaseRange(m_geometry_render_data_allocation);
       }
 
       [[nodiscard]] RenderGeometryLayout GetLayout() const {
         return m_layout;
       }
 
-      [[nodiscard]] size_t GetDrawCommandID() const {
-        return m_draw_command_allocation.base_element;
+      [[nodiscard]] size_t GetGeometryID() const {
+        return m_geometry_render_data_allocation.base_element;
       }
 
       [[nodiscard]] size_t GetNumberOfVertices() const override {
@@ -96,21 +109,36 @@ namespace zephyr {
         m_ibo->Write(data, m_ibo_allocation.base_element);
       }
 
+      void SetAABB(const Box3& aabb) {
+        m_geometry_render_data.aabb_min.X() = aabb.Min().X();
+        m_geometry_render_data.aabb_min.Y() = aabb.Min().Y();
+        m_geometry_render_data.aabb_min.Z() = aabb.Min().Z();
+        m_geometry_render_data.aabb_max.X() = aabb.Max().X();
+        m_geometry_render_data.aabb_max.Y() = aabb.Max().Y();
+        m_geometry_render_data.aabb_max.Z() = aabb.Max().Z();
+        WriteGeometryRenderDataToBuffer();
+      }
+
     private:
+      void WriteGeometryRenderDataToBuffer() {
+        m_geometry_render_data_buffer->Write({(const u8*)&m_geometry_render_data, sizeof(m_geometry_render_data)}, m_geometry_render_data_allocation.base_element);
+      }
+
       RenderGeometryLayout m_layout;
       std::shared_ptr<OpenGLDynamicGPUArray> m_vbo;
       std::shared_ptr<OpenGLDynamicGPUArray> m_ibo{};
-      std::shared_ptr<OpenGLDynamicGPUArray> m_draw_command_buffer{};
+      std::shared_ptr<OpenGLDynamicGPUArray> m_geometry_render_data_buffer{};
       OpenGLDynamicGPUArray::BufferRange m_vbo_allocation{};
       OpenGLDynamicGPUArray::BufferRange m_ibo_allocation{};
-      OpenGLDynamicGPUArray::BufferRange m_draw_command_allocation{};
+      OpenGLDynamicGPUArray::BufferRange m_geometry_render_data_allocation{};
+      OpenGLRenderGeometryRenderData m_geometry_render_data{};
   };
 
   class OpenGLRenderGeometryManager {
     public:
       OpenGLRenderGeometryManager() {
         m_ibo = std::make_shared<OpenGLDynamicGPUArray>(sizeof(u32));
-        m_draw_command_buffer = std::make_shared<OpenGLDynamicGPUArray>(sizeof(OpenGLDrawElementsIndirectCommand));
+        m_geometry_render_data = std::make_shared<OpenGLDynamicGPUArray>(sizeof(OpenGLRenderGeometryRenderData));
       }
 
       GLuint GetVAOFromLayout(RenderGeometryLayout layout) {
@@ -123,12 +151,12 @@ namespace zephyr {
       }
 
       GLuint GetDrawCommandBuffer() {
-        return m_draw_command_buffer->GetBufferHandle();
+        return m_geometry_render_data->GetBufferHandle();
       }
 
       RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) {
         const Bucket& bucket = GetBucketFromLayout(layout);
-        return new OpenGLRenderGeometry{layout, number_of_vertices, number_of_indices, bucket.vbo, m_ibo, m_draw_command_buffer};
+        return new OpenGLRenderGeometry{layout, number_of_vertices, number_of_indices, bucket.vbo, m_ibo, m_geometry_render_data};
       }
 
       void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) {
@@ -137,6 +165,10 @@ namespace zephyr {
 
       void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) {
         dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->WriteVBO(data);
+      }
+
+      void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->SetAABB(aabb);
       }
 
       void DestroyRenderGeometry(RenderGeometry* render_geometry) {
@@ -170,7 +202,7 @@ namespace zephyr {
           RegisterAttribute(RenderGeometryAttribute::Position, 3);
           RegisterAttribute(RenderGeometryAttribute::Normal, 3);
           RegisterAttribute(RenderGeometryAttribute::UV, 2);
-          RegisterAttribute(RenderGeometryAttribute::Color, 3);
+          RegisterAttribute(RenderGeometryAttribute::Color, 4);
 
           const size_t byte_stride = next_attribute_offset;
           bucket.vbo = GetVBOFromByteStride(byte_stride);
@@ -189,7 +221,7 @@ namespace zephyr {
       std::shared_ptr<OpenGLDynamicGPUArray> m_ibo{};
       std::unordered_map<size_t, std::shared_ptr<OpenGLDynamicGPUArray>> m_byte_stride_to_vbo_table{};
       std::unordered_map<decltype(RenderGeometryLayout::key), Bucket> m_layout_to_bucket_table{};
-      std::shared_ptr<OpenGLDynamicGPUArray> m_draw_command_buffer{};
+      std::shared_ptr<OpenGLDynamicGPUArray> m_geometry_render_data{};
   };
 
 } // namespace zephyr

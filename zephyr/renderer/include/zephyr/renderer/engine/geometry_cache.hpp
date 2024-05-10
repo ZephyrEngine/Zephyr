@@ -32,6 +32,7 @@ namespace zephyr {
 
       struct UploadTask {
         const Geometry* geometry;
+        Box3 aabb;
         std::span<const u8> raw_vbo_data;
         std::span<const u8> raw_ibo_data;
         RenderGeometryLayout layout;

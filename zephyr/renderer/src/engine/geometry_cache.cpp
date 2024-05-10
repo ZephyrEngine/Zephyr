@@ -30,6 +30,7 @@ namespace zephyr {
 
       m_upload_tasks.push_back({
         .geometry = geometry,
+        .aabb = geometry->GetAABB(),
         .raw_vbo_data = CopyDataToStagingBuffer(geometry->GetRawVertexData()),
         .raw_ibo_data = CopyDataToStagingBuffer(geometry->GetRawIndexData()),
         .layout = geometry->GetLayout(),
@@ -98,6 +99,7 @@ namespace zephyr {
       if(new_number_of_indices > 0) {
         m_render_backend->UpdateRenderGeometryIndices(render_geometry, upload_task.raw_ibo_data);
       }
+      m_render_backend->UpdateRenderGeometryAABB(render_geometry, upload_task.aabb);
 
       delete[] upload_task.raw_vbo_data.data();
       delete[] upload_task.raw_ibo_data.data();
