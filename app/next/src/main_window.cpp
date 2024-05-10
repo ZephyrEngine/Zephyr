@@ -102,6 +102,24 @@ namespace zephyr {
     m_render_engine->RenderScene(m_scene_root.get());
 
     m_frame++;
+
+    UpdateFramesPerSecondCounter();
+  }
+
+  void MainWindow::UpdateFramesPerSecondCounter() {
+    const auto time_point_now = std::chrono::steady_clock::now();
+
+    const auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+      time_point_now - m_time_point_last_update).count();
+
+    m_fps_counter++;
+
+    if(time_elapsed >= 1000) {
+      const f32 fps = (f32)m_fps_counter * 1000.0f / (f32)time_elapsed;
+      fmt::print("{} fps\n", fps);
+      m_fps_counter = 0;
+      m_time_point_last_update = std::chrono::steady_clock::now();
+    }
   }
 
   void MainWindow::CreateVulkanEngine() {
@@ -244,7 +262,7 @@ namespace zephyr {
     };
     std::copy_n(index_data, sizeof(index_data) / sizeof(u32), indices.begin());
 
-    const int grid_size = 64;
+    const int grid_size = 37;
 
     for(int x = -grid_size / 2; x < grid_size / 2; x++) {
       for(int y = -grid_size / 2; y < grid_size / 2; y++) {

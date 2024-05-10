@@ -1,3 +1,4 @@
+#include <chrono>
 #include <algorithm>
 #include <zephyr/logger/sink/console.hpp>
 #include <zephyr/logger/logger.hpp>
@@ -29,6 +30,7 @@ namespace zephyr {
       void Setup();
       void MainLoop();
       void RenderFrame();
+      void UpdateFramesPerSecondCounter();
       void CreateScene();
       void CreateBenchmarkScene();
 
@@ -43,6 +45,8 @@ namespace zephyr {
       std::shared_ptr<SceneNode> m_camera_node{};
       std::shared_ptr<SceneNode> m_behemoth_scene{};
 
+      int m_fps_counter{};
+      std::chrono::steady_clock::time_point m_time_point_last_update{};
       u64 m_frame{};
       SDL_Window* m_window{};
       std::shared_ptr<VulkanInstance> m_vk_instance{};
