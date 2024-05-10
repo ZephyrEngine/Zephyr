@@ -202,7 +202,7 @@ namespace zephyr {
           RegisterAttribute(RenderGeometryAttribute::Position, 3);
           RegisterAttribute(RenderGeometryAttribute::Normal, 3);
           RegisterAttribute(RenderGeometryAttribute::UV, 2);
-          RegisterAttribute(RenderGeometryAttribute::Color, 3);
+          RegisterAttribute(RenderGeometryAttribute::Color, 4);
 
           const size_t byte_stride = next_attribute_offset;
           bucket.vbo = GetVBOFromByteStride(byte_stride);
