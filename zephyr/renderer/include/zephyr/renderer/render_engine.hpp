@@ -41,13 +41,9 @@ namespace zephyr {
         Geometry* geometry;
       };
       std::vector<GameThreadRenderObject> m_game_thread_render_objects;
-
-      struct RenderCamera {
-        Matrix4 view;
-        Matrix4 projection;
-      } m_render_camera{};
-
       std::vector<RenderObject> m_render_objects;
+
+      RenderCamera m_render_camera[2]{};
   };
 
 } // namespace zephyr

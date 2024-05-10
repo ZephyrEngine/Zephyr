@@ -25,8 +25,7 @@ namespace zephyr {
 
     // Traverse the scene and update any data structures (such as render lists and resource caches) needed to render the frame.
     m_game_thread_render_objects.clear();
-    m_render_camera.view = Matrix4::Identity();
-    m_render_camera.projection = Matrix4::Identity();
+    m_render_camera[1] = {};
     scene_root->Traverse([&](SceneNode* node) -> bool {
       if(!node->IsVisible()) return false;
 
@@ -47,8 +46,8 @@ namespace zephyr {
       // TODO(fleroviux): think of a better way to mark the camera we actually want to use.
       if(node->HasComponent<PerspectiveCameraComponent>()) {
         const PerspectiveCameraComponent& camera_component = node->GetComponent<PerspectiveCameraComponent>();
-        m_render_camera.view = node->GetTransform().GetWorld().Inverse();
-        m_render_camera.projection = camera_component.GetProjectionMatrix();
+        m_render_camera[1].projection = camera_component.GetProjectionMatrix();
+        m_render_camera[1].view = node->GetTransform().GetWorld().Inverse();
       }
 
       return true;
@@ -78,8 +77,7 @@ namespace zephyr {
     while(m_render_thread_running) {
       ReadyRenderThreadData();
 
-      const Matrix4 view_projection = m_render_camera.projection * m_render_camera.view;
-      m_render_backend->Render(view_projection, m_render_objects);
+      m_render_backend->Render(m_render_camera[0], m_render_objects);
       m_render_backend->SwapBuffers();
     }
 
@@ -102,6 +100,8 @@ namespace zephyr {
         .local_to_world = game_thread_render_object.local_to_world
       });
     }
+
+    m_render_camera[0] = m_render_camera[1];
 
     // Signal to the caller thread that we are done reading the internal render structures.
     m_render_thread_semaphore.release();

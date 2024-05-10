@@ -73,7 +73,7 @@ namespace zephyr {
     m_render_geometry_manager->DestroyRenderGeometry(render_geometry);
   }
 
-  void OpenGLRenderBackend::Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) {
+  void OpenGLRenderBackend::Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) {
     std::unordered_map<decltype(RenderGeometryLayout::key), std::vector<RenderBundleItem>> render_bundles;
 
     for(const RenderObject& render_object : render_objects) {
@@ -93,6 +93,7 @@ namespace zephyr {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    const Matrix4 view_projection = render_camera.projection * render_camera.view;
     glNamedBufferSubData(m_gl_camera_ubo, 0, sizeof(Matrix4), &view_projection);
 
     // TODO(fleroviux): attempt to keep buffers bound throughout the entire rendering process for minimal number of OpenGL calls.

@@ -7,7 +7,7 @@
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;
-static const bool benchmark_scene_size = true;
+static const bool benchmark_scene_size = false;
 
 namespace zephyr {
 
