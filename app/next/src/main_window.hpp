@@ -30,6 +30,7 @@ namespace zephyr {
       void MainLoop();
       void RenderFrame();
       void CreateScene();
+      void CreateBenchmarkScene();
 
       void CreateVulkanEngine();
       void CleanupVulkan();
