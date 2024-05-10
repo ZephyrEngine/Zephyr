@@ -54,6 +54,7 @@ namespace zephyr {
       GLuint m_gl_draw_list_ssbo{};
       GLuint m_gl_camera_ubo{};
       GLuint m_gl_draw_count_ubo{};
+      GLuint m_gl_draw_count_out_ac{};
 
       std::unique_ptr<OpenGLRenderGeometryManager> m_render_geometry_manager{};
   };

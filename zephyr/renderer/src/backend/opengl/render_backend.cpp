@@ -31,6 +31,9 @@ namespace zephyr {
     glCreateBuffers(1u, &m_gl_draw_count_ubo);
     glNamedBufferStorage(m_gl_draw_count_ubo, sizeof(u32), nullptr, GL_DYNAMIC_STORAGE_BIT);
 
+    glCreateBuffers(1u, &m_gl_draw_count_out_ac);
+    glNamedBufferStorage(m_gl_draw_count_out_ac, sizeof(GLuint), nullptr, 0);
+
     glEnable(GL_DEPTH_TEST);
 
     m_render_geometry_manager = std::make_unique<OpenGLRenderGeometryManager>();
@@ -113,6 +116,7 @@ namespace zephyr {
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_draw_list_ssbo);
           glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_draw_count_ubo);
+          glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, m_gl_draw_count_out_ac);
 
           const GLuint workgroup_size = 32u;
           const GLuint workgroup_group_count = (number_of_draws + workgroup_size - 1u) / workgroup_size;
@@ -122,6 +126,7 @@ namespace zephyr {
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
           glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
+          glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, 0u);
         }
 
         // 3. draw everything written to the Draw List SSBO
@@ -130,14 +135,17 @@ namespace zephyr {
 
           glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
+          glBindBuffer(GL_PARAMETER_BUFFER, m_gl_draw_count_out_ac);
           glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_camera_ubo);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
 
-          glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
-          glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
+          glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
+          //glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
+          glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
 
           glBindVertexArray(0u);
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
+          glBindBuffer(GL_PARAMETER_BUFFER, 0u);
           glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
         }
@@ -234,11 +242,19 @@ namespace zephyr {
         uint u_draw_count;
       };
 
+      layout(binding = 0) uniform atomic_uint u_draw_count_out;
+
       void main() {
         const uint draw_index = gl_GlobalInvocationID.x;
 
+        if(draw_index == 0u) {
+          atomicCounterExchange(u_draw_count_out, 0u);
+        }
+        barrier();
+
         if(draw_index < u_draw_count) {
           b_command_buffer[draw_index] = rb_geometry_commands[rb_render_bundle_items[draw_index].draw_command_id];
+          atomicCounterIncrement(u_draw_count_out);
         }
       }
     )", GL_COMPUTE_SHADER);
