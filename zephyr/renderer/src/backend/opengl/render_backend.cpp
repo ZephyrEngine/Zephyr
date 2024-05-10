@@ -42,6 +42,7 @@ namespace zephyr {
   void OpenGLRenderBackend::DestroyContext() {
     m_render_geometry_manager.reset();
 
+    glDeleteBuffers(1u, &m_gl_draw_count_out_ac);
     glDeleteBuffers(1u, &m_gl_draw_count_ubo);
     glDeleteBuffers(1u, &m_gl_camera_ubo);
     glDeleteBuffers(1u, &m_gl_draw_list_ssbo);
@@ -212,22 +213,24 @@ namespace zephyr {
       #version 460 core
 
       layout(local_size_x = 32) in;
+    
+      struct DrawIndirectCommand {
+        uint data[5];
+      };
 
-      struct DrawElementsIndirectCommand {
-        uint count;
-        uint instance_count;
-        uint first_index;
-        int  base_vertex;
-        uint base_instance;
+      struct RenderGeometryRenderData {
+        vec4 aabb_min;
+        vec4 aabb_max;
+        DrawIndirectCommand draw_command;
       };
 
       struct RenderBundleItem {
         mat4 local_to_world;
-        uint draw_command_id;
+        uint geometry_id;
       };
 
       layout(std430, binding = 0) readonly buffer GeometryBuffer {
-        DrawElementsIndirectCommand rb_geometry_commands[];
+        RenderGeometryRenderData rb_render_geometry_render_data[];
       };
 
       layout(std430, binding = 1) readonly buffer RenderBundleBuffer {
@@ -235,7 +238,7 @@ namespace zephyr {
       };
 
       layout(std430, binding = 2) buffer CommandBuffer {
-        DrawElementsIndirectCommand b_command_buffer[];
+        DrawIndirectCommand b_command_buffer[];
       };
 
       layout(std140, binding = 0) uniform DrawCount {
@@ -253,7 +256,7 @@ namespace zephyr {
         barrier();
 
         if(draw_index < u_draw_count) {
-          b_command_buffer[draw_index] = rb_geometry_commands[rb_render_bundle_items[draw_index].draw_command_id];
+          b_command_buffer[draw_index] = rb_render_geometry_render_data[rb_render_bundle_items[draw_index].geometry_id].draw_command;
           atomicCounterIncrement(u_draw_count_out);
         }
       }
