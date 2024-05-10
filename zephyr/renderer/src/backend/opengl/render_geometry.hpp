@@ -84,7 +84,7 @@ namespace zephyr {
         return m_layout;
       }
 
-      [[nodiscard]] size_t GetDrawCommandID() const {
+      [[nodiscard]] size_t GetGeometryID() const {
         return m_geometry_render_data_allocation.base_element;
       }
 

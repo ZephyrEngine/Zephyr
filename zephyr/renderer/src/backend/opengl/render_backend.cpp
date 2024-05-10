@@ -83,7 +83,7 @@ namespace zephyr {
       if(render_geometry->GetNumberOfIndices() == 0u) {
         continue;
       }
-      render_bundles[render_geometry->GetLayout().key].emplace_back(render_object.local_to_world, (u32)render_geometry->GetDrawCommandID());
+      render_bundles[render_geometry->GetLayout().key].emplace_back(render_object.local_to_world, (u32) render_geometry->GetGeometryID());
     }
 
     // TODO(fleroviux): apply Z-sorting on the render bundles here
@@ -97,6 +97,8 @@ namespace zephyr {
 
     // TODO(fleroviux): attempt to keep buffers bound throughout the entire rendering process for minimal number of OpenGL calls.
 
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_camera_ubo);
+
     for(const auto& [key, render_bundle] : render_bundles) {
       const size_t render_bundle_size = render_bundle.size();
 
@@ -104,19 +106,18 @@ namespace zephyr {
         const u32 number_of_draws = std::min<size_t>(render_bundle_size - base_draw, k_max_draws_per_draw_call);
 
         // TODO(fleroviux): use persistently mapped buffers (PMBs) for this and see if they are faster?
-        // 1. upload render bundle items into the render bundle buffer
+        // 1. Upload render bundle items into the render bundle buffer
         glNamedBufferSubData(m_gl_render_bundle_ssbo, 0u, (GLsizeiptr)(number_of_draws * sizeof(RenderBundleItem)), &render_bundle[base_draw]);
         glNamedBufferSubData(m_gl_draw_count_ubo, 0u, sizeof(u32), &number_of_draws);
 
-        // 2. generate multi-draw indirect command buffer from the render bundle buffer and geometry descriptor buffer
+        // 2. Generate multi-draw indirect command buffer from the render bundle buffer and geometry descriptor buffer
         {
-          // TODO(fleroviux): adjust local work group size
           glUseProgram(m_gl_draw_list_builder_program);
 
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_draw_list_ssbo);
-          glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_draw_count_ubo);
+          glBindBufferBase(GL_UNIFORM_BUFFER, 1u, m_gl_draw_count_ubo);
           glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, m_gl_draw_count_out_ac);
 
           const GLuint workgroup_size = 32u;
@@ -126,32 +127,31 @@ namespace zephyr {
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
-          glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
+          glBindBufferBase(GL_UNIFORM_BUFFER, 1u, 0u);
           glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, 0u);
         }
 
-        // 3. draw everything written to the Draw List SSBO
+        // 3. Draw everything written to the Draw List SSBO
         {
           glUseProgram(m_gl_draw_program);
 
           glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
           glBindBuffer(GL_PARAMETER_BUFFER, m_gl_draw_count_out_ac);
-          glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_camera_ubo);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
 
           glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
-          //glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
           glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
 
           glBindVertexArray(0u);
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
           glBindBuffer(GL_PARAMETER_BUFFER, 0u);
-          glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
         }
       }
     }
+
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
   }
 
   void OpenGLRenderBackend::SwapBuffers() {
@@ -213,12 +213,13 @@ namespace zephyr {
       #version 460 core
 
       layout(local_size_x = 32) in;
-    
+
       struct DrawIndirectCommand {
         uint data[5];
       };
 
       struct RenderGeometryRenderData {
+        // TODO(fleroviux): evaluate whether the packing can be tighter or not.
         vec4 aabb_min;
         vec4 aabb_max;
         DrawIndirectCommand draw_command;
@@ -241,7 +242,11 @@ namespace zephyr {
         DrawIndirectCommand b_command_buffer[];
       };
 
-      layout(std140, binding = 0) uniform DrawCount {
+      layout(std140, binding = 0) uniform Transform {
+        mat4 u_projection;
+      };
+
+      layout(std140, binding = 1) uniform DrawCount {
         uint u_draw_count;
       };
 
@@ -256,8 +261,14 @@ namespace zephyr {
         barrier();
 
         if(draw_index < u_draw_count) {
-          b_command_buffer[draw_index] = rb_render_geometry_render_data[rb_render_bundle_items[draw_index].geometry_id].draw_command;
-          atomicCounterIncrement(u_draw_count_out);
+          RenderBundleItem render_bundle_item = rb_render_bundle_items[draw_index];
+          RenderGeometryRenderData render_data = rb_render_geometry_render_data[render_bundle_item.geometry_id];
+
+          vec4 clip_aabb_center = u_projection * render_bundle_item.local_to_world * vec4((render_data.aabb_min.xyz + render_data.aabb_max.xyz) * 0.5, 1.0);
+          if(abs(clip_aabb_center.x) < clip_aabb_center.w && abs(clip_aabb_center.y) < clip_aabb_center.w && abs(clip_aabb_center.z) < clip_aabb_center.w) {
+            b_command_buffer[draw_index] = render_data.draw_command;
+            atomicCounterIncrement(u_draw_count_out);
+          }
         }
       }
     )", GL_COMPUTE_SHADER);
