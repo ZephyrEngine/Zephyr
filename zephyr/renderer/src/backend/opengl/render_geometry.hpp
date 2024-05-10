@@ -1,9 +1,11 @@
 
 #pragma once
 
+#include <zephyr/math/box3.hpp>
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
+#include <limits>
 #include <memory>
 #include <span>
 #include <unordered_map>
@@ -57,6 +59,9 @@ namespace zephyr {
           };
           m_draw_command_buffer->Write({(const u8*)&command, sizeof(command)}, m_draw_command_allocation.base_element);
         }
+
+        m_aabb.Min() = {-std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity()};
+        m_aabb.Max() = { std::numeric_limits<f32>::infinity(),  std::numeric_limits<f32>::infinity(),  std::numeric_limits<f32>::infinity()};
       }
 
      ~OpenGLRenderGeometry() override {
@@ -83,6 +88,10 @@ namespace zephyr {
         return m_ibo_allocation.number_of_elements;
       }
 
+      [[nodiscard]] const Box3& GetAABB() const {
+        return m_aabb;
+      }
+
       void WriteVBO(std::span<const u8> data) {
         // TODO(fleroviux): this does not protect against writing into neighbouring allocations.
         m_vbo->Write(data, m_vbo_allocation.base_element);
@@ -96,6 +105,10 @@ namespace zephyr {
         m_ibo->Write(data, m_ibo_allocation.base_element);
       }
 
+      void SetAABB(const Box3& aabb) {
+        m_aabb = aabb;
+      }
+
     private:
       RenderGeometryLayout m_layout;
       std::shared_ptr<OpenGLDynamicGPUArray> m_vbo;
@@ -104,6 +117,7 @@ namespace zephyr {
       OpenGLDynamicGPUArray::BufferRange m_vbo_allocation{};
       OpenGLDynamicGPUArray::BufferRange m_ibo_allocation{};
       OpenGLDynamicGPUArray::BufferRange m_draw_command_allocation{};
+      Box3 m_aabb{};
   };
 
   class OpenGLRenderGeometryManager {
@@ -137,6 +151,10 @@ namespace zephyr {
 
       void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) {
         dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->WriteVBO(data);
+      }
+
+      void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) {
+        dynamic_cast<OpenGLRenderGeometry*>(render_geometry)->SetAABB(aabb);
       }
 
       void DestroyRenderGeometry(RenderGeometry* render_geometry) {

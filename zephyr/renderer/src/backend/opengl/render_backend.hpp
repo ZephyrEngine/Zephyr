@@ -23,6 +23,7 @@ namespace zephyr {
       RenderGeometry* CreateRenderGeometry(RenderGeometryLayout layout, size_t number_of_vertices, size_t number_of_indices) override;
       void UpdateRenderGeometryIndices(RenderGeometry* render_geometry, std::span<const u8> data) override;
       void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) override;
+      void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) override;
       void DestroyRenderGeometry(RenderGeometry* render_geometry) override;
 
       void Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) override;

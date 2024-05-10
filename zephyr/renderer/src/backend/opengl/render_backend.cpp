@@ -61,6 +61,10 @@ namespace zephyr {
     m_render_geometry_manager->UpdateRenderGeometryVertices(render_geometry, data);
   }
 
+  void OpenGLRenderBackend::UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) {
+    m_render_geometry_manager->UpdateRenderGeometryAABB(render_geometry, aabb);
+  }
+
   void OpenGLRenderBackend::DestroyRenderGeometry(RenderGeometry* render_geometry) {
     m_render_geometry_manager->DestroyRenderGeometry(render_geometry);
   }

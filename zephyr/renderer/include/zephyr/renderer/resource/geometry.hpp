@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <zephyr/math/box3.hpp>
 #include <zephyr/math/vector.hpp>
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/resource/resource.hpp>
@@ -136,6 +137,11 @@ namespace zephyr {
         return {(const u8*)m_vertex_data, m_vertex_stride * m_number_of_vertices};
       }
 
+      [[nodiscard]] const Box3& GetAABB() const {
+        UpdateAABB();
+        return m_aabb;
+      }
+
     private:
       template<typename T>
       [[nodiscard]] Accessor<T> GetAccessor(RenderGeometryAttribute attribute) {
@@ -143,6 +149,34 @@ namespace zephyr {
           return {nullptr, 0u, 0u, 0u};
         }
         return {m_vertex_data, m_attribute_offsets[(int)attribute], m_vertex_stride, m_number_of_vertices};
+      }
+
+      void UpdateAABB() const {
+        if(m_aabb_version == CurrentVersion()) {
+          return;
+        }
+
+        m_aabb.Min() = {  std::numeric_limits<f32>::infinity(),  std::numeric_limits<f32>::infinity(),  std::numeric_limits<f32>::infinity() };
+        m_aabb.Max() = { -std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity() };
+        m_aabb_version = CurrentVersion();
+
+        auto positions = const_cast<Geometry*>(this)->GetPositions();
+
+        if(!positions.IsValid()) {
+          return;
+        }
+
+        for(size_t i = 0; i < m_number_of_vertices; i++) {
+          const auto& position = positions[i];
+
+          m_aabb.Min().X() = std::min(m_aabb.Min().X(), position.X());
+          m_aabb.Min().Y() = std::min(m_aabb.Min().Y(), position.Y());
+          m_aabb.Min().Z() = std::min(m_aabb.Min().Z(), position.Z());
+
+          m_aabb.Max().X() = std::max(m_aabb.Max().X(), position.X());
+          m_aabb.Max().Y() = std::max(m_aabb.Max().Y(), position.Y());
+          m_aabb.Max().Z() = std::max(m_aabb.Max().Z(), position.Z());
+        }
       }
 
       u32* m_index_data{};
@@ -153,6 +187,8 @@ namespace zephyr {
       size_t m_vertex_stride{};
       size_t m_number_of_vertices{};
       std::array<size_t, (int)RenderGeometryAttribute::Count> m_attribute_offsets{};
+      mutable Box3 m_aabb{};
+      mutable u64 m_aabb_version{std::numeric_limits<u64>::max()};
   };
 
 } // namespace zephyr
