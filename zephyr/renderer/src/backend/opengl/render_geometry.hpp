@@ -150,7 +150,7 @@ namespace zephyr {
         return bucket.vao;
       }
 
-      GLuint GetDrawCommandBuffer() {
+      GLuint GetGeometryRenderDataBuffer() {
         return m_geometry_render_data->GetBufferHandle();
       }
 

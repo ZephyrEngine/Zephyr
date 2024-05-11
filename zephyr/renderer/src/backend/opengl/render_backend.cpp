@@ -22,11 +22,11 @@ namespace zephyr {
     glCreateBuffers(1u, &m_gl_render_bundle_ssbo);
     glNamedBufferStorage(m_gl_render_bundle_ssbo, sizeof(RenderBundleItem) * k_max_draws_per_draw_call, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-    glCreateBuffers(1u, &m_gl_draw_list_ssbo);
-    glNamedBufferStorage(m_gl_draw_list_ssbo, sizeof(OpenGLDrawElementsIndirectCommand) * k_max_draws_per_draw_call, nullptr, 0);
+    glCreateBuffers(1u, &m_gl_draw_list_command_ssbo);
+    glNamedBufferStorage(m_gl_draw_list_command_ssbo, (sizeof(OpenGLDrawElementsIndirectCommand) + sizeof(u32)) * k_max_draws_per_draw_call, nullptr, 0);
 
     glCreateBuffers(1u, &m_gl_camera_ubo);
-    glNamedBufferStorage(m_gl_camera_ubo, sizeof(Matrix4), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    glNamedBufferStorage(m_gl_camera_ubo, sizeof(RenderCamera), nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     glCreateBuffers(1u, &m_gl_draw_count_ubo);
     glNamedBufferStorage(m_gl_draw_count_ubo, sizeof(u32), nullptr, GL_DYNAMIC_STORAGE_BIT);
@@ -45,7 +45,7 @@ namespace zephyr {
     glDeleteBuffers(1u, &m_gl_draw_count_out_ac);
     glDeleteBuffers(1u, &m_gl_draw_count_ubo);
     glDeleteBuffers(1u, &m_gl_camera_ubo);
-    glDeleteBuffers(1u, &m_gl_draw_list_ssbo);
+    glDeleteBuffers(1u, &m_gl_draw_list_command_ssbo);
     glDeleteBuffers(1u, &m_gl_render_bundle_ssbo);
     glDeleteProgram(m_gl_draw_list_builder_program);
     glDeleteProgram(m_gl_draw_program);
@@ -73,7 +73,7 @@ namespace zephyr {
     m_render_geometry_manager->DestroyRenderGeometry(render_geometry);
   }
 
-  void OpenGLRenderBackend::Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) {
+  void OpenGLRenderBackend::Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) {
     std::unordered_map<decltype(RenderGeometryLayout::key), std::vector<RenderBundleItem>> render_bundles;
 
     for(const RenderObject& render_object : render_objects) {
@@ -93,11 +93,11 @@ namespace zephyr {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glNamedBufferSubData(m_gl_camera_ubo, 0, sizeof(Matrix4), &view_projection);
-
-    // TODO(fleroviux): attempt to keep buffers bound throughout the entire rendering process for minimal number of OpenGL calls.
+    glNamedBufferSubData(m_gl_camera_ubo, 0, sizeof(RenderCamera), &render_camera);
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_camera_ubo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_draw_list_command_ssbo);
 
     for(const auto& [key, render_bundle] : render_bundles) {
       const size_t render_bundle_size = render_bundle.size();
@@ -114,9 +114,7 @@ namespace zephyr {
         {
           glUseProgram(m_gl_draw_list_builder_program);
 
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_render_geometry_manager->GetDrawCommandBuffer());
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_draw_list_ssbo);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_render_geometry_manager->GetGeometryRenderDataBuffer());
           glBindBufferBase(GL_UNIFORM_BUFFER, 1u, m_gl_draw_count_ubo);
           glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, m_gl_draw_count_out_ac);
 
@@ -124,8 +122,6 @@ namespace zephyr {
           const GLuint workgroup_group_count = (number_of_draws + workgroup_size - 1u) / workgroup_size;
           glDispatchCompute(workgroup_group_count, 1u, 1u);
 
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
           glBindBufferBase(GL_UNIFORM_BUFFER, 1u, 0u);
           glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, 0u);
@@ -136,22 +132,22 @@ namespace zephyr {
           glUseProgram(m_gl_draw_program);
 
           glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
-          glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_ssbo);
+          glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_command_ssbo);
           glBindBuffer(GL_PARAMETER_BUFFER, m_gl_draw_count_out_ac);
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
 
-          glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
-          glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
+          glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+          glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand) + sizeof(u32));
 
           glBindVertexArray(0u);
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
           glBindBuffer(GL_PARAMETER_BUFFER, 0u);
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
         }
       }
     }
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
   }
 
   void OpenGLRenderBackend::SwapBuffers() {
@@ -164,15 +160,25 @@ namespace zephyr {
 
       struct RenderBundleItem {
         mat4 local_to_world;
-        uint draw_command_id;
+        uint geometry_id;
+      };
+
+      struct DrawCommandWithRenderBundleItemID {
+        uint command[5];
+        uint render_bundle_item_id;
       };
 
       layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
         RenderBundleItem rb_render_bundle_items[];
       };
 
-      layout(std140, binding = 0) uniform Transform {
+      layout(std430, binding = 1) readonly buffer CommandBuffer {
+        DrawCommandWithRenderBundleItemID rb_command_buffer[];
+      };
+
+      layout(std140, binding = 0) uniform Camera {
         mat4 u_projection;
+        mat4 u_view;
       };
 
       layout(location = 0) in vec3 a_position;
@@ -184,9 +190,11 @@ namespace zephyr {
       out vec3 v_color;
 
       void main() {
+        uint render_bundle_item_id = rb_command_buffer[gl_DrawID].render_bundle_item_id;
+
         v_normal = a_normal;
         v_color = a_color;
-        gl_Position = u_projection * rb_render_bundle_items[gl_DrawID].local_to_world * vec4(a_position, 1.0);
+        gl_Position = u_projection * u_view * rb_render_bundle_items[render_bundle_item_id].local_to_world * vec4(a_position, 1.0);
       }
     )", GL_VERTEX_SHADER);
 
@@ -214,15 +222,20 @@ namespace zephyr {
 
       layout(local_size_x = 32) in;
 
-      struct DrawIndirectCommand {
+      struct DrawCommand {
         uint data[5];
+      };
+
+      struct DrawCommandWithRenderBundleItemID {
+        DrawCommand command;
+        uint render_bundle_item_id;
       };
 
       struct RenderGeometryRenderData {
         // TODO(fleroviux): evaluate whether the packing can be tighter or not.
         vec4 aabb_min;
         vec4 aabb_max;
-        DrawIndirectCommand draw_command;
+        DrawCommand draw_command;
       };
 
       struct RenderBundleItem {
@@ -230,20 +243,22 @@ namespace zephyr {
         uint geometry_id;
       };
 
-      layout(std430, binding = 0) readonly buffer GeometryBuffer {
-        RenderGeometryRenderData rb_render_geometry_render_data[];
-      };
-
-      layout(std430, binding = 1) readonly buffer RenderBundleBuffer {
+      layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
         RenderBundleItem rb_render_bundle_items[];
       };
 
-      layout(std430, binding = 2) buffer CommandBuffer {
-        DrawIndirectCommand b_command_buffer[];
+      layout(std430, binding = 1) buffer CommandBuffer {
+        DrawCommandWithRenderBundleItemID b_command_buffer[];
       };
 
-      layout(std140, binding = 0) uniform Transform {
+      layout(std430, binding = 2) readonly buffer GeometryBuffer {
+        RenderGeometryRenderData rb_render_geometry_render_data[];
+      };
+
+      layout(std140, binding = 0) uniform Camera {
         mat4 u_projection;
+        mat4 u_view;
+        vec4 u_frustum_planes[6];
       };
 
       layout(std140, binding = 1) uniform DrawCount {
@@ -253,21 +268,54 @@ namespace zephyr {
       layout(binding = 0) uniform atomic_uint u_draw_count_out;
 
       void main() {
-        const uint draw_index = gl_GlobalInvocationID.x;
+        const uint render_bundle_item_id = gl_GlobalInvocationID.x;
 
-        if(draw_index == 0u) {
+        if(render_bundle_item_id == 0u) {
           atomicCounterExchange(u_draw_count_out, 0u);
         }
         barrier();
 
-        if(draw_index < u_draw_count) {
-          RenderBundleItem render_bundle_item = rb_render_bundle_items[draw_index];
+        if(render_bundle_item_id < u_draw_count) {
+          RenderBundleItem render_bundle_item = rb_render_bundle_items[render_bundle_item_id];
           RenderGeometryRenderData render_data = rb_render_geometry_render_data[render_bundle_item.geometry_id];
 
-          vec4 clip_aabb_center = u_projection * render_bundle_item.local_to_world * vec4((render_data.aabb_min.xyz + render_data.aabb_max.xyz) * 0.5, 1.0);
-          if(abs(clip_aabb_center.x) < clip_aabb_center.w && abs(clip_aabb_center.y) < clip_aabb_center.w && abs(clip_aabb_center.z) < clip_aabb_center.w) {
-            b_command_buffer[draw_index] = render_data.draw_command;
-            atomicCounterIncrement(u_draw_count_out);
+          bool inside_frustum = true;
+          vec4 model_aabb_min = render_data.aabb_min;
+          vec4 model_aabb_max = render_data.aabb_max;
+
+          mat4 mv = u_view * render_bundle_item.local_to_world;
+
+          // TODO(fleroviux): optimize this plenty!
+          vec4[] aabb_points = vec4[](
+            mv * vec4(model_aabb_min.x, model_aabb_min.y, model_aabb_min.z, 1.0),
+            mv * vec4(model_aabb_min.x, model_aabb_min.y, model_aabb_max.z, 1.0),
+            mv * vec4(model_aabb_min.x, model_aabb_max.y, model_aabb_min.z, 1.0),
+            mv * vec4(model_aabb_min.x, model_aabb_max.y, model_aabb_max.z, 1.0),
+            mv * vec4(model_aabb_max.x, model_aabb_min.y, model_aabb_min.z, 1.0),
+            mv * vec4(model_aabb_max.x, model_aabb_min.y, model_aabb_max.z, 1.0),
+            mv * vec4(model_aabb_max.x, model_aabb_max.y, model_aabb_min.z, 1.0),
+            mv * vec4(model_aabb_max.x, model_aabb_max.y, model_aabb_max.z, 1.0)
+          );
+
+          vec4 view_aabb_min = min(aabb_points[0], min(aabb_points[1], min(aabb_points[2], min(aabb_points[3], min(aabb_points[4], min(aabb_points[5], min(aabb_points[6], aabb_points[7])))))));
+          vec4 view_aabb_max = max(aabb_points[0], max(aabb_points[1], max(aabb_points[2], max(aabb_points[3], max(aabb_points[4], max(aabb_points[5], max(aabb_points[6], aabb_points[7])))))));
+
+          for(int i = 0; i < 6; i++) {
+            vec4 frustum_plane = u_frustum_planes[i];
+            // TODO(fleroviux): can this be shortened?
+            vec4 aabb_corner = vec4(
+              frustum_plane.x > 0 ? view_aabb_max.x : view_aabb_min.x,
+              frustum_plane.y > 0 ? view_aabb_max.y : view_aabb_min.y,
+              frustum_plane.z > 0 ? view_aabb_max.z : view_aabb_min.z,
+              -1.0
+            );
+
+            inside_frustum = inside_frustum && dot(aabb_corner, frustum_plane) >= 0.0;
+          }
+
+          if(inside_frustum) {
+            uint draw_id = atomicCounterIncrement(u_draw_count_out);
+            b_command_buffer[draw_id] = DrawCommandWithRenderBundleItemID(render_data.draw_command, render_bundle_item_id);
           }
         }
       }

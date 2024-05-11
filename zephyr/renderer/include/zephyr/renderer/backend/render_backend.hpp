@@ -2,6 +2,7 @@
 #pragma once
 
 #include <zephyr/math/box3.hpp>
+#include <zephyr/math/frustum.hpp>
 #include <zephyr/math/matrix4.hpp>
 #include <zephyr/float.hpp>
 #include <zephyr/integer.hpp>
@@ -43,9 +44,21 @@ namespace zephyr {
       [[nodiscard]] virtual size_t GetNumberOfIndices() const = 0;
   };
 
+  struct RenderCamera {
+    /**
+     * This struct may be uploaded to a GPU buffer directly and therefore must match the following std430/std140 data layout:
+     *   mat4 projection;
+     *   mat4 view;
+     *   vec4 frustum_planes[6];
+     */
+    Matrix4 projection{};
+    Matrix4 view{};
+    Frustum frustum{};
+  };
+
   struct RenderObject {
     RenderGeometry* render_geometry{};
-    Matrix4 local_to_world;
+    Matrix4 local_to_world{};
   };
 
   class RenderBackend {
@@ -65,7 +78,7 @@ namespace zephyr {
       virtual void DestroyRenderGeometry(RenderGeometry* render_geometry) = 0;
 
       /// Just a quick thing for testing the rendering.
-      virtual void Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) = 0;
+      virtual void Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) = 0;
 
       /// Start rendering the next frame.
       virtual void SwapBuffers() = 0;

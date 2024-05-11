@@ -261,7 +261,7 @@ namespace zephyr {
       6, 7, 3
     };
     std::copy_n(index_data, sizeof(index_data) / sizeof(u32), indices.begin());
-
+    
     const int grid_size = 37;
 
     for(int x = -grid_size / 2; x < grid_size / 2; x++) {

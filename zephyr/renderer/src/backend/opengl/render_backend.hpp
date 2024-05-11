@@ -26,7 +26,7 @@ namespace zephyr {
       void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) override;
       void DestroyRenderGeometry(RenderGeometry* render_geometry) override;
 
-      void Render(const Matrix4& view_projection, std::span<const RenderObject> render_objects) override;
+      void Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) override;
 
       void SwapBuffers() override;
 
@@ -51,7 +51,7 @@ namespace zephyr {
       GLuint m_gl_draw_program{};
       GLuint m_gl_draw_list_builder_program{};
       GLuint m_gl_render_bundle_ssbo{};
-      GLuint m_gl_draw_list_ssbo{};
+      GLuint m_gl_draw_list_command_ssbo{};
       GLuint m_gl_camera_ubo{};
       GLuint m_gl_draw_count_ubo{};
       GLuint m_gl_draw_count_out_ac{};
