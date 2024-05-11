@@ -285,24 +285,18 @@ namespace zephyr {
 
           mat4 mv = u_view * render_bundle_item.local_to_world;
 
-          // TODO(fleroviux): optimize this plenty!
-          vec4[] aabb_points = vec4[](
-            mv * vec4(model_aabb_min.x, model_aabb_min.y, model_aabb_min.z, 1.0),
-            mv * vec4(model_aabb_min.x, model_aabb_min.y, model_aabb_max.z, 1.0),
-            mv * vec4(model_aabb_min.x, model_aabb_max.y, model_aabb_min.z, 1.0),
-            mv * vec4(model_aabb_min.x, model_aabb_max.y, model_aabb_max.z, 1.0),
-            mv * vec4(model_aabb_max.x, model_aabb_min.y, model_aabb_min.z, 1.0),
-            mv * vec4(model_aabb_max.x, model_aabb_min.y, model_aabb_max.z, 1.0),
-            mv * vec4(model_aabb_max.x, model_aabb_max.y, model_aabb_min.z, 1.0),
-            mv * vec4(model_aabb_max.x, model_aabb_max.y, model_aabb_max.z, 1.0)
-          );
-
-          vec4 view_aabb_min = min(aabb_points[0], min(aabb_points[1], min(aabb_points[2], min(aabb_points[3], min(aabb_points[4], min(aabb_points[5], min(aabb_points[6], aabb_points[7])))))));
-          vec4 view_aabb_max = max(aabb_points[0], max(aabb_points[1], max(aabb_points[2], max(aabb_points[3], max(aabb_points[4], max(aabb_points[5], max(aabb_points[6], aabb_points[7])))))));
+          vec4 mv_min_x = mv[0] * model_aabb_min.x;
+          vec4 mv_min_y = mv[1] * model_aabb_min.y;
+          vec4 mv_min_z = mv[2] * model_aabb_min.z;
+          vec4 mv_max_x = mv[0] * model_aabb_max.x;
+          vec4 mv_max_y = mv[1] * model_aabb_max.y;
+          vec4 mv_max_z = mv[2] * model_aabb_max.z;
+          vec4 view_aabb_min = min(mv_min_x, mv_max_x) + min(mv_min_y, mv_max_y) + min(mv_min_z, mv_max_z) + mv[3];
+          vec4 view_aabb_max = max(mv_min_x, mv_max_x) + max(mv_min_y, mv_max_y) + max(mv_min_z, mv_max_z) + mv[3];
 
           for(int i = 0; i < 6; i++) {
             vec4 frustum_plane = u_frustum_planes[i];
-            // TODO(fleroviux): can this be shortened?
+
             vec4 aabb_corner = vec4(
               frustum_plane.x > 0 ? view_aabb_max.x : view_aabb_min.x,
               frustum_plane.y > 0 ? view_aabb_max.y : view_aabb_min.y,
