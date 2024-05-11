@@ -25,7 +25,7 @@ namespace zephyr {
 
       ~SceneNode() {
         for(const auto& child : m_children) {
-          child->m_parent.reset();
+          child->m_parent_weak.reset();
         }
       }
 
@@ -34,8 +34,12 @@ namespace zephyr {
         return std::make_shared<SceneNode>(Private{}, std::forward<Args>(args)...);
       }
 
-      [[nodiscard]] std::shared_ptr<SceneNode> GetParent() const {
-        return m_parent.lock();
+      [[nodiscard]] SceneNode* GetParent() const {
+        return m_parent;
+      }
+
+      [[nodiscard]] std::shared_ptr<SceneNode> GetParentWithOwnership() const {
+        return m_parent_weak.lock();
       }
 
       [[nodiscard]] std::span<const std::shared_ptr<SceneNode>> GetChildren() const {
@@ -44,14 +48,16 @@ namespace zephyr {
 
       void Add(std::shared_ptr<SceneNode> node) {
         node->RemoveFromParent();
-        node->m_parent = shared_from_this();
+        node->m_parent = this;
+        node->m_parent_weak = shared_from_this();
         m_children.push_back(std::move(node));
       }
 
       template<typename... Args>
       std::shared_ptr<SceneNode> CreateChild(Args&&... args) {
         std::shared_ptr<SceneNode> node = New(std::forward<Args>(args)...);
-        node->m_parent = shared_from_this();
+        node->m_parent = this;
+        node->m_parent_weak = shared_from_this();
         m_children.push_back(node);
         return std::move(node);
       }
@@ -66,15 +72,15 @@ namespace zephyr {
         }
 
         std::shared_ptr<SceneNode> node_ptr = std::move(*it);
-        node_ptr->m_parent.reset();
+        node_ptr->m_parent = nullptr;
+        node_ptr->m_parent_weak.reset();
         m_children.erase(it);
         return std::move(node_ptr);
       }
 
       void RemoveFromParent() {
-        std::shared_ptr<SceneNode> parent = m_parent.lock();
-        if(parent) {
-          parent->Remove(this);
+        if(m_parent) {
+          m_parent->Remove(this);
         }
       }
 
@@ -153,7 +159,8 @@ namespace zephyr {
       }
 
     private:
-      std::weak_ptr<SceneNode> m_parent{};
+      SceneNode* m_parent{};
+      std::weak_ptr<SceneNode> m_parent_weak{};
       std::vector<std::shared_ptr<SceneNode>> m_children{};
       std::string m_name{};
       bool m_is_visible{true};
