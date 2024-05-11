@@ -45,6 +45,12 @@ namespace zephyr {
   };
 
   struct RenderCamera {
+    /**
+     * This struct may be uploaded to a GPU buffer directly and therefore must match the following std430/std140 data layout:
+     *   mat4 projection;
+     *   mat4 view;
+     *   vec4 frustum_planes[6];
+     */
     Matrix4 projection{};
     Matrix4 view{};
     Frustum frustum{};

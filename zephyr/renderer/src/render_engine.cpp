@@ -48,6 +48,7 @@ namespace zephyr {
         const PerspectiveCameraComponent& camera_component = node->GetComponent<PerspectiveCameraComponent>();
         m_render_camera[1].projection = camera_component.GetProjectionMatrix();
         m_render_camera[1].view = node->GetTransform().GetWorld().Inverse();
+        m_render_camera[1].frustum = camera_component.GetFrustum();
       }
 
       return true;

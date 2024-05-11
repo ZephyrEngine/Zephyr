@@ -7,7 +7,7 @@
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;
-static const bool benchmark_scene_size = false;
+static const bool benchmark_scene_size = true;
 
 namespace zephyr {
 
@@ -261,6 +261,9 @@ namespace zephyr {
       6, 7, 3
     };
     std::copy_n(index_data, sizeof(index_data) / sizeof(u32), indices.begin());
+
+    fmt::print("min: {} {} {}\n", cube_geometry->GetAABB().Min().X(), cube_geometry->GetAABB().Min().Y(), cube_geometry->GetAABB().Min().X());
+    fmt::print("max: {} {} {}\n", cube_geometry->GetAABB().Max().X(), cube_geometry->GetAABB().Max().Y(), cube_geometry->GetAABB().Max().X());
 
     const int grid_size = 37;
 
