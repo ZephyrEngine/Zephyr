@@ -23,10 +23,7 @@ namespace zephyr {
     glNamedBufferStorage(m_gl_render_bundle_ssbo, sizeof(RenderBundleItem) * k_max_draws_per_draw_call, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     glCreateBuffers(1u, &m_gl_draw_list_command_ssbo);
-    glNamedBufferStorage(m_gl_draw_list_command_ssbo, sizeof(OpenGLDrawElementsIndirectCommand) * k_max_draws_per_draw_call, nullptr, 0);
-
-    glCreateBuffers(1u, &m_gl_draw_list_transform_ssbo);
-    glNamedBufferStorage(m_gl_draw_list_transform_ssbo, sizeof(Matrix4) * k_max_draws_per_draw_call, nullptr, 0);
+    glNamedBufferStorage(m_gl_draw_list_command_ssbo, (sizeof(OpenGLDrawElementsIndirectCommand) + sizeof(u32)) * k_max_draws_per_draw_call, nullptr, 0);
 
     glCreateBuffers(1u, &m_gl_camera_ubo);
     glNamedBufferStorage(m_gl_camera_ubo, sizeof(RenderCamera), nullptr, GL_DYNAMIC_STORAGE_BIT);
@@ -48,7 +45,6 @@ namespace zephyr {
     glDeleteBuffers(1u, &m_gl_draw_count_out_ac);
     glDeleteBuffers(1u, &m_gl_draw_count_ubo);
     glDeleteBuffers(1u, &m_gl_camera_ubo);
-    glDeleteBuffers(1u, &m_gl_draw_list_transform_ssbo);
     glDeleteBuffers(1u, &m_gl_draw_list_command_ssbo);
     glDeleteBuffers(1u, &m_gl_render_bundle_ssbo);
     glDeleteProgram(m_gl_draw_list_builder_program);
@@ -99,10 +95,9 @@ namespace zephyr {
 
     glNamedBufferSubData(m_gl_camera_ubo, 0, sizeof(RenderCamera), &render_camera);
 
-    // TODO(fleroviux): attempt to keep more buffers bound throughout the entire rendering process for minimal number of OpenGL calls.
-
     glBindBufferBase(GL_UNIFORM_BUFFER, 0u, m_gl_camera_ubo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_draw_list_transform_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, m_gl_render_bundle_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_draw_list_command_ssbo);
 
     for(const auto& [key, render_bundle] : render_bundles) {
       const size_t render_bundle_size = render_bundle.size();
@@ -119,9 +114,7 @@ namespace zephyr {
         {
           glUseProgram(m_gl_draw_list_builder_program);
 
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, m_gl_render_bundle_ssbo);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_render_geometry_manager->GetGeometryRenderDataBuffer());
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3u, m_gl_draw_list_command_ssbo);
           glBindBufferBase(GL_UNIFORM_BUFFER, 1u, m_gl_draw_count_ubo);
           glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, m_gl_draw_count_out_ac);
 
@@ -129,9 +122,7 @@ namespace zephyr {
           const GLuint workgroup_group_count = (number_of_draws + workgroup_size - 1u) / workgroup_size;
           glDispatchCompute(workgroup_group_count, 1u, 1u);
 
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
           glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
-          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3u, 0u);
           glBindBufferBase(GL_UNIFORM_BUFFER, 1u, 0u);
           glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0u, 0u);
         }
@@ -144,8 +135,8 @@ namespace zephyr {
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_command_ssbo);
           glBindBuffer(GL_PARAMETER_BUFFER, m_gl_draw_count_out_ac);
 
-          glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
-          glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand));
+          glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+          glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand) + sizeof(u32));
 
           glBindVertexArray(0u);
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
@@ -156,6 +147,7 @@ namespace zephyr {
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0u, 0u);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0u, 0u);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1u, 0u);
   }
 
   void OpenGLRenderBackend::SwapBuffers() {
@@ -166,8 +158,22 @@ namespace zephyr {
     GLuint vert_shader = CreateShader(R"(
       #version 460 core
 
-      layout(std430, binding = 0) readonly buffer DrawListTransformBuffer {
-        mat4 rb_draw_list_transform[];
+      struct RenderBundleItem {
+        mat4 local_to_world;
+        uint geometry_id;
+      };
+
+      struct DrawCommandWithRenderBundleItemID {
+        uint command[5];
+        uint render_bundle_item_id;
+      };
+
+      layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
+        RenderBundleItem rb_render_bundle_items[];
+      };
+
+      layout(std430, binding = 1) readonly buffer CommandBuffer {
+        DrawCommandWithRenderBundleItemID rb_command_buffer[];
       };
 
       layout(std140, binding = 0) uniform Camera {
@@ -184,9 +190,11 @@ namespace zephyr {
       out vec3 v_color;
 
       void main() {
+        uint render_bundle_item_id = rb_command_buffer[gl_DrawID].render_bundle_item_id;
+
         v_normal = a_normal;
         v_color = a_color;
-        gl_Position = u_projection * u_view * rb_draw_list_transform[gl_DrawID] * vec4(a_position, 1.0);
+        gl_Position = u_projection * u_view * rb_render_bundle_items[render_bundle_item_id].local_to_world * vec4(a_position, 1.0);
       }
     )", GL_VERTEX_SHADER);
 
@@ -214,15 +222,20 @@ namespace zephyr {
 
       layout(local_size_x = 32) in;
 
-      struct DrawIndirectCommand {
+      struct DrawCommand {
         uint data[5];
+      };
+
+      struct DrawCommandWithRenderBundleItemID {
+        DrawCommand command;
+        uint render_bundle_item_id;
       };
 
       struct RenderGeometryRenderData {
         // TODO(fleroviux): evaluate whether the packing can be tighter or not.
         vec4 aabb_min;
         vec4 aabb_max;
-        DrawIndirectCommand draw_command;
+        DrawCommand draw_command;
       };
 
       struct RenderBundleItem {
@@ -230,20 +243,16 @@ namespace zephyr {
         uint geometry_id;
       };
 
-      layout(std430, binding = 0) buffer DrawListTransformBuffer {
-        mat4 b_draw_list_transform[];
+      layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
+        RenderBundleItem rb_render_bundle_items[];
       };
 
-      layout(std430, binding = 1) readonly buffer RenderBundleBuffer {
-        RenderBundleItem rb_render_bundle_items[];
+      layout(std430, binding = 1) buffer CommandBuffer {
+        DrawCommandWithRenderBundleItemID b_command_buffer[];
       };
 
       layout(std430, binding = 2) readonly buffer GeometryBuffer {
         RenderGeometryRenderData rb_render_geometry_render_data[];
-      };
-
-      layout(std430, binding = 3) buffer CommandBuffer {
-        DrawIndirectCommand b_command_buffer[];
       };
 
       layout(std140, binding = 0) uniform Camera {
@@ -259,15 +268,15 @@ namespace zephyr {
       layout(binding = 0) uniform atomic_uint u_draw_count_out;
 
       void main() {
-        const uint draw_index = gl_GlobalInvocationID.x;
+        const uint render_bundle_item_id = gl_GlobalInvocationID.x;
 
-        if(draw_index == 0u) {
+        if(render_bundle_item_id == 0u) {
           atomicCounterExchange(u_draw_count_out, 0u);
         }
         barrier();
 
-        if(draw_index < u_draw_count) {
-          RenderBundleItem render_bundle_item = rb_render_bundle_items[draw_index];
+        if(render_bundle_item_id < u_draw_count) {
+          RenderBundleItem render_bundle_item = rb_render_bundle_items[render_bundle_item_id];
           RenderGeometryRenderData render_data = rb_render_geometry_render_data[render_bundle_item.geometry_id];
 
           bool inside_frustum = true;
@@ -306,8 +315,7 @@ namespace zephyr {
 
           if(inside_frustum) {
             uint draw_id = atomicCounterIncrement(u_draw_count_out);
-            b_draw_list_transform[draw_id] = render_bundle_item.local_to_world;
-            b_command_buffer[draw_id] = render_data.draw_command;
+            b_command_buffer[draw_id] = DrawCommandWithRenderBundleItemID(render_data.draw_command, render_bundle_item_id);
           }
         }
       }

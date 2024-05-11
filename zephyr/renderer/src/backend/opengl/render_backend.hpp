@@ -52,7 +52,6 @@ namespace zephyr {
       GLuint m_gl_draw_list_builder_program{};
       GLuint m_gl_render_bundle_ssbo{};
       GLuint m_gl_draw_list_command_ssbo{};
-      GLuint m_gl_draw_list_transform_ssbo{};
       GLuint m_gl_camera_ubo{};
       GLuint m_gl_draw_count_ubo{};
       GLuint m_gl_draw_count_out_ac{};
