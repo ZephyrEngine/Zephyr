@@ -279,12 +279,13 @@ namespace zephyr {
           RenderBundleItem render_bundle_item = rb_render_bundle_items[render_bundle_item_id];
           RenderGeometryRenderData render_data = rb_render_geometry_render_data[render_bundle_item.geometry_id];
 
-          bool inside_frustum = true;
+          mat4 mv = u_view * render_bundle_item.local_to_world;
+
+          // Model-Space Axis-Aligned Bounding Box
           vec4 model_aabb_min = render_data.aabb_min;
           vec4 model_aabb_max = render_data.aabb_max;
 
-          mat4 mv = u_view * render_bundle_item.local_to_world;
-
+          // Camera-Space Axis-Aligned Bounding Box
           vec4 mv_min_x = mv[0] * model_aabb_min.x;
           vec4 mv_min_y = mv[1] * model_aabb_min.y;
           vec4 mv_min_z = mv[2] * model_aabb_min.z;
@@ -293,6 +294,8 @@ namespace zephyr {
           vec4 mv_max_z = mv[2] * model_aabb_max.z;
           vec4 view_aabb_min = min(mv_min_x, mv_max_x) + min(mv_min_y, mv_max_y) + min(mv_min_z, mv_max_z) + mv[3];
           vec4 view_aabb_max = max(mv_min_x, mv_max_x) + max(mv_min_y, mv_max_y) + max(mv_min_z, mv_max_z) + mv[3];
+
+          bool inside_frustum = true;
 
           for(int i = 0; i < 6; i++) {
             vec4 frustum_plane = u_frustum_planes[i];
