@@ -23,7 +23,7 @@ namespace zephyr {
     glNamedBufferStorage(m_gl_render_bundle_ssbo, sizeof(RenderBundleItem) * k_max_draws_per_draw_call, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     glCreateBuffers(1u, &m_gl_draw_list_command_ssbo);
-    glNamedBufferStorage(m_gl_draw_list_command_ssbo, (sizeof(OpenGLDrawElementsIndirectCommand) + sizeof(u32)) * k_max_draws_per_draw_call, nullptr, 0);
+    glNamedBufferStorage(m_gl_draw_list_command_ssbo, 6u * sizeof(u32) * k_max_draws_per_draw_call, nullptr, 0);
 
     glCreateBuffers(1u, &m_gl_camera_ubo);
     glNamedBufferStorage(m_gl_camera_ubo, sizeof(RenderCamera), nullptr, GL_DYNAMIC_STORAGE_BIT);
@@ -74,16 +74,20 @@ namespace zephyr {
   }
 
   void OpenGLRenderBackend::Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) {
-    std::unordered_map<decltype(RenderGeometryLayout::key), std::vector<RenderBundleItem>> render_bundles;
+    // TODO(fleroviux): implement render bundle key more cleanly
+    using RenderBundleKey = u64;
+
+    std::unordered_map<RenderBundleKey, std::vector<RenderBundleItem>> render_bundles;
 
     for(const RenderObject& render_object : render_objects) {
       // TODO(fleroviux): get rid of unsafe size_t to u32 conversion.
       // TODO(fleroviux): deal with non-indexed geometries
       auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
-      if(render_geometry->GetNumberOfIndices() == 0u) {
-        continue;
+      RenderBundleKey render_bundle_key = render_geometry->GetLayout().key;
+      if(render_geometry->GetNumberOfIndices() > 0u) {
+        render_bundle_key |= 0x8000'0000'0000'0000ull;
       }
-      render_bundles[render_geometry->GetLayout().key].emplace_back(render_object.local_to_world, (u32) render_geometry->GetGeometryID());
+      render_bundles[render_bundle_key].emplace_back(render_object.local_to_world, (u32) render_geometry->GetGeometryID());
     }
 
     // TODO(fleroviux): apply Z-sorting on the render bundles here
@@ -101,6 +105,7 @@ namespace zephyr {
 
     for(const auto& [key, render_bundle] : render_bundles) {
       const size_t render_bundle_size = render_bundle.size();
+      const bool uses_ibo = key & 0x8000'0000'0000'0000ull;
 
       for(size_t base_draw = 0u; base_draw < render_bundle_size; base_draw += k_max_draws_per_draw_call) {
         const u32 number_of_draws = std::min<size_t>(render_bundle_size - base_draw, k_max_draws_per_draw_call);
@@ -136,7 +141,11 @@ namespace zephyr {
           glBindBuffer(GL_PARAMETER_BUFFER, m_gl_draw_count_out_ac);
 
           glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-          glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, sizeof(OpenGLDrawElementsIndirectCommand) + sizeof(u32));
+          if(uses_ibo) {
+            glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, 6u * sizeof(u32));
+          } else {
+            glMultiDrawArraysIndirectCount(GL_TRIANGLES, nullptr, 0u, (GLsizei)number_of_draws, 6u * sizeof(u32));
+          }
 
           glBindVertexArray(0u);
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);

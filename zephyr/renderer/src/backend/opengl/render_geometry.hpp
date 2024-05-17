@@ -14,28 +14,10 @@
 
 namespace zephyr {
 
-  struct OpenGLDrawElementsIndirectCommand {
-    GLuint count;
-    GLuint instance_count;
-    GLuint first_index;
-    GLint  base_vertex;
-    GLuint base_instance;
-  };
-
-  struct OpenGLDrawArraysIndirectCommand {
-    GLuint count;
-    GLuint instance_count;
-    GLuint first;
-    GLuint base_instance;
-  };
-
   struct OpenGLRenderGeometryRenderData {
     Vector4 aabb_min;
     Vector4 aabb_max;
-    union {
-      OpenGLDrawElementsIndirectCommand draw_elements;
-      OpenGLDrawArraysIndirectCommand draw_arrays;
-    } cmd;
+    u32 mdi_command[5]; // Stores either a DrawElementsIndirectCommand or DrawArraysIndirectCommand
     u32 padding[3]; // Padding for std430 layout
   };
 
@@ -51,20 +33,21 @@ namespace zephyr {
         if(number_of_indices > 0u) {
           m_ibo = std::move(ibo);
           m_ibo_allocation = m_ibo->AllocateRange(number_of_indices);
-          m_geometry_render_data.cmd.draw_elements = {
-            .count = (GLuint)number_of_indices,
-            .instance_count = 1u,
-            .first_index = (GLuint)m_ibo_allocation.base_element,
-            .base_vertex = (GLint)m_vbo_allocation.base_element,
-            .base_instance = 0u,
-          };
+
+          // See DrawElementsIndirectCommand structure definition:
+          // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glMultiDrawElementsIndirect.xhtml
+          m_geometry_render_data.mdi_command[0] = (u32)number_of_indices;
+          m_geometry_render_data.mdi_command[1] = 1u; // Number of instances
+          m_geometry_render_data.mdi_command[2] = (u32)m_ibo_allocation.base_element;
+          m_geometry_render_data.mdi_command[3] = (u32)m_vbo_allocation.base_element;
+          m_geometry_render_data.mdi_command[4] = 0u; // Base instance
         } else {
-          m_geometry_render_data.cmd.draw_arrays = {
-            .count = (GLuint)number_of_vertices,
-            .instance_count = 1u,
-            .first = (GLuint)m_vbo_allocation.base_element,
-            .base_instance = 0u,
-          };
+          // See DrawArraysIndirectCommand structure definition:
+          // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glMultiDrawArraysIndirect.xhtml
+          m_geometry_render_data.mdi_command[0] = (u32)number_of_vertices;
+          m_geometry_render_data.mdi_command[1] = 1u; // Number of instances
+          m_geometry_render_data.mdi_command[2] = (u32)m_vbo_allocation.base_element;
+          m_geometry_render_data.mdi_command[3] = 0u; // Base instance
         }
 
         m_geometry_render_data.aabb_min = {-std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity(), 0};
