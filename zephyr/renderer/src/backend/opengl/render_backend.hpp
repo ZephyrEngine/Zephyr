@@ -2,6 +2,7 @@
 #pragma once
 
 #include <zephyr/renderer/backend/render_backend.hpp>
+#include <zephyr/hash.hpp>
 #include <zephyr/panic.hpp>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -15,6 +16,15 @@ namespace zephyr {
 
   class OpenGLRenderBackend final : public RenderBackend {
     public:
+      struct RenderBundleKey {
+        bool uses_ibo;
+        u32 geometry_layout;
+
+        [[nodiscard]] bool operator==(const RenderBundleKey& other) const {
+          return uses_ibo == other.uses_ibo && geometry_layout == other.geometry_layout;
+        }
+      };
+
       explicit OpenGLRenderBackend(SDL_Window* sdl2_window);
 
       void InitializeContext() override;
@@ -32,10 +42,11 @@ namespace zephyr {
 
     private:
       struct RenderBundleItem {
-        RenderBundleItem(const Matrix4& local_to_world, u32 draw_command_id) : local_to_world{local_to_world}, draw_command_id{draw_command_id} {}
+        RenderBundleItem(const Matrix4& local_to_world, u32 draw_command_id, u32 material_id) : local_to_world{local_to_world}, draw_command_id{draw_command_id}, material_id{material_id} {}
         Matrix4 local_to_world;
         u32 draw_command_id;
-        u32 padding[3]; // Padding for std430 buffer layout
+        u32 material_id;
+        u32 padding[2]; // Padding for std430 buffer layout
       };
 
       static constexpr u32 k_max_draws_per_draw_call = 16384;
@@ -56,6 +67,8 @@ namespace zephyr {
       GLuint m_gl_draw_count_ubo{};
       GLuint m_gl_draw_count_out_ac{};
 
+      GLuint m_gl_material_data_buffer{};
+
       std::unique_ptr<OpenGLRenderGeometryManager> m_render_geometry_manager{};
   };
 
@@ -64,3 +77,13 @@ namespace zephyr {
   }
 
 } // namespace zephyr
+
+template<>
+struct std::hash<zephyr::OpenGLRenderBackend::RenderBundleKey> {
+  [[nodiscard]] std::size_t operator()(const zephyr::OpenGLRenderBackend::RenderBundleKey& key) const noexcept {
+    size_t h = 0;
+    zephyr::hash_combine(h, key.uses_ibo);
+    zephyr::hash_combine(h, key.geometry_layout);
+    return h;
+  }
+};

@@ -87,7 +87,7 @@ namespace zephyr {
       void WriteIBO(std::span<const u8> data) {
         // TODO(fleroviux): this does not protect against writing into neighbouring allocations.
         if(!m_ibo) {
-          ZEPHYR_PANIC("Attempted to write IBO of non-indexed render geometry");
+          ZEPHYR_PANIC("Attempted to write IBO of non-uses_ibo render geometry");
         }
         m_ibo->Write(data, m_ibo_allocation.base_element);
       }

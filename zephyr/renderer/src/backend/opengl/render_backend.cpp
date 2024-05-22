@@ -34,6 +34,14 @@ namespace zephyr {
     glCreateBuffers(1u, &m_gl_draw_count_out_ac);
     glNamedBufferStorage(m_gl_draw_count_out_ac, sizeof(GLuint), nullptr, 0);
 
+    f32 material_data[] = {
+      1.0, 0.0, 0.0, 1.0,
+      0.0, 1.0, 0.0, 1.0,
+      0.0, 0.0, 1.0, 1.0
+    };
+    glCreateBuffers(1u, &m_gl_material_data_buffer);
+    glNamedBufferStorage(m_gl_material_data_buffer, sizeof(material_data), material_data, 0);
+
     glEnable(GL_DEPTH_TEST);
 
     m_render_geometry_manager = std::make_unique<OpenGLRenderGeometryManager>();
@@ -42,6 +50,7 @@ namespace zephyr {
   void OpenGLRenderBackend::DestroyContext() {
     m_render_geometry_manager.reset();
 
+    glDeleteBuffers(1u, &m_gl_material_data_buffer);
     glDeleteBuffers(1u, &m_gl_draw_count_out_ac);
     glDeleteBuffers(1u, &m_gl_draw_count_ubo);
     glDeleteBuffers(1u, &m_gl_camera_ubo);
@@ -74,25 +83,16 @@ namespace zephyr {
   }
 
   void OpenGLRenderBackend::Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) {
-    // TODO(fleroviux): implement render bundle key more cleanly
-    using RenderBundleKey = u64;
-
     std::unordered_map<RenderBundleKey, std::vector<RenderBundleItem>> render_bundles;
 
     for(const RenderObject& render_object : render_objects) {
       // TODO(fleroviux): get rid of unsafe size_t to u32 conversion.
-      // TODO(fleroviux): deal with non-indexed geometries
       auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
-      RenderBundleKey render_bundle_key = render_geometry->GetLayout().key;
-      if(render_geometry->GetNumberOfIndices() > 0u) {
-        render_bundle_key |= 0x8000'0000'0000'0000ull;
-      }
-      render_bundles[render_bundle_key].emplace_back(render_object.local_to_world, (u32) render_geometry->GetGeometryID());
+      RenderBundleKey render_bundle_key{};
+      render_bundle_key.uses_ibo = render_geometry->GetNumberOfIndices();
+      render_bundle_key.geometry_layout = render_geometry->GetLayout().key;
+      render_bundles[render_bundle_key].emplace_back(render_object.local_to_world, (u32)render_geometry->GetGeometryID(), (u32)0u);
     }
-
-    // TODO(fleroviux): apply Z-sorting on the render bundles here
-
-    // ----------------------------------------------------------------
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -105,7 +105,6 @@ namespace zephyr {
 
     for(const auto& [key, render_bundle] : render_bundles) {
       const size_t render_bundle_size = render_bundle.size();
-      const bool uses_ibo = key & 0x8000'0000'0000'0000ull;
 
       for(size_t base_draw = 0u; base_draw < render_bundle_size; base_draw += k_max_draws_per_draw_call) {
         const u32 number_of_draws = std::min<size_t>(render_bundle_size - base_draw, k_max_draws_per_draw_call);
@@ -136,12 +135,13 @@ namespace zephyr {
         {
           glUseProgram(m_gl_draw_program);
 
-          glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key}));
+          glBindVertexArray(m_render_geometry_manager->GetVAOFromLayout(RenderGeometryLayout{key.geometry_layout}));
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, m_gl_draw_list_command_ssbo);
           glBindBuffer(GL_PARAMETER_BUFFER, m_gl_draw_count_out_ac);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, m_gl_material_data_buffer);
 
           glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-          if(uses_ibo) {
+          if(key.uses_ibo) {
             glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0u, (GLsizei)number_of_draws, 6u * sizeof(u32));
           } else {
             glMultiDrawArraysIndirectCount(GL_TRIANGLES, nullptr, 0u, (GLsizei)number_of_draws, 6u * sizeof(u32));
@@ -150,6 +150,7 @@ namespace zephyr {
           glBindVertexArray(0u);
           glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0u);
           glBindBuffer(GL_PARAMETER_BUFFER, 0u);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2u, 0u);
         }
       }
     }
@@ -170,6 +171,7 @@ namespace zephyr {
       struct RenderBundleItem {
         mat4 local_to_world;
         uint geometry_id;
+        uint material_id;
       };
 
       struct DrawCommandWithRenderBundleItemID {
@@ -195,12 +197,14 @@ namespace zephyr {
       layout(location = 2) in vec2 a_uv;
       layout(location = 3) in vec3 a_color;
 
+      flat out uint fv_material_id;
       out vec3 v_normal;
       out vec3 v_color;
 
       void main() {
         uint render_bundle_item_id = rb_command_buffer[gl_DrawID].render_bundle_item_id;
 
+        fv_material_id = rb_render_bundle_items[render_bundle_item_id].material_id;
         v_normal = a_normal;
         v_color = a_color;
         gl_Position = u_projection * u_view * rb_render_bundle_items[render_bundle_item_id].local_to_world * vec4(a_position, 1.0);
@@ -210,13 +214,19 @@ namespace zephyr {
     GLuint frag_shader = CreateShader(R"(
       #version 460 core
 
+      layout(std430, binding = 2) readonly buffer MaterialBuffer {
+        vec4 rb_material_color[];
+      };
+
       layout(location = 0) out vec4 f_frag_color;
 
+      flat in uint fv_material_id;
       in vec3 v_normal;
       in vec3 v_color;
 
       void main() {
-        f_frag_color = vec4(v_normal * 0.5 + 0.5, 1.0);
+        vec4 material_color = rb_material_color[fv_material_id];
+        f_frag_color = vec4(v_normal * 0.25 + 0.25 + material_color.rgb * 0.5, 1.0);
       }
     )", GL_FRAGMENT_SHADER);
 

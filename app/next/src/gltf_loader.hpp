@@ -378,11 +378,11 @@ namespace zephyr {
         if(node_json.contains("mesh")) {
           Mesh& mesh = m_meshes[node_json["mesh"].get<size_t>()];
           if(mesh.primitives.size() == 1u) {
-            node->CreateComponent<MeshComponent>(mesh.primitives[0].geometry);
+            node->CreateComponent<MeshComponent>(mesh.primitives[0].geometry, std::shared_ptr<Material>{});
           } else {
             for(size_t i = 0; i < mesh.primitives.size(); i++) {
               std::shared_ptr<SceneNode> primitive_node = node->CreateChild(fmt::format("{}#{}", name, i));
-              primitive_node->CreateComponent<MeshComponent>(mesh.primitives[i].geometry);
+              primitive_node->CreateComponent<MeshComponent>(mesh.primitives[i].geometry, std::shared_ptr<Material>{});
             }
           }
         }

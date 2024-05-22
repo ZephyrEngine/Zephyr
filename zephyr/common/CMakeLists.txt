@@ -1,7 +1,6 @@
 
 set(SOURCES
   src/panic.cpp
-  src/uid.cpp
 )
 
 set(HEADERS
@@ -11,6 +10,7 @@ set(HEADERS_PUBLIC
   include/zephyr/bit.hpp
   include/zephyr/event.hpp
   include/zephyr/float.hpp
+  include/zephyr/hash.hpp
   include/zephyr/integer.hpp
   include/zephyr/literal.hpp
   include/zephyr/meta.hpp
@@ -19,7 +19,6 @@ set(HEADERS_PUBLIC
   include/zephyr/panic.hpp
   include/zephyr/punning.hpp
   include/zephyr/result.hpp
-  include/zephyr/uid.hpp
   include/zephyr/vector_n.hpp
 )
 

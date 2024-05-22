@@ -7,7 +7,7 @@
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;
-static const bool benchmark_scene_size = true;
+static const bool benchmark_scene_size = false;
 
 namespace zephyr {
 
@@ -268,7 +268,7 @@ namespace zephyr {
       for(int y = -grid_size / 2; y < grid_size / 2; y++) {
         for(int z = -grid_size / 2; z < grid_size / 2; z++) {
           std::shared_ptr<SceneNode> cube = m_scene_root->CreateChild("Cube");
-          cube->CreateComponent<MeshComponent>(cube_geometry);
+          cube->CreateComponent<MeshComponent>(cube_geometry, std::shared_ptr<Material>{});
           cube->GetTransform().GetPosition() = {(f32)x, (f32)y, (f32)-z};
           cube->GetTransform().GetScale() = {0.1, 0.1, 0.1};
         }

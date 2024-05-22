@@ -28,6 +28,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/component/mesh.hpp
   include/zephyr/renderer/engine/geometry_cache.hpp
   include/zephyr/renderer/resource/geometry.hpp
+  include/zephyr/renderer/resource/material.hpp
   include/zephyr/renderer/resource/resource.hpp
   include/zephyr/renderer/vulkan/vulkan_instance.hpp
   include/zephyr/renderer/vulkan/vulkan_physical_device.hpp
