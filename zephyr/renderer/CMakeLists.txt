@@ -16,6 +16,8 @@ set(SOURCES
 set(HEADERS
   src/backend/opengl/render_geometry/render_geometry.hpp
   src/backend/opengl/render_geometry/render_geometry_manager.hpp
+  src/backend/opengl/shader/draw_call.glsl.hpp
+  src/backend/opengl/shader/draw_list_builder.glsl.hpp
   src/backend/opengl/dynamic_gpu_array.hpp
   src/backend/opengl/render_backend.hpp
   src/backend/vulkan/shader/triangle.frag.h

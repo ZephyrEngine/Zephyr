@@ -1,4 +1,6 @@
 
+#include "shader/draw_call.glsl.hpp"
+#include "shader/draw_list_builder.glsl.hpp"
 #include "render_backend.hpp"
 
 namespace zephyr {
@@ -165,70 +167,8 @@ namespace zephyr {
   }
 
   void OpenGLRenderBackend::CreateDrawShaderProgram() {
-    GLuint vert_shader = CreateShader(R"(
-      #version 460 core
-
-      struct RenderBundleItem {
-        mat4 local_to_world;
-        uint geometry_id;
-        uint material_id;
-      };
-
-      struct DrawCommandWithRenderBundleItemID {
-        uint command[5];
-        uint render_bundle_item_id;
-      };
-
-      layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
-        RenderBundleItem rb_render_bundle_items[];
-      };
-
-      layout(std430, binding = 1) readonly buffer CommandBuffer {
-        DrawCommandWithRenderBundleItemID rb_command_buffer[];
-      };
-
-      layout(std140, binding = 0) uniform Camera {
-        mat4 u_projection;
-        mat4 u_view;
-      };
-
-      layout(location = 0) in vec3 a_position;
-      layout(location = 1) in vec3 a_normal;
-      layout(location = 2) in vec2 a_uv;
-      layout(location = 3) in vec3 a_color;
-
-      flat out uint fv_material_id;
-      out vec3 v_normal;
-      out vec3 v_color;
-
-      void main() {
-        uint render_bundle_item_id = rb_command_buffer[gl_DrawID].render_bundle_item_id;
-
-        fv_material_id = rb_render_bundle_items[render_bundle_item_id].material_id;
-        v_normal = a_normal;
-        v_color = a_color;
-        gl_Position = u_projection * u_view * rb_render_bundle_items[render_bundle_item_id].local_to_world * vec4(a_position, 1.0);
-      }
-    )", GL_VERTEX_SHADER);
-
-    GLuint frag_shader = CreateShader(R"(
-      #version 460 core
-
-      layout(std430, binding = 2) readonly buffer MaterialBuffer {
-        vec4 rb_material_color[];
-      };
-
-      layout(location = 0) out vec4 f_frag_color;
-
-      flat in uint fv_material_id;
-      in vec3 v_normal;
-      in vec3 v_color;
-
-      void main() {
-        vec4 material_color = rb_material_color[fv_material_id];
-        f_frag_color = vec4(v_normal * 0.25 + 0.25 + material_color.rgb * 0.5, 1.0);
-      }
-    )", GL_FRAGMENT_SHADER);
+    GLuint vert_shader = CreateShader(k_draw_call_vert_glsl, GL_VERTEX_SHADER);
+    GLuint frag_shader = CreateShader(k_draw_call_frag_glsl, GL_FRAGMENT_SHADER);
 
     m_gl_draw_program = CreateProgram({{vert_shader, frag_shader}});
     glDeleteShader(vert_shader);
@@ -236,106 +176,7 @@ namespace zephyr {
   }
 
   void OpenGLRenderBackend::CreateDrawListBuilderShaderProgram() {
-    GLuint compute_shader = CreateShader(R"(
-      #version 460 core
-
-      layout(local_size_x = 32) in;
-
-      struct DrawCommand {
-        uint data[5];
-      };
-
-      struct DrawCommandWithRenderBundleItemID {
-        DrawCommand command;
-        uint render_bundle_item_id;
-      };
-
-      struct RenderGeometryRenderData {
-        // TODO(fleroviux): evaluate whether the packing can be tighter or not.
-        vec4 aabb_min;
-        vec4 aabb_max;
-        DrawCommand draw_command;
-      };
-
-      struct RenderBundleItem {
-        mat4 local_to_world;
-        uint geometry_id;
-      };
-
-      layout(std430, binding = 0) readonly buffer RenderBundleBuffer {
-        RenderBundleItem rb_render_bundle_items[];
-      };
-
-      layout(std430, binding = 1) buffer CommandBuffer {
-        DrawCommandWithRenderBundleItemID b_command_buffer[];
-      };
-
-      layout(std430, binding = 2) readonly buffer GeometryBuffer {
-        RenderGeometryRenderData rb_render_geometry_render_data[];
-      };
-
-      layout(std140, binding = 0) uniform Camera {
-        mat4 u_projection;
-        mat4 u_view;
-        vec4 u_frustum_planes[6];
-      };
-
-      layout(std140, binding = 1) uniform DrawCount {
-        uint u_draw_count;
-      };
-
-      layout(binding = 0) uniform atomic_uint u_draw_count_out;
-
-      void main() {
-        const uint render_bundle_item_id = gl_GlobalInvocationID.x;
-
-        if(render_bundle_item_id == 0u) {
-          atomicCounterExchange(u_draw_count_out, 0u);
-        }
-        barrier();
-
-        if(render_bundle_item_id < u_draw_count) {
-          RenderBundleItem render_bundle_item = rb_render_bundle_items[render_bundle_item_id];
-          RenderGeometryRenderData render_data = rb_render_geometry_render_data[render_bundle_item.geometry_id];
-
-          mat4 mv = u_view * render_bundle_item.local_to_world;
-
-          // Model-Space Axis-Aligned Bounding Box
-          vec4 model_aabb_min = render_data.aabb_min;
-          vec4 model_aabb_max = render_data.aabb_max;
-
-          // Camera-Space Axis-Aligned Bounding Box
-          vec4 mv_min_x = mv[0] * model_aabb_min.x;
-          vec4 mv_min_y = mv[1] * model_aabb_min.y;
-          vec4 mv_min_z = mv[2] * model_aabb_min.z;
-          vec4 mv_max_x = mv[0] * model_aabb_max.x;
-          vec4 mv_max_y = mv[1] * model_aabb_max.y;
-          vec4 mv_max_z = mv[2] * model_aabb_max.z;
-          vec4 view_aabb_min = min(mv_min_x, mv_max_x) + min(mv_min_y, mv_max_y) + min(mv_min_z, mv_max_z) + mv[3];
-          vec4 view_aabb_max = max(mv_min_x, mv_max_x) + max(mv_min_y, mv_max_y) + max(mv_min_z, mv_max_z) + mv[3];
-
-          bool inside_frustum = true;
-
-          for(int i = 0; i < 6; i++) {
-            vec4 frustum_plane = u_frustum_planes[i];
-
-            vec4 aabb_corner = vec4(
-              frustum_plane.x > 0 ? view_aabb_max.x : view_aabb_min.x,
-              frustum_plane.y > 0 ? view_aabb_max.y : view_aabb_min.y,
-              frustum_plane.z > 0 ? view_aabb_max.z : view_aabb_min.z,
-              -1.0
-            );
-
-            inside_frustum = inside_frustum && dot(aabb_corner, frustum_plane) >= 0.0;
-          }
-
-          if(inside_frustum) {
-            uint draw_id = atomicCounterIncrement(u_draw_count_out);
-            b_command_buffer[draw_id] = DrawCommandWithRenderBundleItemID(render_data.draw_command, render_bundle_item_id);
-          }
-        }
-      }
-    )", GL_COMPUTE_SHADER);
+    GLuint compute_shader = CreateShader(k_draw_list_builder_comp_glsl, GL_COMPUTE_SHADER);
 
     m_gl_draw_list_builder_program = CreateProgram({{compute_shader}});
     glDeleteShader(compute_shader);
