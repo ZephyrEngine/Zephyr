@@ -3,9 +3,10 @@
 # TODO: remove dependency on SDL2 if possible
 
 set(SOURCES
+  src/backend/opengl/render_geometry/render_geometry.cpp
+  src/backend/opengl/render_geometry/render_geometry_manager.cpp
   src/backend/opengl/dynamic_gpu_array.cpp
   src/backend/opengl/render_backend.cpp
-  src/backend/opengl/render_geometry.cpp
   src/backend/vulkan/render_backend.cpp
   src/engine/geometry_cache.cpp
   src/vulkan/vulkan_instance.cpp
@@ -13,9 +14,10 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/backend/opengl/render_geometry/render_geometry.hpp
+  src/backend/opengl/render_geometry/render_geometry_manager.hpp
   src/backend/opengl/dynamic_gpu_array.hpp
   src/backend/opengl/render_backend.hpp
-  src/backend/opengl/render_geometry.hpp
   src/backend/vulkan/shader/triangle.frag.h
   src/backend/vulkan/shader/triangle.vert.h
 )

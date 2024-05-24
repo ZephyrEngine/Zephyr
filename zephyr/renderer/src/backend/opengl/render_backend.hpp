@@ -10,7 +10,7 @@
 #include <SDL_opengl.h>
 #include <unordered_map>
 
-#include "render_geometry.hpp"
+#include "render_geometry/render_geometry_manager.hpp"
 
 namespace zephyr {
 
