@@ -25,7 +25,7 @@ namespace zephyr {
 
       ~SceneNode() {
         for(const auto& child : m_children) {
-          child->m_parent_weak.reset();
+          child->m_parent = nullptr;
         }
       }
 
@@ -34,12 +34,12 @@ namespace zephyr {
         return std::make_shared<SceneNode>(Private{}, std::forward<Args>(args)...);
       }
 
-      [[nodiscard]] SceneNode* GetParent() const {
-        return m_parent;
+      [[nodiscard]] std::shared_ptr<SceneNode> GetSharedPtr() {
+        return shared_from_this();
       }
 
-      [[nodiscard]] std::shared_ptr<SceneNode> GetParentWithOwnership() const {
-        return m_parent_weak.lock();
+      [[nodiscard]] SceneNode* GetParent() const {
+        return m_parent;
       }
 
       [[nodiscard]] std::span<const std::shared_ptr<SceneNode>> GetChildren() const {
@@ -49,7 +49,6 @@ namespace zephyr {
       void Add(std::shared_ptr<SceneNode> node) {
         node->RemoveFromParent();
         node->m_parent = this;
-        node->m_parent_weak = shared_from_this();
         m_children.push_back(std::move(node));
       }
 
@@ -57,7 +56,6 @@ namespace zephyr {
       std::shared_ptr<SceneNode> CreateChild(Args&&... args) {
         std::shared_ptr<SceneNode> node = New(std::forward<Args>(args)...);
         node->m_parent = this;
-        node->m_parent_weak = shared_from_this();
         m_children.push_back(node);
         return std::move(node);
       }
@@ -73,7 +71,6 @@ namespace zephyr {
 
         std::shared_ptr<SceneNode> node_ptr = std::move(*it);
         node_ptr->m_parent = nullptr;
-        node_ptr->m_parent_weak.reset();
         m_children.erase(it);
         return std::move(node_ptr);
       }
@@ -160,7 +157,6 @@ namespace zephyr {
 
     private:
       SceneNode* m_parent{};
-      std::weak_ptr<SceneNode> m_parent_weak{};
       std::vector<std::shared_ptr<SceneNode>> m_children{};
       std::string m_name{};
       bool m_is_visible{true};
