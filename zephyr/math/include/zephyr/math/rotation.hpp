@@ -142,6 +142,7 @@ namespace zephyr {
       /// Signal internally that the quaternion has changed
       void MarkQuaternionAsChanged() {
         m_needs_matrix_refresh = true;
+        m_needs_euler_refresh = true;
       }
 
       /// Update the 4x4 matrix from the quaternion.
