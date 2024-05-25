@@ -23,7 +23,7 @@ namespace zephyr {
       explicit SceneNode(Private) {};
       SceneNode(Private, std::string name) : m_name{std::move(name)} {}
 
-      ~SceneNode() {
+     ~SceneNode() {
         for(const auto& child : m_children) {
           child->m_parent = nullptr;
         }

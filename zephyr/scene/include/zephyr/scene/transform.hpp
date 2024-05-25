@@ -11,7 +11,10 @@ namespace zephyr {
 
   class Transform3D {
     public:
-      explicit Transform3D(SceneNode* node) : m_node{node} {}
+      explicit Transform3D(SceneNode* node) : m_node{node} {
+        UpdateLocal();
+        UpdateWorld();
+      }
 
       [[nodiscard]] const Vector3& GetPosition() const {
         return m_position;
