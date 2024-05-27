@@ -1,6 +1,7 @@
 
 #include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/scene/scene_node.hpp>
+#include <algorithm>
 
 namespace zephyr {
 
@@ -22,12 +23,21 @@ namespace zephyr {
   }
 
   void SceneGraph::SignalNodeRemoved(SceneNode* node) {
+    node->Traverse([this](SceneNode* child_node) {
+      const auto match = std::ranges::find(m_nodes_with_dirty_transform, child_node);
+      if(match != m_nodes_with_dirty_transform.end()) {
+        m_nodes_with_dirty_transform.erase(match);
+      }
+      return true;
+    });
   }
 
   void SceneGraph::SignalNodeTransformChanged(SceneNode* node) {
-    // TODO(fleroviux): avoid updating nodes more than once.
-    // If a node is marked for update once and then later again, ideally skip the first update.
     node->Traverse([this](SceneNode* child_node) {
+      const auto match = std::ranges::find(m_nodes_with_dirty_transform, child_node);
+      if(match != m_nodes_with_dirty_transform.end()) {
+        m_nodes_with_dirty_transform.erase(match);
+      }
       m_nodes_with_dirty_transform.push_back(child_node);
       return true;
     });
