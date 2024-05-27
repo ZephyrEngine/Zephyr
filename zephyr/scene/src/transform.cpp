@@ -1,5 +1,5 @@
 
-#include <zephyr/scene/node.hpp>
+#include <zephyr/scene/scene_node.hpp>
 #include <zephyr/scene/transform.hpp>
 
 namespace zephyr {

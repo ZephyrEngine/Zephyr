@@ -4,8 +4,8 @@
 #include <zephyr/logger/logger.hpp>
 #include <zephyr/renderer/vulkan/vulkan_instance.hpp>
 #include <zephyr/renderer/render_engine.hpp>
-#include <zephyr/scene/node.hpp>
 #include <zephyr/scene/scene_graph.hpp>
+#include <zephyr/scene/scene_node.hpp>
 #include <zephyr/float.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>

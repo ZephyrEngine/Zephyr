@@ -5,7 +5,7 @@
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/engine/geometry_cache.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
-#include <zephyr/scene/node.hpp>
+#include <zephyr/scene/scene_node.hpp>
 #include <atomic>
 #include <semaphore>
 #include <thread>

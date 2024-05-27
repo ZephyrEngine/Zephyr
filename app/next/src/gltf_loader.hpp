@@ -3,7 +3,7 @@
 
 #include <zephyr/renderer/component/mesh.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
-#include <zephyr/scene/node.hpp>
+#include <zephyr/scene/scene_node.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
 #include <nlohmann/json.hpp>
