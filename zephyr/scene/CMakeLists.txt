@@ -1,5 +1,6 @@
 
 set(SOURCES
+  src/scene_graph.cpp
   src/transform.cpp
 )
 
@@ -7,6 +8,8 @@ set(HEADERS
 )
 
 set(HEADERS_PUBLIC
+  include/zephyr/scene/component.hpp
+  include/zephyr/scene/scene_graph.hpp
   include/zephyr/scene/node.hpp
   include/zephyr/scene/transform.hpp
 )

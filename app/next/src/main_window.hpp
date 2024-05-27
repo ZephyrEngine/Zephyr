@@ -5,6 +5,7 @@
 #include <zephyr/renderer/vulkan/vulkan_instance.hpp>
 #include <zephyr/renderer/render_engine.hpp>
 #include <zephyr/scene/node.hpp>
+#include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/float.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
@@ -41,7 +42,7 @@ namespace zephyr {
       void CleanupOpenGL();
 
       std::unique_ptr<RenderEngine> m_render_engine{};
-      std::shared_ptr<SceneNode> m_scene_root{};
+      std::shared_ptr<SceneGraph> m_scene_graph{};
       std::shared_ptr<SceneNode> m_camera_node{};
       std::shared_ptr<SceneNode> m_behemoth_scene{};
 

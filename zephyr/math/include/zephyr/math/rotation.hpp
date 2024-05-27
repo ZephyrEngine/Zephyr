@@ -4,6 +4,7 @@
 #include <zephyr/math/matrix4.hpp>
 #include <zephyr/math/quaternion.hpp>
 #include <zephyr/math/vector.hpp>
+#include <zephyr/event.hpp>
 #include <zephyr/float.hpp>
 
 namespace zephyr {
@@ -37,6 +38,11 @@ namespace zephyr {
        */
       explicit Rotation(const Quaternion& quaternion) {
         SetFromQuaternion(quaternion);
+      }
+
+      /// @returns a reference to an event that is emitted whenever the rotation changes.
+      [[nodiscard]] VoidEvent& OnChange() const {
+        return m_event_on_change;
       }
 
       /// @returns the rotation in quaternion form
@@ -79,6 +85,7 @@ namespace zephyr {
         // The 4x4 matrix is likely to be read and copying it now is faster than reconstructing it later.
         m_matrix = matrix;
         m_needs_euler_refresh = true;
+        m_event_on_change.Emit();
       }
 
       /**
@@ -138,6 +145,7 @@ namespace zephyr {
       void MarkQuaternionAsChanged() {
         m_needs_matrix_refresh = true;
         m_needs_euler_refresh = true;
+        m_event_on_change.Emit();
       }
 
       /// Update the 4x4 matrix from the quaternion.
@@ -181,6 +189,7 @@ namespace zephyr {
       mutable Vector3 m_euler{}; ///< a vector of euler angles which is updated from the quaternion on demand.
       mutable bool m_needs_matrix_refresh{true}; ///< true when the 4x4 matrix (#{@link m_matrix}) is outdated and false otherwise.
       mutable bool m_needs_euler_refresh{true}; ///< true whe euler angles (#{@link m_euler}) are outdated and false otherwise.
+      mutable VoidEvent m_event_on_change{}; ///< An event that is emitted when the rotation has changed.
   };
 
 } // namespace zephyr

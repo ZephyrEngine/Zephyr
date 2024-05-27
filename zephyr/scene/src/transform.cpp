@@ -22,4 +22,11 @@ namespace zephyr {
     }
   }
 
+  void Transform3D::SignalNodeTransformChanged() {
+    SceneGraph* scene_graph = m_node->m_scene_graph;
+    if(scene_graph) {
+      scene_graph->SignalNodeTransformChanged(m_node);
+    }
+  }
+
 } // namespace zephyr

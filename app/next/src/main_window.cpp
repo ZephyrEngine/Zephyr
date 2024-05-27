@@ -58,7 +58,7 @@ namespace zephyr {
           switch(key_event->keysym.sym) {
             case SDLK_z: {
               if(m_behemoth_scene) {
-                m_scene_root->Remove(m_behemoth_scene.get());
+                m_scene_graph->GetRoot()->Remove(m_behemoth_scene.get());
                 m_behemoth_scene.reset();
               }
               break;
@@ -95,13 +95,8 @@ namespace zephyr {
   }
 
   void MainWindow::RenderFrame() {
-    m_scene_root->Traverse([&](SceneNode* node) {
-      node->GetTransform().UpdateLocal();
-      node->GetTransform().UpdateWorld();
-      return true;
-    });
-
-    m_render_engine->RenderScene(m_scene_root.get());
+    m_scene_graph->UpdateTransforms();
+    m_render_engine->RenderScene(m_scene_graph->GetRoot());
 
     m_frame++;
 
@@ -168,9 +163,9 @@ namespace zephyr {
   }
 
   void MainWindow::CreateScene() {
-    m_scene_root = SceneNode::New();
+    m_scene_graph = std::make_shared<SceneGraph>();
 
-    m_camera_node = m_scene_root->CreateChild("RenderCamera");
+    m_camera_node = m_scene_graph->GetRoot()->CreateChild("RenderCamera");
     m_camera_node->CreateComponent<PerspectiveCameraComponent>(45.0f, 16.f / 9.f, 0.01f, 100.f);
     m_camera_node->GetTransform().SetPosition({0.f, 0.f, 5.f});
 
@@ -178,23 +173,23 @@ namespace zephyr {
     std::shared_ptr<SceneNode> gltf_scene_1 = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");
     gltf_scene_1->GetTransform().SetPosition({1.0f, 0.0f, -5.0f});
     gltf_scene_1->GetTransform().GetRotation().SetFromEuler(1.5f, 0.0f, 0.0f);
-    m_scene_root->Add(std::move(gltf_scene_1));
+    m_scene_graph->GetRoot()->Add(std::move(gltf_scene_1));
 
-    m_scene_root->Add(gltf_loader.Parse("models/triangleWithoutIndices/TriangleWithoutIndices.gltf"));
-    //m_scene_root->Add(gltf_loader.Parse("models/triangle/Triangle.gltf"));
+    m_scene_graph->GetRoot()->Add(gltf_loader.Parse("models/triangleWithoutIndices/TriangleWithoutIndices.gltf"));
+    //m_scene_graph->GetRoot()->Add(gltf_loader.Parse("models/triangle/Triangle.gltf"));
 
     m_behemoth_scene = gltf_loader.Parse("models/Behemoth/scene.gltf");
     m_behemoth_scene->GetTransform().SetPosition({-1.0f, 0.0f, -5.0f});
     m_behemoth_scene->GetTransform().GetRotation().SetFromEuler(-M_PI * 0.5, M_PI, 0.0f);
     m_behemoth_scene->GetTransform().SetScale({0.5f, 0.5f, 0.5f});
-    m_scene_root->Add(m_behemoth_scene);
+    m_scene_graph->GetRoot()->Add(m_behemoth_scene);
   }
 
   void MainWindow::CreateBenchmarkScene() {
-    m_scene_root = SceneNode::New();
+    m_scene_graph = std::make_shared<SceneGraph>();
 
     // TODO(fleroviux): engine crashes when there is no camera in the scene! VERY BAD!!!
-    m_camera_node = m_scene_root->CreateChild("RenderCamera");
+    m_camera_node = m_scene_graph->GetRoot()->CreateChild("RenderCamera");
     m_camera_node->CreateComponent<PerspectiveCameraComponent>(45.0f, 16.f / 9.f, 0.01f, 100.f);
     m_camera_node->GetTransform().SetPosition({0.f, 0.f, 5.f});
 
@@ -269,7 +264,7 @@ namespace zephyr {
     for(int x = -grid_size / 2; x < grid_size / 2; x++) {
       for(int y = -grid_size / 2; y < grid_size / 2; y++) {
         for(int z = -grid_size / 2; z < grid_size / 2; z++) {
-          std::shared_ptr<SceneNode> cube = m_scene_root->CreateChild("Cube");
+          std::shared_ptr<SceneNode> cube = m_scene_graph->GetRoot()->CreateChild("Cube");
           cube->CreateComponent<MeshComponent>(cube_geometry, std::shared_ptr<Material>{});
           cube->GetTransform().SetPosition({(f32)x, (f32)y, (f32)-z});
           cube->GetTransform().SetScale({0.1, 0.1, 0.1});

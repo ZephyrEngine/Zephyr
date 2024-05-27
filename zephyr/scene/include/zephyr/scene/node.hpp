@@ -2,6 +2,7 @@
 #pragma once
 
 #include <zephyr/scene/component.hpp>
+#include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/scene/transform.hpp>
 #include <zephyr/non_copyable.hpp>
 #include <zephyr/non_moveable.hpp>
@@ -21,9 +22,11 @@ namespace zephyr {
 
     public:
       explicit SceneNode(Private) {};
-      SceneNode(Private, std::string name) : m_name{std::move(name)} {}
+      SceneNode(Private, std::string name, SceneGraph* scene_graph = nullptr) : m_name{std::move(name)}, m_scene_graph{scene_graph} {}
 
      ~SceneNode() {
+        // TODO(fleroviux): debate if we should still signal to the scene graph that the children nodes have been unmounted.
+        // As far as I can tell at this point the node would only be bound to a scene graph if the entire scene graph is being destructed.
         for(const auto& child : m_children) {
           child->m_parent = nullptr;
         }
@@ -47,16 +50,25 @@ namespace zephyr {
       }
 
       void Add(std::shared_ptr<SceneNode> node) {
+        SceneNode* node_raw = node.get();
         node->RemoveFromParent();
         node->m_parent = this;
         m_children.push_back(std::move(node));
+
+        // If this node belongs to a scene graph, register the new child tree to that scene graph.
+        if(m_scene_graph) {
+          node_raw->Traverse([this](SceneNode* child_node) {
+            child_node->m_scene_graph = m_scene_graph;
+            return true;
+          });
+          m_scene_graph->SignalNodeMounted(node_raw);
+        }
       }
 
       template<typename... Args>
       std::shared_ptr<SceneNode> CreateChild(Args&&... args) {
         std::shared_ptr<SceneNode> node = New(std::forward<Args>(args)...);
-        node->m_parent = this;
-        m_children.push_back(node);
+        Add(node);
         return std::move(node);
       }
 
@@ -72,6 +84,16 @@ namespace zephyr {
         std::shared_ptr<SceneNode> node_ptr = std::move(*it);
         node_ptr->m_parent = nullptr;
         m_children.erase(it);
+
+        // If this node belongs to a scene graph, unregister the removed child tree from that scene graph.
+        if(m_scene_graph) {
+          node_ptr->Traverse([this](SceneNode* child_node) {
+            child_node->m_scene_graph = nullptr;
+            return true;
+          });
+          m_scene_graph->SignalNodeRemoved(node_ptr.get());
+        }
+
         return std::move(node_ptr);
       }
 
@@ -156,6 +178,9 @@ namespace zephyr {
       }
 
     private:
+      friend Transform3D;
+      
+      SceneGraph* m_scene_graph{};
       SceneNode* m_parent{};
       std::vector<std::shared_ptr<SceneNode>> m_children{};
       std::string m_name{};

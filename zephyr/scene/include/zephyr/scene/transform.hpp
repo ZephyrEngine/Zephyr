@@ -14,6 +14,7 @@ namespace zephyr {
       explicit Transform3D(SceneNode* node) : m_node{node} {
         UpdateLocal();
         UpdateWorld();
+        m_rotation.OnChange().Subscribe([this]() { SignalNodeTransformChanged(); });
       }
 
       [[nodiscard]] const Vector3& GetPosition() const {
@@ -22,6 +23,7 @@ namespace zephyr {
 
       void SetPosition(const Vector3& position) {
         m_position = position;
+        SignalNodeTransformChanged();
       }
 
       [[nodiscard]] const Vector3& GetScale() const {
@@ -30,6 +32,7 @@ namespace zephyr {
 
       void SetScale(const Vector3& scale) {
         m_scale = scale;
+        SignalNodeTransformChanged();
       }
 
       [[nodiscard]] const Rotation& GetRotation() const {
@@ -52,12 +55,14 @@ namespace zephyr {
       void UpdateWorld();
 
     private:
+      void SignalNodeTransformChanged();
+
       SceneNode* m_node;
-      Vector3 m_position;
+      Vector3 m_position{};
       Vector3 m_scale{1.0f, 1.0f, 1.0f};
-      Rotation m_rotation;
-      Matrix4 m_local_matrix;
-      Matrix4 m_world_matrix;
+      Rotation m_rotation{};
+      Matrix4 m_local_matrix{};
+      Matrix4 m_world_matrix{};
   };
 
 } // namespace zephyr
