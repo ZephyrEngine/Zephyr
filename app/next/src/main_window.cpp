@@ -7,7 +7,7 @@
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;
-static const bool benchmark_scene_size = false;
+static const bool benchmark_scene_size = true;
 
 namespace zephyr {
 
@@ -75,18 +75,20 @@ namespace zephyr {
 
       const u8* key_state = SDL_GetKeyboardState(nullptr);
 
-      Vector3&  camera_position = m_camera_node->GetTransform().GetPosition();
+      Transform3D& camera_transform = m_camera_node->GetTransform();
+      Vector3 camera_position = camera_transform.GetPosition();
       const f32 delta_p = 0.075f;
       const f32 delta_r = 0.01f;
-      if(key_state[SDL_SCANCODE_W]) camera_position -= m_camera_node->GetTransform().GetLocal().Z().XYZ() * delta_p;
-      if(key_state[SDL_SCANCODE_S]) camera_position += m_camera_node->GetTransform().GetLocal().Z().XYZ() * delta_p;
-      if(key_state[SDL_SCANCODE_A]) camera_position -= m_camera_node->GetTransform().GetLocal().X().XYZ() * delta_p;
-      if(key_state[SDL_SCANCODE_D]) camera_position += m_camera_node->GetTransform().GetLocal().X().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_W]) camera_position -= camera_transform.GetLocal().Z().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_S]) camera_position += camera_transform.GetLocal().Z().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_A]) camera_position -= camera_transform.GetLocal().X().XYZ() * delta_p;
+      if(key_state[SDL_SCANCODE_D]) camera_position += camera_transform.GetLocal().X().XYZ() * delta_p;
       if(key_state[SDL_SCANCODE_LEFT])  euler_y += delta_r;
       if(key_state[SDL_SCANCODE_RIGHT]) euler_y -= delta_r;
       if(key_state[SDL_SCANCODE_UP])    euler_x += delta_r;
       if(key_state[SDL_SCANCODE_DOWN])  euler_x -= delta_r;
-      m_camera_node->GetTransform().GetRotation().SetFromEuler(euler_x, euler_y, 0.0f);
+      camera_transform.SetPosition(camera_position);
+      camera_transform.GetRotation().SetFromEuler(euler_x, euler_y, 0.0f);
 
       RenderFrame();
     }
@@ -170,11 +172,11 @@ namespace zephyr {
 
     m_camera_node = m_scene_root->CreateChild("RenderCamera");
     m_camera_node->CreateComponent<PerspectiveCameraComponent>(45.0f, 16.f / 9.f, 0.01f, 100.f);
-    m_camera_node->GetTransform().GetPosition() = {0.f, 0.f, 5.f};
+    m_camera_node->GetTransform().SetPosition({0.f, 0.f, 5.f});
 
     GLTFLoader gltf_loader{};
     std::shared_ptr<SceneNode> gltf_scene_1 = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");
-    gltf_scene_1->GetTransform().GetPosition() = {1.0f, 0.0f, -5.0f};
+    gltf_scene_1->GetTransform().SetPosition({1.0f, 0.0f, -5.0f});
     gltf_scene_1->GetTransform().GetRotation().SetFromEuler(1.5f, 0.0f, 0.0f);
     m_scene_root->Add(std::move(gltf_scene_1));
 
@@ -182,9 +184,9 @@ namespace zephyr {
     //m_scene_root->Add(gltf_loader.Parse("models/triangle/Triangle.gltf"));
 
     m_behemoth_scene = gltf_loader.Parse("models/Behemoth/scene.gltf");
-    m_behemoth_scene->GetTransform().GetPosition() = Vector3{-1.0f, 0.0f, -5.0f};
+    m_behemoth_scene->GetTransform().SetPosition({-1.0f, 0.0f, -5.0f});
     m_behemoth_scene->GetTransform().GetRotation().SetFromEuler(-M_PI * 0.5, M_PI, 0.0f);
-    m_behemoth_scene->GetTransform().GetScale() = {0.5f, 0.5f, 0.5f};
+    m_behemoth_scene->GetTransform().SetScale({0.5f, 0.5f, 0.5f});
     m_scene_root->Add(m_behemoth_scene);
   }
 
@@ -194,7 +196,7 @@ namespace zephyr {
     // TODO(fleroviux): engine crashes when there is no camera in the scene! VERY BAD!!!
     m_camera_node = m_scene_root->CreateChild("RenderCamera");
     m_camera_node->CreateComponent<PerspectiveCameraComponent>(45.0f, 16.f / 9.f, 0.01f, 100.f);
-    m_camera_node->GetTransform().GetPosition() = {0.f, 0.f, 5.f};
+    m_camera_node->GetTransform().SetPosition({0.f, 0.f, 5.f});
 
     // TODO(fleroviux): fix cube geometry is rendered incorrectly.
 
@@ -269,8 +271,8 @@ namespace zephyr {
         for(int z = -grid_size / 2; z < grid_size / 2; z++) {
           std::shared_ptr<SceneNode> cube = m_scene_root->CreateChild("Cube");
           cube->CreateComponent<MeshComponent>(cube_geometry, std::shared_ptr<Material>{});
-          cube->GetTransform().GetPosition() = {(f32)x, (f32)y, (f32)-z};
-          cube->GetTransform().GetScale() = {0.1, 0.1, 0.1};
+          cube->GetTransform().SetPosition({(f32)x, (f32)y, (f32)-z});
+          cube->GetTransform().SetScale({0.1, 0.1, 0.1});
         }
       }
     }

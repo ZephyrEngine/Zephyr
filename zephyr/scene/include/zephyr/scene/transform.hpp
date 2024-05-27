@@ -20,16 +20,16 @@ namespace zephyr {
         return m_position;
       }
 
-      [[nodiscard]] Vector3& GetPosition() {
-        return m_position;
+      void SetPosition(const Vector3& position) {
+        m_position = position;
       }
 
       [[nodiscard]] const Vector3& GetScale() const {
         return m_scale;
       }
 
-      [[nodiscard]] Vector3& GetScale() {
-        return m_scale;
+      void SetScale(const Vector3& scale) {
+        m_scale = scale;
       }
 
       [[nodiscard]] const Rotation& GetRotation() const {
