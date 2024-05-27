@@ -90,6 +90,16 @@ namespace zephyr {
       camera_transform.SetPosition(camera_position);
       camera_transform.GetRotation().SetFromEuler(euler_x, euler_y, 0.0f);
 
+      for(SceneNode* cube : m_dynamic_cubes) {
+        Vector3 position = cube->GetTransform().GetPosition();
+        position.X() += 0.01;
+        cube->GetTransform().SetPosition(position);
+
+        Quaternion rotation = cube->GetTransform().GetRotation().GetAsQuaternion();
+        rotation = Quaternion::FromAxisAngle({0, 1, 0}, 0.01f) * rotation;
+        cube->GetTransform().GetRotation().SetFromQuaternion(rotation);
+      }
+
       RenderFrame();
     }
   }
@@ -268,6 +278,10 @@ namespace zephyr {
           cube->CreateComponent<MeshComponent>(cube_geometry, std::shared_ptr<Material>{});
           cube->GetTransform().SetPosition({(f32)x, (f32)y, (f32)-z});
           cube->GetTransform().SetScale({0.1, 0.1, 0.1});
+
+          if(m_dynamic_cubes.size() < 32768) {
+            m_dynamic_cubes.push_back(cube.get());
+          }
         }
       }
     }

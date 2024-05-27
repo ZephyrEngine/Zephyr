@@ -33,11 +33,8 @@ namespace zephyr {
   }
 
   void SceneGraph::SignalNodeTransformChanged(SceneNode* node) {
+    // TODO(fleroviux): try to efficiently eliminate redundant updates.
     node->Traverse([this](SceneNode* child_node) {
-      const auto match = std::ranges::find(m_nodes_with_dirty_transform, child_node);
-      if(match != m_nodes_with_dirty_transform.end()) {
-        m_nodes_with_dirty_transform.erase(match);
-      }
       m_nodes_with_dirty_transform.push_back(child_node);
       return true;
     });

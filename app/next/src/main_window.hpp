@@ -45,6 +45,7 @@ namespace zephyr {
       std::shared_ptr<SceneGraph> m_scene_graph{};
       std::shared_ptr<SceneNode> m_camera_node{};
       std::shared_ptr<SceneNode> m_behemoth_scene{};
+      std::vector<SceneNode*> m_dynamic_cubes{};
 
       int m_fps_counter{};
       std::chrono::steady_clock::time_point m_time_point_last_update{};

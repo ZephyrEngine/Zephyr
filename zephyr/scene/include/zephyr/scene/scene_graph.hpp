@@ -31,6 +31,7 @@ namespace zephyr {
       void SignalNodeTransformChanged(SceneNode* node);
 
       std::shared_ptr<SceneNode> m_root_node{};
+      std::vector<SceneNode*> m_pending_nodes_with_dirty_transforms{};
       std::vector<SceneNode*> m_nodes_with_dirty_transform{};
   };
 
