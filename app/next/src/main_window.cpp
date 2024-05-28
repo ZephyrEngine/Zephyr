@@ -39,6 +39,8 @@ namespace zephyr {
     #else
       CreateVulkanEngine();
     #endif
+
+    m_render_engine->SetSceneGraph(m_scene_graph);
   }
 
   void MainWindow::MainLoop() {
@@ -106,7 +108,7 @@ namespace zephyr {
 
   void MainWindow::RenderFrame() {
     m_scene_graph->UpdateTransforms();
-    m_render_engine->RenderScene(m_scene_graph->GetRoot());
+    m_render_engine->RenderScene();
 
     m_frame++;
 

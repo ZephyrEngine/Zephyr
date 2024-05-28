@@ -16,7 +16,11 @@ namespace zephyr {
     JoinRenderThread();
   }
 
-  void RenderEngine::RenderScene(SceneNode* scene_root) {
+  void RenderEngine::SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph) {
+    m_current_scene_graph = std::move(scene_graph);
+  }
+
+  void RenderEngine::RenderScene() {
     // Wait for the render thread to complete reading the internal render structures.
     m_render_thread_semaphore.acquire();
 
@@ -26,7 +30,7 @@ namespace zephyr {
     // Traverse the scene and update any data structures (such as render lists and resource caches) needed to render the frame.
     m_game_thread_render_objects.clear();
     m_render_camera[1] = {};
-    scene_root->Traverse([&](SceneNode* node) -> bool {
+    m_current_scene_graph->GetRoot()->Traverse([&](SceneNode* node) -> bool {
       if(!node->IsVisible()) return false;
 
       if(node->HasComponent<MeshComponent>()) {

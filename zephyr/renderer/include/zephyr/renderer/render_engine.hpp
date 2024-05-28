@@ -5,6 +5,7 @@
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/engine/geometry_cache.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
+#include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/scene/scene_node.hpp>
 #include <atomic>
 #include <semaphore>
@@ -18,7 +19,8 @@ namespace zephyr {
       explicit RenderEngine(std::unique_ptr<RenderBackend> render_backend);
      ~RenderEngine();
 
-      void RenderScene(SceneNode* scene_root);
+      void SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph);
+      void RenderScene();
 
     private:
       void CreateRenderThread();
@@ -35,6 +37,8 @@ namespace zephyr {
       std::binary_semaphore m_render_thread_semaphore{1}; //> Semaphore signalled by the rendering thread
 
       GeometryCache m_geometry_cache;
+
+      std::shared_ptr<SceneGraph> m_current_scene_graph{};
 
       struct GameThreadRenderObject {
         Matrix4 local_to_world;
