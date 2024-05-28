@@ -5,7 +5,7 @@
 namespace zephyr {
 
   void Transform3D::UpdateLocal() {
-    m_local_matrix = m_rotation.GetAsMatrix4();
+    m_local_matrix = m_rotation.ToRotationMatrix();
     m_local_matrix.X() *= m_scale.X();
     m_local_matrix.Y() *= m_scale.Y();
     m_local_matrix.Z() *= m_scale.Z();

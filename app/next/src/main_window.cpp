@@ -88,16 +88,16 @@ namespace zephyr {
       if(key_state[SDL_SCANCODE_UP])    euler_x += delta_r;
       if(key_state[SDL_SCANCODE_DOWN])  euler_x -= delta_r;
       camera_transform.SetPosition(camera_position);
-      camera_transform.GetRotation().SetFromEuler(euler_x, euler_y, 0.0f);
+      camera_transform.SetRotation(extrinsic_xyz_angles_to_quaternion({euler_x, euler_y, 0.0f}));
 
       for(SceneNode* cube : m_dynamic_cubes) {
         Vector3 position = cube->GetTransform().GetPosition();
         position.X() += 0.01;
         cube->GetTransform().SetPosition(position);
 
-        Quaternion rotation = cube->GetTransform().GetRotation().GetAsQuaternion();
+        Quaternion rotation = cube->GetTransform().GetRotation();
         rotation = Quaternion::FromAxisAngle({0, 1, 0}, 0.01f) * rotation;
-        cube->GetTransform().GetRotation().SetFromQuaternion(rotation);
+        cube->GetTransform().SetRotation(rotation);
       }
 
       RenderFrame();
@@ -182,7 +182,7 @@ namespace zephyr {
     GLTFLoader gltf_loader{};
     std::shared_ptr<SceneNode> gltf_scene_1 = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");
     gltf_scene_1->GetTransform().SetPosition({1.0f, 0.0f, -5.0f});
-    gltf_scene_1->GetTransform().GetRotation().SetFromEuler(1.5f, 0.0f, 0.0f);
+    gltf_scene_1->GetTransform().SetRotation(extrinsic_xyz_angles_to_quaternion({1.5f, 0.0f, 0.0f}));
     m_scene_graph->GetRoot()->Add(std::move(gltf_scene_1));
 
     m_scene_graph->GetRoot()->Add(gltf_loader.Parse("models/triangleWithoutIndices/TriangleWithoutIndices.gltf"));
@@ -190,7 +190,7 @@ namespace zephyr {
 
     m_behemoth_scene = gltf_loader.Parse("models/Behemoth/scene.gltf");
     m_behemoth_scene->GetTransform().SetPosition({-1.0f, 0.0f, -5.0f});
-    m_behemoth_scene->GetTransform().GetRotation().SetFromEuler(-M_PI * 0.5, M_PI, 0.0f);
+    m_behemoth_scene->GetTransform().SetRotation(extrinsic_xyz_angles_to_quaternion({-M_PI * 0.5, M_PI, 0.0f}));
     m_behemoth_scene->GetTransform().SetScale({0.5f, 0.5f, 0.5f});
     m_scene_graph->GetRoot()->Add(m_behemoth_scene);
   }
