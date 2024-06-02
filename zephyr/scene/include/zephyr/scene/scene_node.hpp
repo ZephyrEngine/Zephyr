@@ -116,7 +116,13 @@ namespace zephyr {
       }
 
       void SetVisible(bool visible) {
+        if(m_is_visible == visible) {
+          return;
+        }
         m_is_visible = visible;
+        if(m_scene_graph) {
+          m_scene_graph->SignalNodeVisibilityChanged(this, visible);
+        }
       }
 
       [[nodiscard]] const Transform3D& GetTransform() const {
@@ -166,6 +172,9 @@ namespace zephyr {
 
         T* component_raw_ptr = component.get();
         m_components[std::type_index{typeid(T)}] = std::move(component);
+        if(m_scene_graph) {
+          m_scene_graph->SignalComponentMounted(this, std::type_index{typeid(T)});
+        }
         return *component_raw_ptr;
       }
 
@@ -175,6 +184,9 @@ namespace zephyr {
           ZEPHYR_PANIC("Node does not have a component of the type: '{}'", typeid(T).name());
         }
         m_components.erase(m_components.find(std::type_index{typeid(T)}));
+        if(m_scene_graph) {
+          m_scene_graph->SignalComponentRemoved(this, std::type_index{typeid(T)});
+        }
       }
 
     private:
