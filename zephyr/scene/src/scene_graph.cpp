@@ -14,6 +14,13 @@ namespace zephyr {
     for(const auto node : m_nodes_with_dirty_transform) {
       node->GetTransform().UpdateLocal();
       node->GetTransform().UpdateWorld();
+
+      if(QueryNodeWorldVisibility(node)) { // TODO(fleroviux): this check is slow!
+        m_scene_patches.push_back({
+          .type = ScenePatch::Type::NodeTransformChanged,
+          .node = node
+        });
+      }
     }
     m_nodes_with_dirty_transform.clear();
   }
@@ -25,9 +32,23 @@ namespace zephyr {
   void SceneGraph::SignalNodeMounted(SceneNode* node) {
     SignalNodeTransformChanged(node);
     SignalNodeVisibilityChanged(node, node->IsVisible());
+
+    if(QueryNodeWorldVisibility(node)) {
+      m_scene_patches.push_back({
+        .type = ScenePatch::Type::NodeMounted,
+        .node = node
+      });
+    }
   }
 
   void SceneGraph::SignalNodeRemoved(SceneNode* node) {
+    if(QueryNodeWorldVisibility(node)) {
+      m_scene_patches.push_back({
+        .type = ScenePatch::Type::NodeRemoved,
+        .node = node
+      });
+    }
+
     node->Traverse([this](SceneNode* child_node) {
       const auto match = std::ranges::find(m_nodes_with_dirty_transform, child_node);
       if(match != m_nodes_with_dirty_transform.end()) {
@@ -38,14 +59,22 @@ namespace zephyr {
   }
 
   void SceneGraph::SignalComponentMounted(SceneNode* node, std::type_index type_index) {
-    if(!QueryNodeWorldVisibility(node)) {
-      return;
+    if(QueryNodeWorldVisibility(node)) {
+      m_scene_patches.push_back({
+        .type = ScenePatch::Type::ComponentMounted,
+        .node = node,
+        .component_type = type_index
+      });
     }
   }
 
   void SceneGraph::SignalComponentRemoved(SceneNode* node, std::type_index type_index) {
-    if(!QueryNodeWorldVisibility(node)) {
-      return;
+    if(QueryNodeWorldVisibility(node)) {
+      m_scene_patches.push_back({
+        .type = ScenePatch::Type::ComponentRemoved,
+        .node = node,
+        .component_type = type_index
+      });
     }
   }
 
@@ -68,12 +97,22 @@ namespace zephyr {
           m_node_world_visibility[child_node] = true;
           return child_node->IsVisible();
         });
+
+        m_scene_patches.push_back({
+          .type = ScenePatch::Type::NodeMounted,
+          .node = node
+        });
       }
     } else if(m_node_world_visibility[node]) {
       node->Traverse([this](SceneNode* child_node) {
         const bool was_visible = m_node_world_visibility[child_node];
         m_node_world_visibility[child_node] = false;
         return was_visible;
+      });
+
+      m_scene_patches.push_back({
+        .type = ScenePatch::Type::NodeRemoved,
+        .node = node
       });
     }
   }
