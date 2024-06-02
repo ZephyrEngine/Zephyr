@@ -8,8 +8,11 @@
 #include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/scene/scene_node.hpp>
 #include <atomic>
+#include <optional>
 #include <semaphore>
 #include <thread>
+#include <typeindex>
+#include <unordered_map>
 #include <vector>
 
 namespace zephyr {
@@ -23,6 +26,31 @@ namespace zephyr {
       void RenderScene();
 
     private:
+      struct SceneNodeMeshData {
+        SceneNodeMeshData(const Matrix4& local_to_world, Geometry* geometry) : local_to_world{local_to_world}, geometry{geometry} {}
+        Matrix4 local_to_world;
+        Geometry* geometry;
+      };
+
+      struct SceneNodeData {
+        std::optional<size_t> mesh_data_id{};
+        std::optional<size_t> camera_data_id{};
+
+        [[nodiscard]] bool Empty() const {
+          return !mesh_data_id.has_value() &&
+                 !camera_data_id.has_value();
+        }
+      };
+
+      // Methods used for translating the scene graph into our internal representation.
+      void RebuildScene();
+      void PatchScene();
+      void PatchNodeMounted(SceneNode* node);
+      void PatchNodeRemoved(SceneNode* node);
+      void PatchNodeComponentMounted(SceneNode* node, std::type_index component_type);
+      void PatchNodeComponentRemoved(SceneNode* node, std::type_index component_type);
+      void PatchNodeTransformChanged(SceneNode* node);
+
       void CreateRenderThread();
       void JoinRenderThread();
       void RenderThreadMain();
@@ -39,15 +67,15 @@ namespace zephyr {
       GeometryCache m_geometry_cache;
 
       std::shared_ptr<SceneGraph> m_current_scene_graph{};
+      bool m_need_scene_rebuild{};
 
-      struct GameThreadRenderObject {
-        Matrix4 local_to_world;
-        Geometry* geometry;
-      };
-      std::vector<GameThreadRenderObject> m_game_thread_render_objects;
-      std::vector<RenderObject> m_render_objects;
+      // Representation of the scene graph that is internal to the render engine.
+      std::vector<SceneNodeMeshData> m_scene_node_mesh_data{};
+      std::vector<RenderCamera> m_scene_node_camera_data{};
+      std::unordered_map<const SceneNode*, SceneNodeData> m_scene_node_data{};
 
-      RenderCamera m_render_camera[2]{};
+      std::vector<RenderObject> m_render_objects{};
+      RenderCamera m_render_camera{};
   };
 
 } // namespace zephyr

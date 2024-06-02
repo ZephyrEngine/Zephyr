@@ -22,7 +22,7 @@ namespace zephyr {
     };
 
     Type type;
-    SceneNode* node;
+    std::shared_ptr<SceneNode> node;
     std::type_index component_type{typeid(void)};
   };
 

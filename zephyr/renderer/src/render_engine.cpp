@@ -17,7 +17,10 @@ namespace zephyr {
   }
 
   void RenderEngine::SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph) {
-    m_current_scene_graph = std::move(scene_graph);
+    if(m_current_scene_graph != scene_graph) {
+      m_current_scene_graph = std::move(scene_graph);
+      m_need_scene_rebuild = true;
+    }
   }
 
   void RenderEngine::RenderScene() {
@@ -27,39 +30,127 @@ namespace zephyr {
     // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
     m_geometry_cache.CommitPendingDeleteTaskList();
 
-    // Traverse the scene and update any data structures (such as render lists and resource caches) needed to render the frame.
-    m_game_thread_render_objects.clear();
-    m_render_camera[1] = {};
-    m_current_scene_graph->GetRoot()->Traverse([&](SceneNode* node) -> bool {
-      if(!node->IsVisible()) return false;
+    // Update the internal scene graph representation of the render engine based on changes in the scene graph.
+    if(m_need_scene_rebuild) {
+      RebuildScene();
+      m_need_scene_rebuild = false;
+    } else {
+      PatchScene();
+    }
 
-      if(node->HasComponent<MeshComponent>()) {
-        const MeshComponent& mesh_component = node->GetComponent<MeshComponent>();
-        const auto& geometry = mesh_component.geometry;
-
-        if(geometry) {
-          m_geometry_cache.UpdateGeometry(geometry.get());
-
-          m_game_thread_render_objects.push_back({
-            .local_to_world = node->GetTransform().GetWorld(),
-            .geometry = geometry.get()
-          });
-        }
-      }
-
-      // TODO(fleroviux): think of a better way to mark the camera we actually want to use.
-      if(node->HasComponent<PerspectiveCameraComponent>()) {
-        const PerspectiveCameraComponent& camera_component = node->GetComponent<PerspectiveCameraComponent>();
-        m_render_camera[1].projection = camera_component.GetProjectionMatrix();
-        m_render_camera[1].view = node->GetTransform().GetWorld().Inverse();
-        m_render_camera[1].frustum = camera_component.GetFrustum();
-      }
-
-      return true;
-    });
+    // Update all geometries which might be rendered in this frame.
+    for(const auto& game_thread_render_object : m_scene_node_mesh_data) {
+      m_geometry_cache.UpdateGeometry(game_thread_render_object.geometry);
+    }
 
     // Signal to the render thread that the next frame is ready
     m_caller_thread_semaphore.release();
+  }
+
+  void RenderEngine::RebuildScene() {
+    m_scene_node_data.clear();
+    m_scene_node_mesh_data.clear();
+    m_scene_node_camera_data.clear();
+    PatchNodeMounted(m_current_scene_graph->GetRoot());
+  }
+
+  void RenderEngine::PatchScene() {
+    for(const ScenePatch& patch : m_current_scene_graph->GetScenePatches()) {
+      switch(patch.type) {
+        case ScenePatch::Type::NodeMounted: PatchNodeMounted(patch.node.get()); break;
+        case ScenePatch::Type::NodeRemoved: PatchNodeRemoved(patch.node.get()); break;
+        case ScenePatch::Type::ComponentMounted: PatchNodeComponentMounted(patch.node.get(), patch.component_type); break;
+        case ScenePatch::Type::ComponentRemoved: PatchNodeComponentRemoved(patch.node.get(), patch.component_type); break;
+        case ScenePatch::Type::NodeTransformChanged: PatchNodeTransformChanged(patch.node.get()); break;
+        default: ZEPHYR_PANIC("Unhandled scene patch type: {}", (int)patch.type);
+      }
+    }
+  }
+
+  void RenderEngine::PatchNodeMounted(SceneNode* node) {
+    node->Traverse([this](SceneNode* child_node) {
+      for(auto& [component_type, _] : child_node->GetComponents()) {
+        PatchNodeComponentMounted(child_node, component_type);
+      }
+      return true; //child_node->IsVisible();
+    });
+  }
+
+  void RenderEngine::PatchNodeRemoved(SceneNode* node) {
+    node->Traverse([this](SceneNode* child_node) {
+      // TODO(fleroviux): this could be optimized, just unload everything.
+      for(auto& [component_type, _] : child_node->GetComponents()) {
+        PatchNodeComponentRemoved(child_node, component_type);
+      }
+      return true; //child_node->IsVisible();
+    });
+  }
+
+  void RenderEngine::PatchNodeComponentMounted(SceneNode* node, std::type_index component_type) {
+    if(component_type == typeid(MeshComponent)) {
+      SceneNodeData& node_data = m_scene_node_data[node];
+      auto& mesh_component = node->GetComponent<MeshComponent>();
+
+      node_data.mesh_data_id = m_scene_node_mesh_data.size();
+      m_scene_node_mesh_data.emplace_back(node->GetTransform().GetWorld(), mesh_component.geometry.get());
+    }
+
+    if(component_type == typeid(PerspectiveCameraComponent)) {
+      SceneNodeData& node_data = m_scene_node_data[node];
+      auto& camera_component = node->GetComponent<PerspectiveCameraComponent>();
+
+      node_data.camera_data_id = m_scene_node_camera_data.size();
+      m_scene_node_camera_data.push_back({
+        .projection = camera_component.GetProjectionMatrix(),
+        .view = node->GetTransform().GetWorld().Inverse(),
+        .frustum = camera_component.GetFrustum()
+      });
+    }
+  }
+
+  void RenderEngine::PatchNodeComponentRemoved(SceneNode* node, std::type_index component_type) {
+    if(!m_scene_node_data.contains(node)) {
+      return;
+    }
+
+    if(component_type == typeid(MeshComponent)) {
+      SceneNodeData& node_data = m_scene_node_data[node];
+      if(node_data.mesh_data_id.has_value()) {
+        // TODO(fleroviux): this breaks indices in other SceneNodeData
+        m_scene_node_mesh_data.erase(m_scene_node_mesh_data.begin() + node_data.mesh_data_id.value());
+        node_data.mesh_data_id.reset();
+      }
+    }
+
+    if(component_type == typeid(PerspectiveCameraComponent)) {
+      SceneNodeData& node_data = m_scene_node_data[node];
+      if(node_data.camera_data_id.has_value()) {
+        // TODO(fleroviux): this breaks indices in other SceneNodeData
+        m_scene_node_camera_data.erase(m_scene_node_camera_data.begin() + node_data.camera_data_id.value());
+        node_data.camera_data_id.reset();
+      }
+    }
+
+    if(m_scene_node_data[node].Empty()) {
+      m_scene_node_data.erase(node);
+    }
+  }
+
+  void RenderEngine::PatchNodeTransformChanged(SceneNode* node) {
+    node->Traverse([this](SceneNode* child_node) {
+      if(m_scene_node_data.contains(child_node)) {
+        const SceneNodeData& node_data = m_scene_node_data[child_node];
+
+        if(node_data.mesh_data_id.has_value()) {
+          m_scene_node_mesh_data[node_data.mesh_data_id.value()].local_to_world = child_node->GetTransform().GetWorld();
+        }
+
+        if(node_data.camera_data_id.has_value()) {
+          m_scene_node_camera_data[node_data.camera_data_id.value()].view = child_node->GetTransform().GetWorld().Inverse();
+        }
+      }
+      return true; //child_node->IsVisible();
+    });
   }
 
   void RenderEngine::CreateRenderThread() {
@@ -82,7 +173,7 @@ namespace zephyr {
     while(m_render_thread_running) {
       ReadyRenderThreadData();
 
-      m_render_backend->Render(m_render_camera[0], m_render_objects);
+      m_render_backend->Render(m_render_camera, m_render_objects);
       m_render_backend->SwapBuffers();
     }
 
@@ -99,14 +190,17 @@ namespace zephyr {
 
     m_render_objects.clear();
 
-    for(const auto& game_thread_render_object : m_game_thread_render_objects) {
+    for(const auto& scene_node_mesh_data : m_scene_node_mesh_data) {
       m_render_objects.push_back({
-        .render_geometry = m_geometry_cache.GetCachedRenderGeometry(game_thread_render_object.geometry),
-        .local_to_world = game_thread_render_object.local_to_world
+        .render_geometry = m_geometry_cache.GetCachedRenderGeometry(scene_node_mesh_data.geometry),
+        .local_to_world = scene_node_mesh_data.local_to_world
       });
     }
 
-    m_render_camera[0] = m_render_camera[1];
+    if(m_scene_node_camera_data.empty()) {
+      ZEPHYR_PANIC("Scene graph does not contain a camera to render with.");
+    }
+    m_render_camera = m_scene_node_camera_data[0];
 
     // Signal to the caller thread that we are done reading the internal render structures.
     m_render_thread_semaphore.release();

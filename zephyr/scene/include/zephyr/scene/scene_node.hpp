@@ -189,6 +189,10 @@ namespace zephyr {
         }
       }
 
+      [[nodiscard]] const std::unordered_map<std::type_index, std::unique_ptr<Component>>& GetComponents() const {
+        return m_components;
+      }
+
     private:
       friend Transform3D;
       

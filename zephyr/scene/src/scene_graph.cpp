@@ -18,7 +18,7 @@ namespace zephyr {
       if(QueryNodeWorldVisibility(node)) { // TODO(fleroviux): this check is slow!
         m_scene_patches.push_back({
           .type = ScenePatch::Type::NodeTransformChanged,
-          .node = node
+          .node = node->GetSharedPtr()
         });
       }
     }
@@ -36,7 +36,7 @@ namespace zephyr {
     if(QueryNodeWorldVisibility(node)) {
       m_scene_patches.push_back({
         .type = ScenePatch::Type::NodeMounted,
-        .node = node
+        .node = node->GetSharedPtr()
       });
     }
   }
@@ -45,7 +45,7 @@ namespace zephyr {
     if(QueryNodeWorldVisibility(node)) {
       m_scene_patches.push_back({
         .type = ScenePatch::Type::NodeRemoved,
-        .node = node
+        .node = node->GetSharedPtr()
       });
     }
 
@@ -62,7 +62,7 @@ namespace zephyr {
     if(QueryNodeWorldVisibility(node)) {
       m_scene_patches.push_back({
         .type = ScenePatch::Type::ComponentMounted,
-        .node = node,
+        .node = node->GetSharedPtr(),
         .component_type = type_index
       });
     }
@@ -72,7 +72,7 @@ namespace zephyr {
     if(QueryNodeWorldVisibility(node)) {
       m_scene_patches.push_back({
         .type = ScenePatch::Type::ComponentRemoved,
-        .node = node,
+        .node = node->GetSharedPtr(),
         .component_type = type_index
       });
     }
@@ -100,7 +100,7 @@ namespace zephyr {
 
         m_scene_patches.push_back({
           .type = ScenePatch::Type::NodeMounted,
-          .node = node
+          .node = node->GetSharedPtr()
         });
       }
     } else if(m_node_world_visibility[node]) {
@@ -112,7 +112,7 @@ namespace zephyr {
 
       m_scene_patches.push_back({
         .type = ScenePatch::Type::NodeRemoved,
-        .node = node
+        .node = node->GetSharedPtr()
       });
     }
   }
