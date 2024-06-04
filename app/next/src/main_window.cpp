@@ -61,6 +61,9 @@ namespace zephyr {
             case SDLK_z: {
               if(m_behemoth_scene) {
                 m_scene_graph->GetRoot()->Remove(m_behemoth_scene.get());
+                while(!m_behemoth_scene->GetChildren().empty()) {
+                  m_behemoth_scene->Remove(m_behemoth_scene->GetChildren()[0].get());
+                }
                 m_behemoth_scene.reset();
               }
               break;

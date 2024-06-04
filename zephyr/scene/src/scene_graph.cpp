@@ -34,18 +34,32 @@ namespace zephyr {
     SignalNodeVisibilityChanged(node, node->IsVisible());
 
     if(QueryNodeWorldVisibility(node)) {
-      m_scene_patches.push_back({
-        .type = ScenePatch::Type::NodeMounted,
-        .node = node->GetSharedPtr()
+      node->Traverse([this](SceneNode* child_node) {
+        if(child_node->IsVisible()) {
+          m_scene_patches.push_back({
+            .type = ScenePatch::Type::NodeMounted,
+            .node = child_node->GetSharedPtr()
+          });
+          return true;
+        }
+
+        return false;
       });
     }
   }
 
   void SceneGraph::SignalNodeRemoved(SceneNode* node) {
     if(QueryNodeWorldVisibility(node)) {
-      m_scene_patches.push_back({
-        .type = ScenePatch::Type::NodeRemoved,
-        .node = node->GetSharedPtr()
+      node->Traverse([this](SceneNode* child_node) {
+        if(child_node->IsVisible()) {
+          m_scene_patches.push_back({
+            .type = ScenePatch::Type::NodeRemoved,
+            .node = child_node->GetSharedPtr()
+          });
+          return true;
+        }
+
+        return false;
       });
     }
 
@@ -94,25 +108,32 @@ namespace zephyr {
         m_node_world_visibility[node] = true;
 
         node->Traverse([this](SceneNode* child_node) {
-          m_node_world_visibility[child_node] = true;
-          return child_node->IsVisible();
-        });
+          if(child_node->IsVisible()) {
+            m_node_world_visibility[child_node] = true;
 
-        m_scene_patches.push_back({
-          .type = ScenePatch::Type::NodeMounted,
-          .node = node->GetSharedPtr()
+            m_scene_patches.push_back({
+              .type = ScenePatch::Type::NodeMounted,
+              .node = child_node->GetSharedPtr()
+            });
+            return true;
+          }
+
+          return false;
         });
       }
     } else if(m_node_world_visibility[node]) {
       node->Traverse([this](SceneNode* child_node) {
-        const bool was_visible = m_node_world_visibility[child_node];
-        m_node_world_visibility[child_node] = false;
-        return was_visible;
-      });
+        if(m_node_world_visibility[child_node]) {
+          m_node_world_visibility[child_node] = false;
 
-      m_scene_patches.push_back({
-        .type = ScenePatch::Type::NodeRemoved,
-        .node = node->GetSharedPtr()
+          m_scene_patches.push_back({
+            .type = ScenePatch::Type::NodeRemoved,
+            .node = child_node->GetSharedPtr()
+          });
+          return true;
+        }
+
+        return false;
       });
     }
   }

@@ -51,7 +51,14 @@ namespace zephyr {
     m_scene_node_data.clear();
     m_scene_node_mesh_data.clear();
     m_scene_node_camera_data.clear();
-    PatchNodeMounted(m_current_scene_graph->GetRoot());
+
+    m_current_scene_graph->GetRoot()->Traverse([this](SceneNode* child_node) {
+      if(child_node->IsVisible()) {
+        PatchNodeMounted(child_node);
+        return true;
+      }
+      return false;
+    });
   }
 
   void RenderEngine::PatchScene() {
@@ -68,22 +75,16 @@ namespace zephyr {
   }
 
   void RenderEngine::PatchNodeMounted(SceneNode* node) {
-    node->Traverse([this](SceneNode* child_node) {
-      for(auto& [component_type, _] : child_node->GetComponents()) {
-        PatchNodeComponentMounted(child_node, component_type);
-      }
-      return true; //child_node->IsVisible();
-    });
+    for(auto& [component_type, _] : node->GetComponents()) {
+      PatchNodeComponentMounted(node, component_type);
+    }
   }
 
   void RenderEngine::PatchNodeRemoved(SceneNode* node) {
-    node->Traverse([this](SceneNode* child_node) {
-      // TODO(fleroviux): this could be optimized, just unload everything.
-      for(auto& [component_type, _] : child_node->GetComponents()) {
-        PatchNodeComponentRemoved(child_node, component_type);
-      }
-      return true; //child_node->IsVisible();
-    });
+    // TODO(fleroviux): this could be optimized, just unload everything.
+    for(auto& [component_type, _] : node->GetComponents()) {
+      PatchNodeComponentRemoved(node, component_type);
+    }
   }
 
   void RenderEngine::PatchNodeComponentMounted(SceneNode* node, std::type_index component_type) {
@@ -137,20 +138,19 @@ namespace zephyr {
   }
 
   void RenderEngine::PatchNodeTransformChanged(SceneNode* node) {
-    node->Traverse([this](SceneNode* child_node) {
-      if(m_scene_node_data.contains(child_node)) {
-        const SceneNodeData& node_data = m_scene_node_data[child_node];
+    if(!m_scene_node_data.contains(node)) {
+      return;
+    }
 
-        if(node_data.mesh_data_id.has_value()) {
-          m_scene_node_mesh_data[node_data.mesh_data_id.value()].local_to_world = child_node->GetTransform().GetWorld();
-        }
+    const SceneNodeData& node_data = m_scene_node_data[node];
 
-        if(node_data.camera_data_id.has_value()) {
-          m_scene_node_camera_data[node_data.camera_data_id.value()].view = child_node->GetTransform().GetWorld().Inverse();
-        }
-      }
-      return true; //child_node->IsVisible();
-    });
+    if(node_data.mesh_data_id.has_value()) {
+      m_scene_node_mesh_data[node_data.mesh_data_id.value()].local_to_world = node->GetTransform().GetWorld();
+    }
+
+    if(node_data.camera_data_id.has_value()) {
+      m_scene_node_camera_data[node_data.camera_data_id.value()].view = node->GetTransform().GetWorld().Inverse();
+    }
   }
 
   void RenderEngine::CreateRenderThread() {
