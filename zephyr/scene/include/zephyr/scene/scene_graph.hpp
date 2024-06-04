@@ -2,10 +2,10 @@
 #pragma once
 
 #include <zephyr/integer.hpp>
+#include <EASTL/hash_map.h>
 #include <memory>
 #include <span>
 #include <vector>
-#include <unordered_map>
 #include <typeindex>
 
 namespace zephyr {
@@ -63,7 +63,7 @@ namespace zephyr {
       std::shared_ptr<SceneNode> m_root_node{};
       std::vector<SceneNode*> m_pending_nodes_with_dirty_transforms{};
       std::vector<SceneNode*> m_nodes_with_dirty_transform{};
-      std::unordered_map<const SceneNode*, bool> m_node_world_visibility{}; //< Tracks the world visibility of nodes
+      eastl::hash_map<const SceneNode*, bool> m_node_world_visibility{}; //< Tracks the world visibility of nodes
       std::vector<ScenePatch> m_scene_patches{};
   };
 

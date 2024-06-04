@@ -110,12 +110,15 @@ namespace zephyr {
   }
 
   void RenderEngine::PatchNodeComponentRemoved(SceneNode* node, std::type_index component_type) {
-    if(!m_scene_node_data.contains(node)) {
+    const auto node_data_match = m_scene_node_data.find(node);
+
+    if(node_data_match == m_scene_node_data.end()) {
       return;
     }
 
+    SceneNodeData& node_data = node_data_match->second;
+
     if(component_type == typeid(MeshComponent)) {
-      SceneNodeData& node_data = m_scene_node_data[node];
       if(node_data.mesh_data_id.has_value()) {
         // TODO(fleroviux): this breaks indices in other SceneNodeData
         m_scene_node_mesh_data.erase(m_scene_node_mesh_data.begin() + node_data.mesh_data_id.value());
@@ -124,7 +127,6 @@ namespace zephyr {
     }
 
     if(component_type == typeid(PerspectiveCameraComponent)) {
-      SceneNodeData& node_data = m_scene_node_data[node];
       if(node_data.camera_data_id.has_value()) {
         // TODO(fleroviux): this breaks indices in other SceneNodeData
         m_scene_node_camera_data.erase(m_scene_node_camera_data.begin() + node_data.camera_data_id.value());
@@ -138,11 +140,13 @@ namespace zephyr {
   }
 
   void RenderEngine::PatchNodeTransformChanged(SceneNode* node) {
-    if(!m_scene_node_data.contains(node)) {
+    const auto node_data_match = m_scene_node_data.find(node);
+
+    if(node_data_match == m_scene_node_data.end()) {
       return;
     }
 
-    const SceneNodeData& node_data = m_scene_node_data[node];
+    const SceneNodeData& node_data = node_data_match->second;
 
     if(node_data.mesh_data_id.has_value()) {
       m_scene_node_mesh_data[node_data.mesh_data_id.value()].local_to_world = node->GetTransform().GetWorld();

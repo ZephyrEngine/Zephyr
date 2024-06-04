@@ -7,12 +7,12 @@
 #include <zephyr/renderer/resource/geometry.hpp>
 #include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/scene/scene_node.hpp>
+#include <EASTL/hash_map.h>
 #include <atomic>
 #include <optional>
 #include <semaphore>
 #include <thread>
 #include <typeindex>
-#include <unordered_map>
 #include <vector>
 
 namespace zephyr {
@@ -72,7 +72,7 @@ namespace zephyr {
       // Representation of the scene graph that is internal to the render engine.
       std::vector<SceneNodeMeshData> m_scene_node_mesh_data{};
       std::vector<RenderCamera> m_scene_node_camera_data{};
-      std::unordered_map<const SceneNode*, SceneNodeData> m_scene_node_data{};
+      eastl::hash_map<const SceneNode*, SceneNodeData> m_scene_node_data{};
 
       std::vector<RenderObject> m_render_objects{};
       RenderCamera m_render_camera{};

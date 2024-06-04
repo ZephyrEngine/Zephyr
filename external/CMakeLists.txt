@@ -1,4 +1,5 @@
 
+add_subdirectory(EASTL)
 add_subdirectory(fmt)
 
 set(JSON_BuildTests OFF CACHE INTERNAL "")

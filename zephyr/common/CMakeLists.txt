@@ -1,5 +1,6 @@
 
 set(SOURCES
+  src/eastl.cpp
   src/panic.cpp
 )
 
@@ -25,4 +26,4 @@ set(HEADERS_PUBLIC
 add_library(zephyr-common ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
 target_include_directories(zephyr-common PUBLIC include)
-target_link_libraries(zephyr-common PUBLIC fmt zephyr-cxx-opts)
+target_link_libraries(zephyr-common PUBLIC fmt zephyr-cxx-opts EASTL)
