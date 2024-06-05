@@ -21,7 +21,7 @@ namespace zephyr {
 
       // Render Thread API:
       void ProcessPendingUpdates();
-      RenderGeometry* GetCachedRenderGeometry(const Geometry* geometry);
+      RenderGeometry* GetCachedRenderGeometry(const Geometry* geometry) const;
 
     private:
       struct GeometryState {
@@ -49,7 +49,7 @@ namespace zephyr {
 
       std::shared_ptr<RenderBackend> m_render_backend;
       std::unordered_map<const Geometry*, GeometryState> m_geometry_state_table{};
-      std::unordered_map<const Geometry*, RenderGeometry*> m_render_geometry_table{};
+      mutable std::unordered_map<const Geometry*, RenderGeometry*> m_render_geometry_table{};
       std::vector<UploadTask> m_upload_tasks{};
       std::vector<DeleteTask> m_delete_tasks[2]{};
   };

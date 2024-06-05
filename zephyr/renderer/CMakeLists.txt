@@ -11,6 +11,7 @@ set(SOURCES
   src/engine/geometry_cache.cpp
   src/vulkan/vulkan_instance.cpp
   src/render_engine.cpp
+  src/render_scene.cpp
 )
 
 set(HEADERS
@@ -37,6 +38,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/vulkan/vulkan_instance.hpp
   include/zephyr/renderer/vulkan/vulkan_physical_device.hpp
   include/zephyr/renderer/render_engine.hpp
+  include/zephyr/renderer/render_scene.hpp
 )
 
 find_package(SDL2 REQUIRED)
