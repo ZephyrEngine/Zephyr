@@ -111,7 +111,7 @@ namespace zephyr {
 
   void MainWindow::RenderFrame() {
     m_scene_graph->UpdateTransforms();
-    m_render_engine->RenderScene();
+    m_render_engine->SubmitFrame();
     m_scene_graph->ClearScenePatches();
 
     m_frame++;

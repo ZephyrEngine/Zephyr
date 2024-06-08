@@ -20,7 +20,7 @@ namespace zephyr {
     m_render_scene.SetSceneGraph(std::move(scene_graph));
   }
 
-  void RenderEngine::RenderScene() {
+  void RenderEngine::SubmitFrame() {
     // Wait for the render thread to complete reading the internal render structures.
     m_render_thread_semaphore.acquire();
 

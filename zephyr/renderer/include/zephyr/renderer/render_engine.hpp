@@ -24,7 +24,7 @@ namespace zephyr {
      ~RenderEngine();
 
       void SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph);
-      void RenderScene();
+      void SubmitFrame();
 
     private:
       void CreateRenderThread();
@@ -42,7 +42,7 @@ namespace zephyr {
 
       GeometryCache m_geometry_cache;
 
-      class RenderScene m_render_scene{}; //< Representation of the scene graph that is internal to the render engine.
+      RenderScene m_render_scene{}; //< Representation of the scene graph that is internal to the render engine.
 
       std::vector<RenderObject> m_render_objects{};
       RenderCamera m_render_camera{};
