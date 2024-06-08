@@ -5,7 +5,9 @@
 #include <zephyr/math/frustum.hpp>
 #include <zephyr/math/matrix4.hpp>
 #include <zephyr/float.hpp>
+#include <zephyr/hash.hpp>
 #include <zephyr/integer.hpp>
+#include <EASTL/hash_map.h>
 #include <span>
 
 namespace zephyr {
@@ -40,6 +42,8 @@ namespace zephyr {
     public:
       virtual ~RenderGeometry() = default;
 
+      [[nodiscard]] virtual RenderGeometryLayout GetLayout() const = 0;
+      [[nodiscard]] virtual size_t GetGeometryID() const = 0;
       [[nodiscard]] virtual size_t GetNumberOfVertices() const = 0;
       [[nodiscard]] virtual size_t GetNumberOfIndices() const = 0;
   };
@@ -63,6 +67,23 @@ namespace zephyr {
 
   class RenderBackend {
     public:
+      struct RenderBundleKey {
+        bool uses_ibo;
+        u32 geometry_layout;
+
+        [[nodiscard]] bool operator==(const RenderBundleKey& other) const {
+          return uses_ibo == other.uses_ibo && geometry_layout == other.geometry_layout;
+        }
+      };
+
+      struct RenderBundleItem {
+        RenderBundleItem(const Matrix4& local_to_world, u32 draw_command_id, u32 material_id) : local_to_world{local_to_world}, draw_command_id{draw_command_id}, material_id{material_id} {}
+        Matrix4 local_to_world;
+        u32 draw_command_id;
+        u32 material_id;
+        u32 padding[2]; // Padding for std430 buffer layout
+      };
+
       virtual ~RenderBackend() = default;
 
       /// Needs to be called from the render thread before performing any render operations.
@@ -79,9 +100,20 @@ namespace zephyr {
 
       /// Just a quick thing for testing the rendering.
       virtual void Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) = 0;
+      virtual void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) = 0;
 
       /// Start rendering the next frame.
       virtual void SwapBuffers() = 0;
   };
 
 } // namespace zephyr
+
+template<>
+struct eastl::hash<zephyr::RenderBackend::RenderBundleKey> {
+  [[nodiscard]] std::size_t operator()(const zephyr::RenderBackend::RenderBundleKey& key) const noexcept {
+    size_t h = 0;
+    zephyr::hash_combine(h, key.uses_ibo);
+    zephyr::hash_combine(h, key.geometry_layout);
+    return h;
+  }
+};

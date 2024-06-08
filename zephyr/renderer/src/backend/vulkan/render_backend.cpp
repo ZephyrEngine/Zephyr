@@ -110,6 +110,10 @@ namespace zephyr {
         vkCmdEndRenderPass(m_vk_command_buffer);
       }
 
+      void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) override {
+        ZEPHYR_PANIC("unimplemented");
+      }
+
       void SwapBuffers() override {
         // Complete command recording and mark the command buffer as ready for queue submission.
         vkEndCommandBuffer(m_vk_command_buffer);

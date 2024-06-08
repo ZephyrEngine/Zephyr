@@ -33,11 +33,11 @@ namespace zephyr {
 
      ~OpenGLRenderGeometry() override;
 
-      [[nodiscard]] RenderGeometryLayout GetLayout() const {
+      [[nodiscard]] RenderGeometryLayout GetLayout() const override {
         return m_layout;
       }
 
-      [[nodiscard]] size_t GetGeometryID() const {
+      [[nodiscard]] size_t GetGeometryID() const override {
         return m_geometry_render_data_allocation.base_element;
       }
 

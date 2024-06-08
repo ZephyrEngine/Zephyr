@@ -23,6 +23,12 @@ namespace zephyr {
       void GetRenderCamera(RenderCamera& out_render_camera);
       void UpdateGeometries(GeometryCache& geometry_cache);
 
+      void UpdateRenderBundles(const GeometryCache& geometry_cache);
+
+      [[nodiscard]] const eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>>& GetRenderBundles() {
+        return m_render_bundles;
+      }
+
     private:
       using Entity = u32;
       using EntityID = size_t;
@@ -43,6 +49,22 @@ namespace zephyr {
       struct Camera {
         Matrix4 projection;
         Frustum frustum;
+      };
+
+      struct RenderScenePatch {
+        enum class Type : u8 {
+          MeshMounted,
+          MeshRemoved,
+          TransformChanged
+        };
+
+        Type type;
+        EntityID entity_id;
+      };
+
+      struct RenderBundleItemLocation {
+        RenderBackend::RenderBundleKey key;
+        size_t index;
       };
 
       void RebuildScene();
@@ -71,6 +93,10 @@ namespace zephyr {
       std::vector<Camera> m_components_camera{};
       std::vector<EntityID> m_view_mesh{};
       std::vector<EntityID> m_view_camera{};
+
+      std::vector<RenderScenePatch> m_render_scene_patches{};
+      eastl::hash_map<EntityID, RenderBundleItemLocation> m_entity_to_render_item_location{};
+      eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>> m_render_bundles{};
   };
 
 } // namespace zephyr

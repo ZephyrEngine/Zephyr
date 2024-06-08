@@ -57,7 +57,8 @@ namespace zephyr {
     while(m_render_thread_running) {
       ReadyRenderThreadData();
 
-      m_render_backend->Render(m_render_camera, m_render_objects);
+      // m_render_backend->Render(m_render_camera, m_render_objects);
+      m_render_backend->Render(m_render_camera, m_render_scene.GetRenderBundles());
       m_render_backend->SwapBuffers();
     }
 
@@ -71,7 +72,7 @@ namespace zephyr {
     m_render_thread_is_waiting = false;
 
     m_geometry_cache.ProcessPendingUpdates();
-    m_render_scene.GetRenderObjects(m_render_objects, m_geometry_cache);
+    m_render_scene.UpdateRenderBundles(m_geometry_cache);
     m_render_scene.GetRenderCamera(m_render_camera);
 
     // Signal to the caller thread that we are done reading the internal render structures.
