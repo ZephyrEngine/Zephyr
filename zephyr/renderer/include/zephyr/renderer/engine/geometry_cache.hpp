@@ -3,8 +3,8 @@
 
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
+#include <EASTL/hash_map.h>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 namespace zephyr {
@@ -21,7 +21,14 @@ namespace zephyr {
 
       // Render Thread API:
       void ProcessPendingUpdates();
-      RenderGeometry* GetCachedRenderGeometry(const Geometry* geometry) const;
+
+      RenderGeometry* GetCachedRenderGeometry(const Geometry* geometry) const {
+        const auto match = m_render_geometry_table.find(geometry);
+        if(match == m_render_geometry_table.end()) {
+          ZEPHYR_PANIC("Bad attempt to retrieve cached render geometry of a geometry which isn't cached.")
+        }
+        return match->second;
+      }
 
     private:
       struct GeometryState {
@@ -48,8 +55,8 @@ namespace zephyr {
       void ProcessPendingUploads();
 
       std::shared_ptr<RenderBackend> m_render_backend;
-      std::unordered_map<const Geometry*, GeometryState> m_geometry_state_table{};
-      mutable std::unordered_map<const Geometry*, RenderGeometry*> m_render_geometry_table{};
+      eastl::hash_map<const Geometry*, GeometryState> m_geometry_state_table{};
+      mutable eastl::hash_map<const Geometry*, RenderGeometry*> m_render_geometry_table{};
       std::vector<UploadTask> m_upload_tasks{};
       std::vector<DeleteTask> m_delete_tasks[2]{};
   };

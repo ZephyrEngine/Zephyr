@@ -60,13 +60,6 @@ namespace zephyr {
     ProcessPendingUploads();
   }
 
-  RenderGeometry* GeometryCache::GetCachedRenderGeometry(const Geometry* geometry) const {
-    if(!m_render_geometry_table.contains(geometry)) {
-      ZEPHYR_PANIC("Bad attempt to retrieve cached render geometry of a geometry which isn't cached.")
-    }
-    return m_render_geometry_table[geometry];
-  }
-
   void GeometryCache::ProcessPendingDeletes() {
     for(const auto& delete_task : m_delete_tasks[0]) {
       RenderGeometry* render_geometry = m_render_geometry_table[delete_task.geometry];
