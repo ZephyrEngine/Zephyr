@@ -25,7 +25,6 @@ namespace zephyr {
       void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) override;
       void DestroyRenderGeometry(RenderGeometry* render_geometry) override;
 
-      void Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) override;
       void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) override;
 
       void SwapBuffers() override;

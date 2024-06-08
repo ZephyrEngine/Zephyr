@@ -86,21 +86,6 @@ namespace zephyr {
     m_render_geometry_manager->DestroyRenderGeometry(render_geometry);
   }
 
-  void OpenGLRenderBackend::Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) {
-    eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>> render_bundles;
-
-    for(const RenderObject& render_object : render_objects) {
-      // TODO(fleroviux): get rid of unsafe size_t to u32 conversion.
-      auto render_geometry = dynamic_cast<OpenGLRenderGeometry*>(render_object.render_geometry);
-      RenderBundleKey render_bundle_key{};
-      render_bundle_key.uses_ibo = render_geometry->GetNumberOfIndices();
-      render_bundle_key.geometry_layout = render_geometry->GetLayout().key;
-      render_bundles[render_bundle_key].emplace_back(render_object.local_to_world, (u32)render_geometry->GetGeometryID(), (u32)0u);
-    }
-
-    Render(render_camera, render_bundles);
-  }
-
   void OpenGLRenderBackend::Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

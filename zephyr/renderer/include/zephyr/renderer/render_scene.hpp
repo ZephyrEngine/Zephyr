@@ -19,7 +19,6 @@ namespace zephyr {
     public:
       void SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph);
       void Update();
-      void GetRenderObjects(std::vector<RenderObject>& out_render_objects, const GeometryCache& geometry_cache);
       void GetRenderCamera(RenderCamera& out_render_camera);
       void UpdateGeometries(GeometryCache& geometry_cache);
 

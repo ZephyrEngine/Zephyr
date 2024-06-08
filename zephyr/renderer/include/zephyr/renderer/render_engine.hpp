@@ -43,8 +43,6 @@ namespace zephyr {
       GeometryCache m_geometry_cache;
 
       RenderScene m_render_scene{}; //< Representation of the scene graph that is internal to the render engine.
-
-      std::vector<RenderObject> m_render_objects{};
       RenderCamera m_render_camera{};
   };
 

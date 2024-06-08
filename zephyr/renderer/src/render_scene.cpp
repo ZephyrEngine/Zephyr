@@ -23,20 +23,6 @@ namespace zephyr {
     }
   }
 
-  void RenderScene::GetRenderObjects(std::vector<RenderObject>& out_render_objects, const GeometryCache& geometry_cache) {
-    out_render_objects.clear();
-
-    for(const EntityID entity_id : m_view_mesh) {
-      const Transform& entity_transform = m_components_transform[entity_id];
-      const Mesh& entity_mesh = m_components_mesh[entity_id];
-
-      out_render_objects.push_back({
-        .render_geometry = geometry_cache.GetCachedRenderGeometry(entity_mesh.geometry),
-        .local_to_world = entity_transform.local_to_world
-      });
-    }
-  }
-
   void RenderScene::GetRenderCamera(RenderCamera& out_render_camera) {
     // TODO(fleroviux): implement a better way to pick the camera to use.
     if(m_view_camera.empty()) {

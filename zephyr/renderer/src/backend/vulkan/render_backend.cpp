@@ -77,39 +77,6 @@ namespace zephyr {
         ZEPHYR_PANIC("unimplemented");
       }
 
-      void Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) override {
-        const VkClearValue clear_value{
-          .color = VkClearColorValue{
-            .float32 = {0.01f, 0.01f, 0.01f, 1.0f}
-          }
-        };
-
-        const VkRenderPassBeginInfo render_pass_begin_info{
-          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-          .pNext = nullptr,
-          .renderPass = m_vk_render_pass,
-          .framebuffer = m_vk_swap_chain_fbs[m_vk_swap_chain_image_index],
-          .renderArea = VkRect2D{
-            .offset = VkOffset2D{0u, 0u},
-            .extent = VkExtent2D{1920u, 1080u}
-          },
-          .clearValueCount = 1u,
-          .pClearValues = &clear_value
-        };
-
-        const Matrix4 view_projection = render_camera.projection * render_camera.view;
-        vkCmdBeginRenderPass(m_vk_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdBindPipeline(m_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vk_pipeline);
-        vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0u, sizeof(Matrix4), &view_projection);
-
-        for(const RenderObject& render_object : render_objects) {
-          vkCmdPushConstants(m_vk_command_buffer, m_vk_pipeline_layout, VK_SHADER_STAGE_ALL, sizeof(Matrix4), sizeof(Matrix4), &render_object.local_to_world);
-          vkCmdDraw(m_vk_command_buffer, 3u, 1u, 0u, 0u);
-        }
-
-        vkCmdEndRenderPass(m_vk_command_buffer);
-      }
-
       void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) override {
         ZEPHYR_PANIC("unimplemented");
       }

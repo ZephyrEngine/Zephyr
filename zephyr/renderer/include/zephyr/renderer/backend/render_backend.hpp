@@ -60,11 +60,6 @@ namespace zephyr {
     Frustum frustum{};
   };
 
-  struct RenderObject {
-    RenderGeometry* render_geometry{};
-    Matrix4 local_to_world{};
-  };
-
   class RenderBackend {
     public:
       struct RenderBundleKey {
@@ -99,7 +94,6 @@ namespace zephyr {
       virtual void DestroyRenderGeometry(RenderGeometry* render_geometry) = 0;
 
       /// Just a quick thing for testing the rendering.
-      virtual void Render(const RenderCamera& render_camera, std::span<const RenderObject> render_objects) = 0;
       virtual void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) = 0;
 
       /// Start rendering the next frame.
