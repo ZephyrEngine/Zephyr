@@ -7,6 +7,10 @@
 
 namespace zephyr {
 
+  RenderScene::RenderScene(std::shared_ptr<RenderBackend> render_backend)
+      : m_geometry_cache{std::move(render_backend)} {
+  }
+
   void RenderScene::SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph) {
     if(m_current_scene_graph != scene_graph) {
       m_current_scene_graph = std::move(scene_graph);
@@ -14,12 +18,20 @@ namespace zephyr {
     }
   }
 
-  void RenderScene::Update() {
+  void RenderScene::UpdateStage1() {
     if(m_require_full_rebuild) {
       RebuildScene();
       m_require_full_rebuild = false;
     } else {
       PatchScene();
+    }
+
+    // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
+    m_geometry_cache.CommitPendingDeleteTaskList();
+
+    // Update all geometries which might be rendered in this frame.
+    for(const Geometry* geometry : m_active_geometry_set) {
+      m_geometry_cache.UpdateGeometry(geometry);
     }
   }
 
@@ -37,13 +49,13 @@ namespace zephyr {
     out_render_camera.view = entity_transform.local_to_world.Inverse();
   }
 
-  void RenderScene::UpdateGeometries(GeometryCache& geometry_cache) {
-    for(const Geometry* geometry : m_active_geometry_set) {
-      geometry_cache.UpdateGeometry(geometry);
-    }
+  [[nodiscard]] const eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>>& RenderScene::GetRenderBundles() {
+    return m_render_bundles;
   }
 
-  void RenderScene::UpdateRenderBundles(const GeometryCache& geometry_cache) {
+  void RenderScene::UpdateStage2() {
+    m_geometry_cache.ProcessPendingUpdates();
+
     for(const RenderScenePatch& render_scene_patch : m_render_scene_patches) {
       switch(render_scene_patch.type) {
         case RenderScenePatch::Type::MeshMounted: {
@@ -51,7 +63,7 @@ namespace zephyr {
           const Mesh& entity_mesh = m_components_mesh[render_scene_patch.entity_id];
 
           // TODO(fleroviux): get rid of unsafe size_t to u32 conversion.
-          const RenderGeometry* const render_geometry = geometry_cache.GetCachedRenderGeometry(entity_mesh.geometry);
+          const RenderGeometry* const render_geometry = m_geometry_cache.GetCachedRenderGeometry(entity_mesh.geometry);
           RenderBackend::RenderBundleKey render_bundle_key{};
           render_bundle_key.uses_ibo = render_geometry->GetNumberOfIndices();
           render_bundle_key.geometry_layout = render_geometry->GetLayout().key;

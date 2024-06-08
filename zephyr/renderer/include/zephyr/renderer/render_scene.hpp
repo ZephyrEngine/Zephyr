@@ -17,16 +17,16 @@ namespace zephyr {
 
   class RenderScene {
     public:
+      explicit RenderScene(std::shared_ptr<RenderBackend> render_backend);
+
+      // Game Thread API:
       void SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph);
-      void Update();
+      void UpdateStage1();
+
+      // Render Thread API:
+      void UpdateStage2();
       void GetRenderCamera(RenderCamera& out_render_camera);
-      void UpdateGeometries(GeometryCache& geometry_cache);
-
-      void UpdateRenderBundles(const GeometryCache& geometry_cache);
-
-      [[nodiscard]] const eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>>& GetRenderBundles() {
-        return m_render_bundles;
-      }
+      [[nodiscard]] const eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>>& GetRenderBundles();
 
     private:
       using Entity = u32;
@@ -79,6 +79,8 @@ namespace zephyr {
       EntityID CreateEntity();
       void DestroyEntity(EntityID entity_id);
       void ResizeComponentStorage(size_t capacity);
+
+      GeometryCache m_geometry_cache;
 
       std::shared_ptr<SceneGraph> m_current_scene_graph{};
       eastl::hash_map<const SceneNode*, EntityID> m_node_entity_map{};

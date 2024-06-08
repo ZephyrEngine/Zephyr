@@ -1,14 +1,11 @@
 
-#include <zephyr/renderer/component/camera.hpp>
-#include <zephyr/renderer/component/mesh.hpp>
 #include <zephyr/renderer/render_engine.hpp>
-#include <fmt/format.h>
 
 namespace zephyr {
 
   RenderEngine::RenderEngine(std::unique_ptr<RenderBackend> render_backend)
       : m_render_backend{std::move(render_backend)}
-      , m_geometry_cache{m_render_backend} {
+      , m_render_scene{m_render_backend} {
     CreateRenderThread();
   }
 
@@ -24,14 +21,8 @@ namespace zephyr {
     // Wait for the render thread to complete reading the internal render structures.
     m_render_thread_semaphore.acquire();
 
-    // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
-    m_geometry_cache.CommitPendingDeleteTaskList();
-
-    // Update the internal scene graph representation of the render engine based on changes in the scene graph.
-    m_render_scene.Update();
-
-    // Update all geometries which might be rendered in this frame.
-    m_render_scene.UpdateGeometries(m_geometry_cache);
+    // Update the GPU scene based on changes in the scene graph (stage 1)
+    m_render_scene.UpdateStage1();
 
     // Signal to the render thread that the next frame is ready
     m_caller_thread_semaphore.release();
@@ -71,8 +62,9 @@ namespace zephyr {
     m_caller_thread_semaphore.acquire();
     m_render_thread_is_waiting = false;
 
-    m_geometry_cache.ProcessPendingUpdates();
-    m_render_scene.UpdateRenderBundles(m_geometry_cache);
+    // Update the GPU scene based on changes in the scene graph (stage 2)
+    m_render_scene.UpdateStage2();
+
     m_render_scene.GetRenderCamera(m_render_camera);
 
     // Signal to the caller thread that we are done reading the internal render structures.
