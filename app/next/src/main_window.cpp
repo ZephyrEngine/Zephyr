@@ -95,15 +95,15 @@ namespace zephyr {
       camera_transform.SetPosition(camera_position);
       camera_transform.SetRotation(extrinsic_xyz_angles_to_quaternion({euler_x, euler_y, 0.0f}));
 
-      for(SceneNode* cube : m_dynamic_cubes) {
-        Vector3 position = cube->GetTransform().GetPosition();
-        position.X() += 0.01;
-        cube->GetTransform().SetPosition(position);
-
-        Quaternion rotation = cube->GetTransform().GetRotation();
-        rotation = Quaternion::FromAxisAngle({0, 1, 0}, 0.01f) * rotation;
-        cube->GetTransform().SetRotation(rotation);
-      }
+//      for(SceneNode* cube : m_dynamic_cubes) {
+//        Vector3 position = cube->GetTransform().GetPosition();
+//        position.X() += 0.01;
+//        cube->GetTransform().SetPosition(position);
+//
+//        Quaternion rotation = cube->GetTransform().GetRotation();
+//        rotation = Quaternion::FromAxisAngle({0, 1, 0}, 0.01f) * rotation;
+//        cube->GetTransform().SetRotation(rotation);
+//      }
 
       RenderFrame();
     }
@@ -111,7 +111,7 @@ namespace zephyr {
 
   void MainWindow::RenderFrame() {
     m_scene_graph->UpdateTransforms();
-    m_render_engine->RenderScene();
+    m_render_engine->SubmitFrame();
     m_scene_graph->ClearScenePatches();
 
     m_frame++;

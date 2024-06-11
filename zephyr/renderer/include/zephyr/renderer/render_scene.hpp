@@ -17,11 +17,16 @@ namespace zephyr {
 
   class RenderScene {
     public:
+      explicit RenderScene(std::shared_ptr<RenderBackend> render_backend);
+
+      // Game Thread API:
       void SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph);
-      void Update();
-      void GetRenderObjects(std::vector<RenderObject>& out_render_objects, const GeometryCache& geometry_cache);
+      void UpdateStage1();
+
+      // Render Thread API:
+      void UpdateStage2();
       void GetRenderCamera(RenderCamera& out_render_camera);
-      void UpdateGeometries(GeometryCache& geometry_cache);
+      [[nodiscard]] const eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>>& GetRenderBundles();
 
     private:
       using Entity = u32;
@@ -45,6 +50,22 @@ namespace zephyr {
         Frustum frustum;
       };
 
+      struct RenderScenePatch {
+        enum class Type : u8 {
+          MeshMounted,
+          MeshRemoved,
+          TransformChanged
+        };
+
+        Type type;
+        EntityID entity_id;
+      };
+
+      struct RenderBundleItemLocation {
+        RenderBackend::RenderBundleKey key;
+        size_t index;
+      };
+
       void RebuildScene();
       void PatchScene();
       void PatchNodeMounted(SceneNode* node);
@@ -59,6 +80,8 @@ namespace zephyr {
       void DestroyEntity(EntityID entity_id);
       void ResizeComponentStorage(size_t capacity);
 
+      GeometryCache m_geometry_cache;
+
       std::shared_ptr<SceneGraph> m_current_scene_graph{};
       eastl::hash_map<const SceneNode*, EntityID> m_node_entity_map{};
       eastl::hash_set<const Geometry*> m_active_geometry_set{};
@@ -71,6 +94,10 @@ namespace zephyr {
       std::vector<Camera> m_components_camera{};
       std::vector<EntityID> m_view_mesh{};
       std::vector<EntityID> m_view_camera{};
+
+      std::vector<RenderScenePatch> m_render_scene_patches{};
+      eastl::hash_map<EntityID, RenderBundleItemLocation> m_entity_to_render_item_location{};
+      eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>> m_render_bundles{};
   };
 
 } // namespace zephyr
