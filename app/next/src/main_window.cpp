@@ -7,7 +7,7 @@
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;
-static const bool benchmark_scene_size = true;
+static const bool benchmark_scene_size = false;
 
 namespace zephyr {
 
@@ -186,6 +186,13 @@ namespace zephyr {
     m_camera_node->GetTransform().SetPosition({0.f, 0.f, 5.f});
 
     GLTFLoader gltf_loader{};
+
+    m_behemoth_scene = gltf_loader.Parse("models/Behemoth/scene.gltf");
+    m_behemoth_scene->GetTransform().SetPosition({-1.0f, 0.0f, -5.0f});
+    m_behemoth_scene->GetTransform().SetRotation(extrinsic_xyz_angles_to_quaternion({-M_PI * 0.5, M_PI, 0.0f}));
+    m_behemoth_scene->GetTransform().SetScale({0.5f, 0.5f, 0.5f});
+    m_scene_graph->GetRoot()->Add(m_behemoth_scene);
+
     std::shared_ptr<SceneNode> gltf_scene_1 = gltf_loader.Parse("models/DamagedHelmet/DamagedHelmet.gltf");
     gltf_scene_1->GetTransform().SetPosition({1.0f, 0.0f, -5.0f});
     gltf_scene_1->GetTransform().SetRotation(extrinsic_xyz_angles_to_quaternion({1.5f, 0.0f, 0.0f}));
@@ -193,12 +200,6 @@ namespace zephyr {
 
     m_scene_graph->GetRoot()->Add(gltf_loader.Parse("models/triangleWithoutIndices/TriangleWithoutIndices.gltf"));
     //m_scene_graph->GetRoot()->Add(gltf_loader.Parse("models/triangle/Triangle.gltf"));
-
-    m_behemoth_scene = gltf_loader.Parse("models/Behemoth/scene.gltf");
-    m_behemoth_scene->GetTransform().SetPosition({-1.0f, 0.0f, -5.0f});
-    m_behemoth_scene->GetTransform().SetRotation(extrinsic_xyz_angles_to_quaternion({-M_PI * 0.5, M_PI, 0.0f}));
-    m_behemoth_scene->GetTransform().SetScale({0.5f, 0.5f, 0.5f});
-    m_scene_graph->GetRoot()->Add(m_behemoth_scene);
   }
 
   void MainWindow::CreateBenchmarkScene() {
