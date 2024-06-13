@@ -30,7 +30,7 @@ namespace zephyr {
 
     private:
       using Entity = u32;
-      using EntityID = size_t;
+      using EntityID = u64;
 
       enum ComponentFlag : Entity {
         COMPONENT_FLAG_MESH = 1ul << 0,

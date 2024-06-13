@@ -59,7 +59,8 @@ namespace zephyr {
     for(const RenderScenePatch& render_scene_patch : m_render_scene_patches) {
       switch(render_scene_patch.type) {
         case RenderScenePatch::Type::MeshMounted: {
-          const Transform& entity_transform = m_components_transform[render_scene_patch.entity_id];
+          const EntityID entity_id = render_scene_patch.entity_id;
+          const Transform& entity_transform = m_components_transform[entity_id];
           const Mesh& entity_mesh = m_components_mesh[render_scene_patch.entity_id];
 
           // TODO(fleroviux): get rid of unsafe size_t to u32 conversion.
@@ -69,9 +70,9 @@ namespace zephyr {
           render_bundle_key.geometry_layout = render_geometry->GetLayout().key;
 
           std::vector<RenderBackend::RenderBundleItem>& render_bundle = m_render_bundles[render_bundle_key];
-          render_bundle.emplace_back(entity_transform.local_to_world, (u32)render_geometry->GetGeometryID(), (u32)0u);
+          render_bundle.emplace_back(entity_transform.local_to_world, (u32)render_geometry->GetGeometryID(), (u32)0u, entity_id);
 
-          m_entity_to_render_item_location[render_scene_patch.entity_id] = { render_bundle_key, render_bundle.size() - 1u };
+          m_entity_to_render_item_location[entity_id] = { render_bundle_key, render_bundle.size() - 1u };
           break;
         }
         case RenderScenePatch::Type::MeshRemoved: {
@@ -79,7 +80,9 @@ namespace zephyr {
           const RenderBundleItemLocation& location = match->second;
 
           std::vector<RenderBackend::RenderBundleItem>& render_bundle = m_render_bundles[location.key];
-          render_bundle.erase(render_bundle.begin() + location.index);
+          render_bundle[location.index] = render_bundle.back();
+          m_entity_to_render_item_location[render_bundle.back().entity_id].index = location.index;
+          render_bundle.pop_back();
 
           m_entity_to_render_item_location.erase(match);
           break;

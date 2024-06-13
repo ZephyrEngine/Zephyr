@@ -72,11 +72,11 @@ namespace zephyr {
       };
 
       struct RenderBundleItem {
-        RenderBundleItem(const Matrix4& local_to_world, u32 draw_command_id, u32 material_id) : local_to_world{local_to_world}, draw_command_id{draw_command_id}, material_id{material_id} {}
+        RenderBundleItem(const Matrix4& local_to_world, u32 draw_command_id, u32 material_id, u64 entity_id) : local_to_world{local_to_world}, draw_command_id{draw_command_id}, material_id{material_id}, entity_id{entity_id} {}
         Matrix4 local_to_world;
         u32 draw_command_id;
         u32 material_id;
-        u32 padding[2]; // Padding for std430 buffer layout
+        u64 entity_id;
       };
 
       virtual ~RenderBackend() = default;
