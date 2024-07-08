@@ -1,5 +1,6 @@
 
 add_subdirectory(common)
+add_subdirectory(gpu)
 add_subdirectory(logger)
 add_subdirectory(math)
 add_subdirectory(renderer)

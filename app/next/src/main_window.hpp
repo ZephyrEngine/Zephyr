@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <zephyr/logger/sink/console.hpp>
 #include <zephyr/logger/logger.hpp>
-#include <zephyr/renderer/vulkan/vulkan_instance.hpp>
+//#include <zephyr/renderer/vulkan/vulkan_instance.hpp>
 #include <zephyr/renderer/render_engine.hpp>
 #include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/scene/scene_node.hpp>
@@ -10,8 +10,8 @@
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
 #include <SDL.h>
-#include <SDL_vulkan.h>
-#include <vulkan/vulkan.h>
+//#include <SDL_vulkan.h>
+//#include <vulkan/vulkan.h>
 #include <vector>
 #include <optional>
 
@@ -51,9 +51,9 @@ namespace zephyr {
       std::chrono::steady_clock::time_point m_time_point_last_update{};
       u64 m_frame{};
       SDL_Window* m_window{};
-      std::shared_ptr<VulkanInstance> m_vk_instance{};
+      //std::shared_ptr<VulkanInstance> m_vk_instance{};
 
-      VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
+      //VkSurfaceKHR m_vk_surface{VK_NULL_HANDLE};
   };
 
 } // namespace zephyr
