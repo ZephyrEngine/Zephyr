@@ -77,9 +77,8 @@ namespace zephyr {
 
   void GeometryCache::QueueGeometryDeleteTaskForNextFrame(const Geometry* geometry) {
     /**
-     * Queue the geometry for eviction from the cache.
-     * To avoid deleting the geometry before the current frame-in-flight has been rendered,
-     * these tasks will only be processed at the start of the *next* frame on the render thread.
+     * Queue the geometry for eviction from the cache, when the next frame begin rendering.
+     * This ensures that the geometry is only evicted after the current frame has fully rendered.
      */
     m_delete_tasks[1].push_back({.geometry = (const Geometry*)geometry});
     m_geometry_state_table.erase((const Geometry*)geometry);
