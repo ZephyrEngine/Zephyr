@@ -26,13 +26,8 @@ namespace zephyr {
       PatchScene();
     }
 
-    // Instruct the geometry cache to evict geometries which had been deleted in the submitted frame.
-    m_geometry_cache.CommitPendingDeleteTaskList();
-
-    // Update all geometries which might be rendered in this frame.
-    for(const Geometry* geometry : m_active_geometry_set) {
-      m_geometry_cache.UpdateGeometry(geometry);
-    }
+    // Queue geometry cache updates and evictions to be processed on the render thread.
+    m_geometry_cache.QueueTasksForRenderThread();
   }
 
   void RenderScene::GetRenderCamera(RenderCamera& out_render_camera) {
@@ -54,7 +49,7 @@ namespace zephyr {
   }
 
   void RenderScene::UpdateStage2() {
-    m_geometry_cache.ProcessPendingUpdates();
+    m_geometry_cache.ProcessQueuedTasks();
 
     for(const RenderScenePatch& render_scene_patch : m_render_scene_patches) {
       switch(render_scene_patch.type) {
@@ -152,7 +147,7 @@ namespace zephyr {
       entity_mesh.geometry = node->GetComponent<MeshComponent>().geometry.get();
       m_entities[entity_id] |= COMPONENT_FLAG_MESH;
       m_view_mesh.push_back(entity_id);
-      m_active_geometry_set.insert(entity_mesh.geometry);
+      m_geometry_cache.IncrementGeometryRefCount(entity_mesh.geometry);
       m_render_scene_patches.push_back({.type = RenderScenePatch::Type::MeshMounted, .entity_id = entity_id});
     }
 
@@ -175,7 +170,7 @@ namespace zephyr {
       const EntityID entity_id = GetOrCreateEntityForNode(node);
       m_entities[entity_id] &= ~COMPONENT_FLAG_MESH;
       m_view_mesh.erase(std::ranges::find(m_view_mesh, entity_id));
-      m_active_geometry_set.erase(m_components_mesh[entity_id].geometry);
+      m_geometry_cache.DecrementGeometryRefCount(m_components_mesh[entity_id].geometry);
       m_render_scene_patches.push_back({.type = RenderScenePatch::Type::MeshRemoved, .entity_id = entity_id});
       did_remove_component = true;
     }

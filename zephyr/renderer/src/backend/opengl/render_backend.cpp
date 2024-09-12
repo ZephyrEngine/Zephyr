@@ -48,7 +48,7 @@ namespace zephyr {
 
     m_render_geometry_manager = std::make_unique<OpenGLRenderGeometryManager>();
 
-    SDL_GL_SetSwapInterval(0);
+//    SDL_GL_SetSwapInterval(0);
   }
 
   void OpenGLRenderBackend::DestroyContext() {

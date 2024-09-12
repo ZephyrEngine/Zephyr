@@ -84,7 +84,6 @@ namespace zephyr {
 
       std::shared_ptr<SceneGraph> m_current_scene_graph{};
       eastl::hash_map<const SceneNode*, EntityID> m_node_entity_map{};
-      eastl::hash_set<const Geometry*> m_active_geometry_set{};
       bool m_require_full_rebuild{};
 
       std::vector<Entity> m_entities{};

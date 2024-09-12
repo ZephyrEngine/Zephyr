@@ -1,6 +1,5 @@
 
 #include <zephyr/renderer/engine/geometry_cache.hpp>
-#include <zephyr/panic.hpp>
 #include <algorithm>
 #include <cstring>
 
@@ -9,15 +8,43 @@ namespace zephyr {
   GeometryCache::~GeometryCache() {
     // Ensure that we do not receive any destruction callbacks from geometries that outlive this geometry cache.
     for(const auto& [geometry, state] : m_geometry_state_table) {
-      geometry->OnBeforeDestruct().Unsubscribe(state.destruct_event_subscription);
+      if(state.uploaded) {
+        geometry->OnBeforeDestruct().Unsubscribe(state.destruct_event_subscription);
+      }
     }
   }
 
-  void GeometryCache::CommitPendingDeleteTaskList() {
+  void GeometryCache::QueueTasksForRenderThread() {
+    // Queue (re-)uploads for all geometries used in the submitted frame which are either new or have changed since the last frame.
+    QueueUploadTasksForUsedGeometries();
+
+    // Queue eviction of geometries which had been deleted in the previously submitted frame.
+    QueueDeleteTaskFromPreviousFrame();
+  }
+
+  void GeometryCache::IncrementGeometryRefCount(const Geometry* geometry) {
+    if(++m_geometry_state_table[geometry].ref_count == 1u) {
+      m_used_geometry_set.insert(geometry);
+    }
+  }
+
+  void GeometryCache::DecrementGeometryRefCount(const Geometry* geometry) {
+    if(--m_geometry_state_table[geometry].ref_count == 0u) {
+      m_used_geometry_set.erase(geometry);
+    }
+  }
+
+  void GeometryCache::QueueUploadTasksForUsedGeometries() {
+    for(const Geometry* geometry : m_used_geometry_set) {
+      QueueGeometryUploadTaskIfNeeded(geometry);
+    }
+  }
+
+  void GeometryCache::QueueDeleteTaskFromPreviousFrame() {
     std::swap(m_delete_tasks[0], m_delete_tasks[1]);
   }
 
-  void GeometryCache::UpdateGeometry(const Geometry* geometry) {
+  void GeometryCache::QueueGeometryUploadTaskIfNeeded(const Geometry* geometry) {
     GeometryState& state = m_geometry_state_table[geometry];
 
     if(!state.uploaded || state.current_version != geometry->CurrentVersion()) {
@@ -39,15 +66,8 @@ namespace zephyr {
       });
 
       if(!state.uploaded) {
-        state.destruct_event_subscription = geometry->OnBeforeDestruct().Subscribe([this, geometry]() {
-          /**
-           * This callback is called from the game thread and may be called outside the frame submission phase.
-           * To avoid deleting geometries too early, we have to push the delete task to an intermediate list,
-           * which is then committed for execution for the next frame submission.
-           */
-          m_delete_tasks[1].push_back({.geometry = (const Geometry*)geometry});
-          m_geometry_state_table.erase((const Geometry*)geometry);
-        });
+        state.destruct_event_subscription = geometry->OnBeforeDestruct().Subscribe(
+          std::bind(&GeometryCache::QueueGeometryDeleteTaskForNextFrame, this, geometry));
       }
 
       state.uploaded = true;
@@ -55,12 +75,22 @@ namespace zephyr {
     }
   }
 
-  void GeometryCache::ProcessPendingUpdates() {
-    ProcessPendingDeletes();
-    ProcessPendingUploads();
+  void GeometryCache::QueueGeometryDeleteTaskForNextFrame(const Geometry* geometry) {
+    /**
+     * Queue the geometry for eviction from the cache.
+     * To avoid deleting the geometry before the current frame-in-flight has been rendered,
+     * these tasks will only be processed at the start of the *next* frame on the render thread.
+     */
+    m_delete_tasks[1].push_back({.geometry = (const Geometry*)geometry});
+    m_geometry_state_table.erase((const Geometry*)geometry);
   }
 
-  void GeometryCache::ProcessPendingDeletes() {
+  void GeometryCache::ProcessQueuedTasks() {
+    ProcessQueuedDeleteTasks();
+    ProcessQueuedUploadTasks();
+  }
+
+  void GeometryCache::ProcessQueuedDeleteTasks() {
     for(const auto& delete_task : m_delete_tasks[0]) {
       RenderGeometry* render_geometry = m_render_geometry_table[delete_task.geometry];
       if(render_geometry) {
@@ -72,7 +102,7 @@ namespace zephyr {
     m_delete_tasks[0].clear();
   }
 
-  void GeometryCache::ProcessPendingUploads() {
+  void GeometryCache::ProcessQueuedUploadTasks() {
     for(const auto& upload_task : m_upload_tasks) {
       const Geometry* geometry = upload_task.geometry;
       RenderGeometry* render_geometry = m_render_geometry_table[geometry];

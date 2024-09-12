@@ -4,6 +4,7 @@
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
 #include <EASTL/hash_map.h>
+#include <EASTL/hash_set.h>
 #include <memory>
 #include <vector>
 
@@ -16,11 +17,12 @@ namespace zephyr {
      ~GeometryCache();
 
       // Game Thread API:
-      void CommitPendingDeleteTaskList();
-      void UpdateGeometry(const Geometry* geometry);
+      void QueueTasksForRenderThread();
+      void IncrementGeometryRefCount(const Geometry* geometry);
+      void DecrementGeometryRefCount(const Geometry* geometry);
 
       // Render Thread API:
-      void ProcessPendingUpdates();
+      void ProcessQueuedTasks();
 
       RenderGeometry* GetCachedRenderGeometry(const Geometry* geometry) const {
         const auto match = m_render_geometry_table.find(geometry);
@@ -34,6 +36,7 @@ namespace zephyr {
       struct GeometryState {
         bool uploaded{false};
         u64 current_version{};
+        size_t ref_count{};
         VoidEvent::SubID destruct_event_subscription;
       };
 
@@ -51,10 +54,18 @@ namespace zephyr {
         const Geometry* geometry;
       };
 
-      void ProcessPendingDeletes();
-      void ProcessPendingUploads();
+      // Game Thread:
+      void QueueUploadTasksForUsedGeometries();
+      void QueueDeleteTaskFromPreviousFrame();
+      void QueueGeometryUploadTaskIfNeeded(const Geometry* geometry);
+      void QueueGeometryDeleteTaskForNextFrame(const Geometry* geometry);
+
+      // Render Thread:
+      void ProcessQueuedDeleteTasks();
+      void ProcessQueuedUploadTasks();
 
       std::shared_ptr<RenderBackend> m_render_backend;
+      eastl::hash_set<const Geometry*> m_used_geometry_set{};
       eastl::hash_map<const Geometry*, GeometryState> m_geometry_state_table{};
       mutable eastl::hash_map<const Geometry*, RenderGeometry*> m_render_geometry_table{};
       std::vector<UploadTask> m_upload_tasks{};
