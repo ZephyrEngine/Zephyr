@@ -32,6 +32,10 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/component/camera.hpp
   include/zephyr/renderer/component/mesh.hpp
   include/zephyr/renderer/engine/geometry_cache.hpp
+  include/zephyr/renderer/glsl/std140_buffer_layout.hpp
+  include/zephyr/renderer/glsl/std430_buffer_layout.hpp
+  include/zephyr/renderer/glsl/type.hpp
+  include/zephyr/renderer/glsl/variable_list.hpp
   include/zephyr/renderer/resource/geometry.hpp
   include/zephyr/renderer/resource/material.hpp
   include/zephyr/renderer/resource/resource.hpp
