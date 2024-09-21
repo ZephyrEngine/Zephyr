@@ -7,6 +7,6 @@
 
 namespace zephyr {
 
-  std::unique_ptr<RenderBackend> CreateOpenGLRenderBackendForSDL2(SDL_Window* sdl2_window);
+std::unique_ptr<RenderBackend> CreateOpenGLRenderBackendForSDL2(SDL_Window* sdl2_window);
 
 } // namespace zephyr

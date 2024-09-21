@@ -8,12 +8,12 @@
 
 namespace zephyr {
 
-  struct MeshComponent : Component {
-    MeshComponent() = default;
-    MeshComponent(std::shared_ptr<Geometry> geometry, std::shared_ptr<Material> material) : geometry{std::move(geometry)}, material{std::move(material)} {}
+struct MeshComponent : Component {
+  MeshComponent() = default;
+  MeshComponent(std::shared_ptr<Geometry> geometry, std::shared_ptr<Material> material) : geometry{std::move(geometry)}, material{std::move(material)} {}
 
-    std::shared_ptr<Geometry> geometry;
-    std::shared_ptr<Material> material;
-  };
+  std::shared_ptr<Geometry> geometry;
+  std::shared_ptr<Material> material;
+};
 
 } // namespace zephyr

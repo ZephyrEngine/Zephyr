@@ -10,11 +10,11 @@
 
 namespace zephyr {
 
-  struct VulkanRenderBackendProps {
-    std::shared_ptr<VulkanInstance> vk_instance;
-    VkSurfaceKHR vk_surface;
-  };
+struct VulkanRenderBackendProps {
+  std::shared_ptr<VulkanInstance> vk_instance;
+  VkSurfaceKHR vk_surface;
+};
 
-  std::unique_ptr<RenderBackend> CreateVulkanRenderBackend(const VulkanRenderBackendProps& props);
+std::unique_ptr<RenderBackend> CreateVulkanRenderBackend(const VulkanRenderBackendProps& props);
 
 } // namespace zephyr

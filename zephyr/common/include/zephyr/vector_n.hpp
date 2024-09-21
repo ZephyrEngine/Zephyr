@@ -30,170 +30,170 @@
 
 namespace zephyr {
 
-  template <typename T, std::size_t capacity>
-  class Vector_N {
-    public:
-      using value_type = T;
-      using size_type = std::size_t;
-      using difference_type = std::ptrdiff_t;
-      using reference = T&;
-      using const_reference = const T&;
-      using pointer = T*;
-      using const_pointer = const T*;
+template <typename T, std::size_t capacity>
+class Vector_N {
+  public:
+    using value_type = T;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = T&;
+    using const_reference = const T&;
+    using pointer = T*;
+    using const_pointer = const T*;
 
-      using iterator = T*;
-      using const_iterator = const T*;
+    using iterator = T*;
+    using const_iterator = const T*;
 
-      constexpr Vector_N() = default;
+    constexpr Vector_N() = default;
 
-      constexpr Vector_N(std::initializer_list<T> values) {
-        for (auto& value : values) PushBack(value);
+    constexpr Vector_N(std::initializer_list<T> values) {
+      for (auto& value : values) PushBack(value);
+    }
+
+    template<class InputIt>
+    constexpr Vector_N(InputIt first, InputIt last) {
+      InputIt iterator = first;
+
+      while(iterator != last) {
+        PushBack(*iterator);
+        ++iterator;
+      }
+    }
+
+    constexpr T& operator[](std::size_t index) {
+      VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
+      return m_data[index];
+    }
+
+    constexpr const T& operator[](std::size_t index) const {
+      VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
+      return m_data[index];
+    }
+
+    constexpr void Clear() {
+      m_size = 0;
+    }
+
+    constexpr void PushBack(T const& value) {
+      VECTOR_N_ASSERT_NOT_FULL();
+      m_data[m_size++] = value;
+    }
+
+    constexpr void PushBack(T&& value) {
+      VECTOR_N_ASSERT_NOT_FULL();
+      m_data[m_size++] = std::move(value);
+    }
+
+    constexpr void PopBack() {
+      VECTOR_N_ASSERT_NOT_EMPTY();
+      m_size--;
+    }
+
+    constexpr void Erase(const_iterator it) {
+      VECTOR_N_ASSERT_NOT_EMPTY();
+
+      auto copy_it = (iterator)it;
+
+      while (copy_it != end()) {
+        *copy_it = std::move(*(copy_it + 1));
+        copy_it++;
       }
 
-      template<class InputIt>
-      constexpr Vector_N(InputIt first, InputIt last) {
-        InputIt iterator = first;
+      m_size--;
+    }
 
-        while(iterator != last) {
-          PushBack(*iterator);
-          ++iterator;
-        }
+    constexpr iterator Insert(const_iterator it, T const& value) {
+      VECTOR_N_ASSERT_NOT_FULL();
+
+      iterator copy_it = end();
+
+      while (copy_it != it) {
+        *copy_it = std::move(*(copy_it - 1));
+        copy_it--;
       }
 
-      constexpr T& operator[](std::size_t index) {
-        VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
-        return m_data[index];
+      *(iterator)it = value;
+
+      m_size++;
+
+      return (iterator)it;
+    }
+
+    constexpr iterator Insert(const_iterator it, T&& value) {
+      VECTOR_N_ASSERT_NOT_FULL();
+
+      iterator copy_it = end();
+
+      while (copy_it != it) {
+        *copy_it = std::move(*(copy_it - 1));
+        copy_it--;
       }
 
-      constexpr const T& operator[](std::size_t index) const {
-        VECTOR_N_ASSERT_INDEX_IN_BOUNDS(index);
-        return m_data[index];
-      }
+      *(iterator)it = std::move(value);
 
-      constexpr void Clear() {
-        m_size = 0;
-      }
+      m_size++;
 
-      constexpr void PushBack(T const& value) {
-        VECTOR_N_ASSERT_NOT_FULL();
-        m_data[m_size++] = value;
-      }
+      return (iterator)it;
+    }
 
-      constexpr void PushBack(T&& value) {
-        VECTOR_N_ASSERT_NOT_FULL();
-        m_data[m_size++] = std::move(value);
-      }
+    constexpr reference Front() {
+      return m_data[0];
+    }
 
-      constexpr void PopBack() {
-        VECTOR_N_ASSERT_NOT_EMPTY();
-        m_size--;
-      }
+    constexpr const_reference Front() const {
+      return m_data[0];
+    }
 
-      constexpr void Erase(const_iterator it) {
-        VECTOR_N_ASSERT_NOT_EMPTY();
+    constexpr reference Back() {
+      return m_data[m_size - 1];
+    }
 
-        auto copy_it = (iterator)it;
+    constexpr const_reference Back() const {
+      return m_data[m_size - 1];
+    }
 
-        while (copy_it != end()) {
-          *copy_it = std::move(*(copy_it + 1));
-          copy_it++;
-        }
+    [[nodiscard]] constexpr bool Empty() const {
+      return m_size == 0;
+    }
 
-        m_size--;
-      }
+    [[nodiscard]] constexpr bool Full() const {
+      return m_size == capacity;
+    }
 
-      constexpr iterator Insert(const_iterator it, T const& value) {
-        VECTOR_N_ASSERT_NOT_FULL();
+    [[nodiscard]] constexpr size_t Size() const {
+      return m_size;
+    }
 
-        iterator copy_it = end();
+    constexpr pointer Data() {
+      return m_data;
+    }
 
-        while (copy_it != it) {
-          *copy_it = std::move(*(copy_it - 1));
-          copy_it--;
-        }
+    constexpr const_pointer Data() const {
+      return m_data;
+    }
 
-        *(iterator)it = value;
+    constexpr iterator begin() {
+      return (iterator)&m_data[0];
+    }
 
-        m_size++;
+    constexpr iterator end() {
+      return (iterator)&m_data[m_size];
+    }
 
-        return (iterator)it;
-      }
+    constexpr const_iterator cbegin() const {
+      return (const_iterator)&m_data[0];
+    }
 
-      constexpr iterator Insert(const_iterator it, T&& value) {
-        VECTOR_N_ASSERT_NOT_FULL();
+    constexpr const_iterator cend() const {
+      return (const_iterator)&m_data[m_size];
+    }
 
-        iterator copy_it = end();
+  private:
 
-        while (copy_it != it) {
-          *copy_it = std::move(*(copy_it - 1));
-          copy_it--;
-        }
+    T m_data[capacity];
 
-        *(iterator)it = std::move(value);
-
-        m_size++;
-
-        return (iterator)it;
-      }
-
-      constexpr reference Front() {
-        return m_data[0];
-      }
-
-      constexpr const_reference Front() const {
-        return m_data[0];
-      }
-
-      constexpr reference Back() {
-        return m_data[m_size - 1];
-      }
-
-      constexpr const_reference Back() const {
-        return m_data[m_size - 1];
-      }
-
-      [[nodiscard]] constexpr bool Empty() const {
-        return m_size == 0;
-      }
-
-      [[nodiscard]] constexpr bool Full() const {
-        return m_size == capacity;
-      }
-
-      [[nodiscard]] constexpr size_t Size() const {
-        return m_size;
-      }
-
-      constexpr pointer Data() {
-        return m_data;
-      }
-
-      constexpr const_pointer Data() const {
-        return m_data;
-      }
-
-      constexpr iterator begin() {
-        return (iterator)&m_data[0];
-      }
-
-      constexpr iterator end() {
-        return (iterator)&m_data[m_size];
-      }
-
-      constexpr const_iterator cbegin() const {
-        return (const_iterator)&m_data[0];
-      }
-
-      constexpr const_iterator cend() const {
-        return (const_iterator)&m_data[m_size];
-      }
-
-    private:
-
-      T m_data[capacity];
-
-      size_t m_size = 0;
-  };
+    size_t m_size = 0;
+};
 
 } // namespace zephyr
 

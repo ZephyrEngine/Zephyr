@@ -10,61 +10,61 @@
 
 namespace zephyr {
 
-  class SceneNode;
+class SceneNode;
 
-  struct ScenePatch {
-    enum class Type : u8 {
-      NodeMounted,
-      NodeRemoved,
-      ComponentMounted,
-      ComponentRemoved,
-      NodeTransformChanged
-    };
-
-    Type type;
-    std::shared_ptr<SceneNode> node;
-    std::type_index component_type{typeid(void)};
+struct ScenePatch {
+  enum class Type : u8 {
+    NodeMounted,
+    NodeRemoved,
+    ComponentMounted,
+    ComponentRemoved,
+    NodeTransformChanged
   };
 
-  class SceneGraph {
-    public:
-      SceneGraph();
+  Type type;
+  std::shared_ptr<SceneNode> node;
+  std::type_index component_type{typeid(void)};
+};
 
-      [[nodiscard]] const SceneNode* GetRoot() const {
-        return m_root_node.get();
-      }
+class SceneGraph {
+  public:
+    SceneGraph();
 
-      [[nodiscard]] SceneNode* GetRoot() {
-        return m_root_node.get();
-      }
+    [[nodiscard]] const SceneNode* GetRoot() const {
+      return m_root_node.get();
+    }
 
-      void ClearScenePatches() {
-        m_scene_patches.clear();
-      }
+    [[nodiscard]] SceneNode* GetRoot() {
+      return m_root_node.get();
+    }
 
-      [[nodiscard]] std::span<ScenePatch const> GetScenePatches() {
-        return m_scene_patches;
-      }
+    void ClearScenePatches() {
+      m_scene_patches.clear();
+    }
 
-      void UpdateTransforms();
-      bool QueryNodeWorldVisibility(const SceneNode* node);
+    [[nodiscard]] std::span<ScenePatch const> GetScenePatches() {
+      return m_scene_patches;
+    }
 
-    private:
-      friend SceneNode;
-      friend class Transform3D;
+    void UpdateTransforms();
+    bool QueryNodeWorldVisibility(const SceneNode* node);
 
-      void SignalNodeMounted(SceneNode* node);
-      void SignalNodeRemoved(SceneNode* node);
-      void SignalComponentMounted(SceneNode* node, std::type_index type_index);
-      void SignalComponentRemoved(SceneNode* node, std::type_index type_index);
-      void SignalNodeTransformChanged(SceneNode* node);
-      void SignalNodeVisibilityChanged(SceneNode* node, bool visible);
+  private:
+    friend SceneNode;
+    friend class Transform3D;
 
-      std::shared_ptr<SceneNode> m_root_node{};
-      std::vector<SceneNode*> m_pending_nodes_with_dirty_transforms{};
-      std::vector<SceneNode*> m_nodes_with_dirty_transform{};
-      eastl::hash_map<const SceneNode*, bool> m_node_world_visibility{}; //< Tracks the world visibility of nodes
-      std::vector<ScenePatch> m_scene_patches{};
-  };
+    void SignalNodeMounted(SceneNode* node);
+    void SignalNodeRemoved(SceneNode* node);
+    void SignalComponentMounted(SceneNode* node, std::type_index type_index);
+    void SignalComponentRemoved(SceneNode* node, std::type_index type_index);
+    void SignalNodeTransformChanged(SceneNode* node);
+    void SignalNodeVisibilityChanged(SceneNode* node, bool visible);
+
+    std::shared_ptr<SceneNode> m_root_node{};
+    std::vector<SceneNode*> m_pending_nodes_with_dirty_transforms{};
+    std::vector<SceneNode*> m_nodes_with_dirty_transform{};
+    eastl::hash_map<const SceneNode*, bool> m_node_world_visibility{}; //< Tracks the world visibility of nodes
+    std::vector<ScenePatch> m_scene_patches{};
+};
 
 } // namespace zephyr

@@ -7,22 +7,22 @@
 
 namespace zephyr {
 
-  namespace detail {
+namespace detail {
 
-    [[noreturn]] void call_panic_handler(const char* file, int line, const char* message);
+[[noreturn]] void call_panic_handler(const char* file, int line, const char* message);
 
-    template<typename... Args>
-    [[noreturn]] void panic(const char* file, int line, const char* format, Args&&... args) {
-      std::string message = fmt::format(fmt::runtime(format), std::forward<Args>(args)...);
+template<typename... Args>
+[[noreturn]] void panic(const char* file, int line, const char* format, Args&&... args) {
+  std::string message = fmt::format(fmt::runtime(format), std::forward<Args>(args)...);
 
-      call_panic_handler(file, line, message.c_str());
-    }
+  call_panic_handler(file, line, message.c_str());
+}
 
-  } // namespace zephyr::detail
+} // namespace zephyr::detail
 
-  typedef void (*PanicHandlerFn)(const char* file, int line, const char* message);
+typedef void (*PanicHandlerFn)(const char* file, int line, const char* message);
 
-  void set_panic_handler(PanicHandlerFn handler);
+void set_panic_handler(PanicHandlerFn handler);
 
 } // namespace zephyr
 

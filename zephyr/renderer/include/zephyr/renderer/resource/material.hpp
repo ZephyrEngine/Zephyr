@@ -5,8 +5,8 @@
 
 namespace zephyr {
 
-  class Material : public Resource {
-    public:
-  };
+class Material : public Resource {
+  public:
+};
 
 } // namespace zephyr
