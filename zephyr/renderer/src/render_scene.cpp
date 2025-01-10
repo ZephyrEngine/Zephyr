@@ -8,7 +8,8 @@
 namespace zephyr {
 
 RenderScene::RenderScene(std::shared_ptr<RenderBackend> render_backend)
-    : m_geometry_cache{std::move(render_backend)} {
+    : m_geometry_cache{std::move(render_backend)}
+    , m_texture_cache{std::move(render_backend)} {
 }
 
 void RenderScene::SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph) {
@@ -28,6 +29,9 @@ void RenderScene::UpdateStage1() {
 
   // Queue geometry cache updates and evictions to be processed on the render thread.
   m_geometry_cache.QueueTasksForRenderThread();
+
+  // Queue texture cache updates and evictions to be processed on the render thread.
+  m_texture_cache.QueueTasksForRenderThread();
 }
 
 void RenderScene::GetRenderCamera(RenderCamera& out_render_camera) {
@@ -50,6 +54,7 @@ void RenderScene::GetRenderCamera(RenderCamera& out_render_camera) {
 
 void RenderScene::UpdateStage2() {
   m_geometry_cache.ProcessQueuedTasks();
+  m_texture_cache.ProcessQueuedTasks();
 
   for(const RenderScenePatch& render_scene_patch : m_render_scene_patches) {
     switch(render_scene_patch.type) {

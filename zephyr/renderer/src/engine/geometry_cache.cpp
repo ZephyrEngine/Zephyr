@@ -77,11 +77,11 @@ void GeometryCache::QueueGeometryUploadTaskIfNeeded(const Geometry* geometry) {
 
 void GeometryCache::QueueGeometryDeleteTaskForNextFrame(const Geometry* geometry) {
   /**
-   * Queue the geometry for eviction from the cache, when the next frame begin rendering.
+   * Queue the geometry for eviction from the cache, when the next frame begins rendering.
    * This ensures that the geometry is only evicted after the current frame has fully rendered.
    */
-  m_delete_tasks[1].push_back({.geometry = (const Geometry*)geometry});
-  m_geometry_state_table.erase((const Geometry*)geometry);
+  m_delete_tasks[1].push_back({.geometry = geometry});
+  m_geometry_state_table.erase(geometry);
 }
 
 void GeometryCache::ProcessQueuedTasks() {
