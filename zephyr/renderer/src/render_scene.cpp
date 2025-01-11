@@ -8,7 +8,7 @@
 namespace zephyr {
 
 RenderScene::RenderScene(std::shared_ptr<RenderBackend> render_backend)
-    : m_geometry_cache{std::move(render_backend)}
+    : m_geometry_cache{render_backend}
     , m_texture_cache{std::move(render_backend)} {
 }
 
@@ -25,6 +25,21 @@ void RenderScene::UpdateStage1() {
     m_require_full_rebuild = false;
   } else {
     PatchScene();
+  }
+
+  // Temporary: test creating a texture and uploading some data to it
+  if(!m_test_texture) {
+    m_test_texture = std::make_unique<Texture>(64, 64);
+
+    // Create a basic checkerboard pattern
+    u32* dst_pixel = m_test_texture->m_data;
+    for(int y = 0; y < 64; y++) {
+      for(int x = 0; x < 64; x++) {
+        *dst_pixel++ = ((x ^ y) & 8) ? 0xFFFF0000u : 0xFFFFFFFFu;
+      }
+    }
+
+    m_texture_cache.IncrementTextureRefCount(m_test_texture.get());
   }
 
   // Queue geometry cache updates and evictions to be processed on the render thread.

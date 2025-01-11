@@ -47,12 +47,14 @@ void OpenGLRenderBackend::InitializeContext() {
   glEnable(GL_DEPTH_TEST);
 
   m_render_geometry_manager = std::make_unique<OpenGLRenderGeometryManager>();
+  m_render_texture_manager = std::make_unique<OpenGLRenderTextureManager>();
 
 //    SDL_GL_SetSwapInterval(0);
 }
 
 void OpenGLRenderBackend::DestroyContext() {
   m_render_geometry_manager.reset();
+  m_render_texture_manager.reset();
 
   glDeleteBuffers(1u, &m_gl_material_data_buffer);
   glDeleteBuffers(1u, &m_gl_draw_count_out_ac);
@@ -84,6 +86,18 @@ void OpenGLRenderBackend::UpdateRenderGeometryAABB(RenderGeometry* render_geomet
 
 void OpenGLRenderBackend::DestroyRenderGeometry(RenderGeometry* render_geometry) {
   m_render_geometry_manager->DestroyRenderGeometry(render_geometry);
+}
+
+RenderTexture* OpenGLRenderBackend::CreateRenderTexture(u32 width, u32 height) {
+  return m_render_texture_manager->CreateRenderTexture(width, height);
+}
+
+void OpenGLRenderBackend::UpdateRenderTextureData(RenderTexture* render_texture, std::span<const u8> data) {
+  m_render_texture_manager->UpdateRenderTextureData(render_texture, data);
+}
+
+void OpenGLRenderBackend::DestroyRenderTexture(RenderTexture* render_texture) {
+   m_render_texture_manager->DestroyRenderTexture(render_texture);
 }
 
 void OpenGLRenderBackend::Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) {

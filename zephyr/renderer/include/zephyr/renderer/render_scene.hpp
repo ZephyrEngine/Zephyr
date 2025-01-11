@@ -99,6 +99,9 @@ class RenderScene {
     std::vector<RenderScenePatch> m_render_scene_patches{};
     eastl::hash_map<EntityID, RenderBundleItemLocation> m_entity_to_render_item_location{};
     eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>> m_render_bundles{};
+
+    // Temporary, texture test:
+    std::unique_ptr<Texture> m_test_texture{};
 };
 
 } // namespace zephyr

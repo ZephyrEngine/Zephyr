@@ -37,7 +37,6 @@ struct RenderGeometryLayout {
   u32 key = 0u;
 };
 
-// @todo: is this really the best way to represent the handle?
 class RenderGeometry {
   public:
     virtual ~RenderGeometry() = default;
@@ -46,6 +45,11 @@ class RenderGeometry {
     [[nodiscard]] virtual size_t GetGeometryID() const = 0;
     [[nodiscard]] virtual size_t GetNumberOfVertices() const = 0;
     [[nodiscard]] virtual size_t GetNumberOfIndices() const = 0;
+};
+
+class RenderTexture {
+  public:
+    virtual ~RenderTexture() = default;
 };
 
 struct RenderCamera {
@@ -59,6 +63,8 @@ struct RenderCamera {
   Matrix4 view{};
   Frustum frustum{};
 };
+
+// TODO(fleroviux): question use of std::span<const u8> to pass data for upload to the backend?
 
 class RenderBackend {
   public:
@@ -92,6 +98,10 @@ class RenderBackend {
     virtual void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) = 0;
     virtual void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) = 0;
     virtual void DestroyRenderGeometry(RenderGeometry* render_geometry) = 0;
+
+    virtual RenderTexture* CreateRenderTexture(u32 width, u32 height) = 0;
+    virtual void UpdateRenderTextureData(RenderTexture* render_texture, std::span<const u8> data) = 0;
+    virtual void DestroyRenderTexture(RenderTexture* render_texture) = 0;
 
     /// Just a quick thing for testing the rendering.
     virtual void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) = 0;

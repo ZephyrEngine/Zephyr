@@ -5,6 +5,8 @@
 set(SOURCES
   src/backend/opengl/render_geometry/render_geometry.cpp
   src/backend/opengl/render_geometry/render_geometry_manager.cpp
+  src/backend/opengl/render_texture/render_texture.cpp
+  src/backend/opengl/render_texture/render_texture_manager.cpp
   src/backend/opengl/dynamic_gpu_array.cpp
   src/backend/opengl/render_backend.cpp
   src/backend/vulkan/render_backend.cpp
@@ -18,6 +20,8 @@ set(SOURCES
 set(HEADERS
   src/backend/opengl/render_geometry/render_geometry.hpp
   src/backend/opengl/render_geometry/render_geometry_manager.hpp
+  src/backend/opengl/render_texture/render_texture.hpp
+  src/backend/opengl/render_texture/render_texture_manager.hpp
   src/backend/opengl/shader/draw_call.glsl.hpp
   src/backend/opengl/shader/draw_list_builder.glsl.hpp
   src/backend/opengl/dynamic_gpu_array.hpp

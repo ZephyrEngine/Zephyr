@@ -55,7 +55,7 @@ void TextureCache::QueueTextureUploadTaskIfNeeded(const Texture* texture) {
 
     m_upload_tasks.push_back({
       .texture = texture,
-      .raw_data = staging_data,
+      .raw_data = {staging_data, width * height * sizeof(u32)},
       .width = width,
       .height = height
     });
@@ -86,7 +86,11 @@ void TextureCache::ProcessQueuedTasks() {
 
 void TextureCache::ProcessQueuedDeleteTasks() {
   for(const auto& delete_task : m_delete_tasks[0]) {
-    // TODO(fleroviux)
+    RenderTexture* render_texture = m_render_texture_table[delete_task.texture];
+    if(render_texture) {
+      m_render_backend->DestroyRenderTexture(render_texture);
+    }
+    m_render_texture_table.erase(delete_task.texture);
   }
 
   m_delete_tasks[0].clear();
@@ -94,12 +98,19 @@ void TextureCache::ProcessQueuedDeleteTasks() {
 
 void TextureCache::ProcessQueuedUploadTasks() {
   for(const auto& upload_task : m_upload_tasks) {
-    // TODO(fleroviux)
-    delete[] upload_task.raw_data;
+    const Texture* texture = upload_task.texture;
+    RenderTexture* render_texture = m_render_texture_table[texture];
+
+    if(!render_texture) {
+      render_texture = m_render_backend->CreateRenderTexture(upload_task.width, upload_task.height);
+      m_render_texture_table[texture] = render_texture;
+    }
+    m_render_backend->UpdateRenderTextureData(render_texture, upload_task.raw_data);
+
+    delete[] upload_task.raw_data.data();
   }
 
   m_upload_tasks.clear();
 }
-
 
 } // namespace zephyr

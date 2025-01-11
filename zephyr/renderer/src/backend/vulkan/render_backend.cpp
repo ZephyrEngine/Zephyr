@@ -77,6 +77,18 @@ class VulkanRenderBackend final : public RenderBackend {
       ZEPHYR_PANIC("unimplemented");
     }
 
+    RenderTexture* CreateRenderTexture(u32 width, u32 height) override {
+      ZEPHYR_PANIC("unimplemented");
+    }
+
+    void UpdateRenderTextureData(RenderTexture* render_texture, std::span<const u8> data) override {
+      ZEPHYR_PANIC("unimplemented");
+    }
+
+    void DestroyRenderTexture(RenderTexture* render_texture) override {
+      ZEPHYR_PANIC("unimplemented");
+    }
+
     void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) override {
       ZEPHYR_PANIC("unimplemented");
     }

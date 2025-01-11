@@ -2,9 +2,11 @@
 #pragma once
 
 #include <zephyr/renderer/backend/render_backend.hpp>
+#include <zephyr/integer.hpp>
 #include <eastl/hash_map.h>
 #include <eastl/hash_set.h>
 #include <memory>
+#include <span>
 #include <vector>
 
 // TODO: implement clean texture class
@@ -24,11 +26,6 @@ class Texture final : public Resource {
     u32 m_width{};
     u32 m_height{};
 };
-} // namespace zephyr
-
-// TODO: implement clean RenderTexture class
-namespace zephyr {
-class RenderTexture {}; // placeholder!
 } // namespace zephyr
 
 namespace zephyr {
@@ -58,7 +55,7 @@ class TextureCache {
 
     struct UploadTask {
       const Texture* texture;
-      u8* raw_data;
+      std::span<const u8> raw_data;
       u32 width;
       u32 height;
     };

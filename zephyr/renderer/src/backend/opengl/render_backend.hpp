@@ -9,6 +9,7 @@
 #include <SDL_opengl.h>
 
 #include "render_geometry/render_geometry_manager.hpp"
+#include "render_texture/render_texture_manager.hpp"
 
 namespace zephyr {
 
@@ -24,6 +25,10 @@ class OpenGLRenderBackend final : public RenderBackend {
     void UpdateRenderGeometryVertices(RenderGeometry* render_geometry, std::span<const u8> data) override;
     void UpdateRenderGeometryAABB(RenderGeometry* render_geometry, const Box3& aabb) override;
     void DestroyRenderGeometry(RenderGeometry* render_geometry) override;
+
+    RenderTexture* CreateRenderTexture(u32 width, u32 height) override;
+    void UpdateRenderTextureData(RenderTexture* render_texture, std::span<const u8> data) override;
+    void DestroyRenderTexture(RenderTexture* render_texture) override;
 
     void Render(const RenderCamera& render_camera, const eastl::hash_map<RenderBundleKey, std::vector<RenderBundleItem>>& render_bundles) override;
 
@@ -51,6 +56,7 @@ class OpenGLRenderBackend final : public RenderBackend {
     GLuint m_gl_material_data_buffer{};
 
     std::unique_ptr<OpenGLRenderGeometryManager> m_render_geometry_manager{};
+    std::unique_ptr<OpenGLRenderTextureManager> m_render_texture_manager{};
 };
 
 std::unique_ptr<RenderBackend> CreateOpenGLRenderBackendForSDL2(SDL_Window* sdl2_window) {
