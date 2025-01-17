@@ -11,6 +11,7 @@ set(SOURCES
   src/backend/opengl/render_backend.cpp
   src/backend/vulkan/render_backend.cpp
   src/engine/geometry_cache.cpp
+  src/engine/material_cache.cpp
   src/engine/texture_cache.cpp
   src/vulkan/vulkan_instance.cpp
   src/render_engine.cpp
@@ -37,6 +38,7 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/component/camera.hpp
   include/zephyr/renderer/component/mesh.hpp
   include/zephyr/renderer/engine/geometry_cache.hpp
+  include/zephyr/renderer/engine/material_cache.hpp
   include/zephyr/renderer/engine/texture_cache.hpp
   include/zephyr/renderer/glsl/std140_buffer_layout.hpp
   include/zephyr/renderer/glsl/std430_buffer_layout.hpp

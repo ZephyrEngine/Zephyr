@@ -5,8 +5,10 @@
 #include <zephyr/math/matrix4.hpp>
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/engine/geometry_cache.hpp>
+#include <zephyr/renderer/engine/material_cache.hpp>
 #include <zephyr/renderer/engine/texture_cache.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
+#include <zephyr/renderer/resource/material.hpp>
 #include <zephyr/renderer/resource/texture_2d.hpp>
 #include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/integer.hpp>
@@ -45,6 +47,7 @@ class RenderScene {
 
     struct Mesh {
       const Geometry* geometry;
+      const Material* material;
     };
 
     struct Camera {
@@ -84,6 +87,7 @@ class RenderScene {
 
     GeometryCache m_geometry_cache;
     TextureCache m_texture_cache;
+    MaterialCache m_material_cache;
 
     std::shared_ptr<SceneGraph> m_current_scene_graph{};
     eastl::hash_map<const SceneNode*, EntityID> m_node_entity_map{};
@@ -103,6 +107,8 @@ class RenderScene {
 
     // Temporary, texture test:
     std::unique_ptr<Texture2D> m_test_texture{};
+
+    Material m_material_placeholder{};
 };
 
 } // namespace zephyr

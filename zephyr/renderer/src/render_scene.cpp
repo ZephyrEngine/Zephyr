@@ -9,7 +9,8 @@ namespace zephyr {
 
 RenderScene::RenderScene(std::shared_ptr<RenderBackend> render_backend)
     : m_geometry_cache{render_backend}
-    , m_texture_cache{std::move(render_backend)} {
+    , m_texture_cache{render_backend}
+    , m_material_cache{std::move(render_backend), m_texture_cache} {
 }
 
 void RenderScene::SetSceneGraph(std::shared_ptr<SceneGraph> scene_graph) {
@@ -162,12 +163,20 @@ void RenderScene::PatchNodeRemoved(SceneNode* node) {
 
 void RenderScene::PatchNodeComponentMounted(SceneNode* node, std::type_index component_type) {
   if(component_type == typeid(MeshComponent)) {
+    const MeshComponent& node_mesh_component = node->GetComponent<MeshComponent>();
+
     const EntityID entity_id = GetOrCreateEntityForNode(node);
     Mesh& entity_mesh = m_components_mesh[entity_id];
-    entity_mesh.geometry = node->GetComponent<MeshComponent>().geometry.get();
+    entity_mesh.geometry = node_mesh_component.geometry.get();
+    entity_mesh.material = node_mesh_component.material.get();
+    if(entity_mesh.material == nullptr) [[unlikely]] {
+      // TODO(fleroviux): this should ideally never happen, but what would be the best way to safeguard against it?
+      entity_mesh.material = &m_material_placeholder;
+    }
     m_entities[entity_id] |= COMPONENT_FLAG_MESH;
     m_view_mesh.push_back(entity_id);
     m_geometry_cache.IncrementGeometryRefCount(entity_mesh.geometry);
+    m_material_cache.IncrementMaterialRefCount(entity_mesh.material);
     m_render_scene_patches.push_back({.type = RenderScenePatch::Type::MeshMounted, .entity_id = entity_id});
   }
 
@@ -191,6 +200,7 @@ void RenderScene::PatchNodeComponentRemoved(SceneNode* node, std::type_index com
     m_entities[entity_id] &= ~COMPONENT_FLAG_MESH;
     m_view_mesh.erase(std::ranges::find(m_view_mesh, entity_id));
     m_geometry_cache.DecrementGeometryRefCount(m_components_mesh[entity_id].geometry);
+    m_material_cache.DecrementMaterialRefCount(m_components_mesh[entity_id].material);
     m_render_scene_patches.push_back({.type = RenderScenePatch::Type::MeshRemoved, .entity_id = entity_id});
     did_remove_component = true;
   }
