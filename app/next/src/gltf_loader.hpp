@@ -86,6 +86,7 @@ class GLTFLoader {
     struct Mesh {
       struct Primitive {
         std::shared_ptr<Geometry> geometry;
+        std::shared_ptr<Material> material;
       };
       std::vector<Primitive> primitives;
     };
@@ -285,6 +286,8 @@ class GLTFLoader {
             parsed_material->m_diffuse_map = m_textures[pbr_metallic_roughness["baseColorTexture"]["index"].get<size_t>()];
           }
         }
+
+        m_materials.push_back(std::move(parsed_material));
       }
     }
 
@@ -365,6 +368,11 @@ class GLTFLoader {
             }
 
             parsed_primitive.geometry = std::move(geometry);
+            if(primitive.contains("material")) {
+              parsed_primitive.material = m_materials[primitive["material"].get<size_t>()];
+            } else {
+              fmt::print("huh? primitive without material? how to deal with this?\n");
+            }
 
             parsed_mesh.primitives.push_back(std::move(parsed_primitive));
           }
@@ -445,11 +453,11 @@ class GLTFLoader {
       if(node_json.contains("mesh")) {
         Mesh& mesh = m_meshes[node_json["mesh"].get<size_t>()];
         if(mesh.primitives.size() == 1u) {
-          node->CreateComponent<MeshComponent>(mesh.primitives[0].geometry, std::shared_ptr<Material>{});
+          node->CreateComponent<MeshComponent>(mesh.primitives[0].geometry, mesh.primitives[0].material);
         } else {
           for(size_t i = 0; i < mesh.primitives.size(); i++) {
             std::shared_ptr<SceneNode> primitive_node = node->CreateChild(fmt::format("{}#{}", name, i));
-            primitive_node->CreateComponent<MeshComponent>(mesh.primitives[i].geometry, std::shared_ptr<Material>{});
+            primitive_node->CreateComponent<MeshComponent>(mesh.primitives[i].geometry, mesh.primitives[i].material);
           }
         }
       }
