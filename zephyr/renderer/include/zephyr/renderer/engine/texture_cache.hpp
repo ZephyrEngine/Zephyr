@@ -2,31 +2,13 @@
 #pragma once
 
 #include <zephyr/renderer/backend/render_backend.hpp>
+#include <zephyr/renderer/resource/texture.hpp>
 #include <zephyr/integer.hpp>
 #include <eastl/hash_map.h>
 #include <eastl/hash_set.h>
 #include <memory>
 #include <span>
 #include <vector>
-
-// TODO: implement clean texture class
-#include <zephyr/renderer/resource/resource.hpp>
-namespace zephyr {
-class Texture final : public Resource {
-  public:
-    Texture(u32 width, u32 height) {
-      m_data = new u32[width * height];
-      m_width = width;
-      m_height = height;
-    }
-   ~Texture() override {
-      delete[] m_data;
-    }
-    u32* m_data{};
-    u32 m_width{};
-    u32 m_height{};
-};
-} // namespace zephyr
 
 namespace zephyr {
 
@@ -38,12 +20,12 @@ class TextureCache {
 
     // Game Thread API:
     void QueueTasksForRenderThread();
-    void IncrementTextureRefCount(const Texture* texture);
-    void DecrementTextureRefCount(const Texture* texture);
+    void IncrementTextureRefCount(const TextureBase* texture);
+    void DecrementTextureRefCount(const TextureBase* texture);
 
     // Render Thread API:
     void ProcessQueuedTasks();
-    // RenderTexture* GetCachedRenderTexture(const Texture* texture) const;
+    // RenderTexture* GetCachedRenderTexture(const TextureBase* texture) const;
 
   private:
     struct TextureState {
@@ -54,30 +36,30 @@ class TextureCache {
     };
 
     struct UploadTask {
-      const Texture* texture;
+      const TextureBase* texture;
       std::span<const u8> raw_data;
       u32 width;
       u32 height;
     };
 
     struct DeleteTask {
-      const Texture* texture;
+      const TextureBase* texture;
     };
 
     // Game Thread:
     void QueueUploadTasksForUsedTextures();
     void QueueDeleteTasksFromPreviousFrame();
-    void QueueTextureUploadTaskIfNeeded(const Texture* texture);
-    void QueueTextureDeleteTaskForNextFrame(const Texture* texture);
+    void QueueTextureUploadTaskIfNeeded(const TextureBase* texture);
+    void QueueTextureDeleteTaskForNextFrame(const TextureBase* texture);
 
     // Render Thread:
     void ProcessQueuedDeleteTasks();
     void ProcessQueuedUploadTasks();
 
     std::shared_ptr<RenderBackend> m_render_backend;
-    eastl::hash_set<const Texture*> m_used_texture_set{};
-    eastl::hash_map<const Texture*, TextureState> m_texture_state_table{};
-    mutable eastl::hash_map<const Texture*, RenderTexture*> m_render_texture_table{};
+    eastl::hash_set<const TextureBase*> m_used_texture_set{};
+    eastl::hash_map<const TextureBase*, TextureState> m_texture_state_table{};
+    mutable eastl::hash_map<const TextureBase*, RenderTexture*> m_render_texture_table{};
     std::vector<UploadTask> m_upload_tasks{};
     std::vector<DeleteTask> m_delete_tasks[2]{};
 };

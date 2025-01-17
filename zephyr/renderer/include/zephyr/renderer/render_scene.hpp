@@ -7,6 +7,7 @@
 #include <zephyr/renderer/engine/geometry_cache.hpp>
 #include <zephyr/renderer/engine/texture_cache.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
+#include <zephyr/renderer/resource/texture_2d.hpp>
 #include <zephyr/scene/scene_graph.hpp>
 #include <zephyr/integer.hpp>
 #include <EASTL/hash_map.h>
@@ -101,7 +102,7 @@ class RenderScene {
     eastl::hash_map<RenderBackend::RenderBundleKey, std::vector<RenderBackend::RenderBundleItem>> m_render_bundles{};
 
     // Temporary, texture test:
-    std::unique_ptr<Texture> m_test_texture{};
+    std::unique_ptr<Texture2D> m_test_texture{};
 };
 
 } // namespace zephyr

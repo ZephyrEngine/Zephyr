@@ -29,10 +29,10 @@ void RenderScene::UpdateStage1() {
 
   // Temporary: test creating a texture and uploading some data to it
   if(!m_test_texture) {
-    m_test_texture = std::make_unique<Texture>(64, 64);
+    m_test_texture = std::make_unique<Texture2D>(64, 64);
 
     // Create a basic checkerboard pattern
-    u32* dst_pixel = m_test_texture->m_data;
+    u32* dst_pixel = m_test_texture->Data<u32>();
     for(int y = 0; y < 64; y++) {
       for(int x = 0; x < 64; x++) {
         *dst_pixel++ = ((x ^ y) & 8) ? 0xFFFF0000u : 0xFFFFFFFFu;

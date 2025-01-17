@@ -1,5 +1,6 @@
 
 #include <zephyr/renderer/engine/texture_cache.hpp>
+#include <zephyr/renderer/resource/texture_2d.hpp>
 #include <algorithm>
 
 namespace zephyr {
@@ -21,20 +22,20 @@ void TextureCache::QueueTasksForRenderThread() {
   QueueDeleteTasksFromPreviousFrame();
 }
 
-void TextureCache::IncrementTextureRefCount(const Texture* texture) {
+void TextureCache::IncrementTextureRefCount(const TextureBase* texture) {
   if(++m_texture_state_table[texture].ref_count == 1u) {
     m_used_texture_set.insert(texture);
   }
 }
 
-void TextureCache::DecrementTextureRefCount(const Texture* texture) {
+void TextureCache::DecrementTextureRefCount(const TextureBase* texture) {
   if(--m_texture_state_table[texture].ref_count == 0u) {
     m_used_texture_set.erase(texture);
   }
 }
 
 void TextureCache::QueueUploadTasksForUsedTextures() {
-  for(const Texture* texture : m_used_texture_set) {
+  for(const TextureBase* texture : m_used_texture_set) {
     QueueTextureUploadTaskIfNeeded(texture);
   }
 }
@@ -43,15 +44,15 @@ void TextureCache::QueueDeleteTasksFromPreviousFrame() {
   std::swap(m_delete_tasks[0], m_delete_tasks[1]);
 }
 
-void TextureCache::QueueTextureUploadTaskIfNeeded(const Texture* texture) {
+void TextureCache::QueueTextureUploadTaskIfNeeded(const TextureBase* texture) {
   TextureState& state = m_texture_state_table[texture];
 
   if(!state.uploaded || state.current_version != texture->CurrentVersion()) {
     // TODO(fleroviux): allocate staging memory from a dedicated allocator?
-    const u32 width = texture->m_width;
-    const u32 height = texture->m_height;
+    const u32 width = dynamic_cast<const Texture2D*>(texture)->GetWidth();
+    const u32 height = dynamic_cast<const Texture2D*>(texture)->GetHeight();
     u8* staging_data = new u8[width * height * sizeof(u32)];
-    std::memcpy(staging_data, texture->m_data, width * height * sizeof(u32));
+    std::memcpy(staging_data, texture->Data(), width * height * sizeof(u32));
 
     m_upload_tasks.push_back({
       .texture = texture,
@@ -70,7 +71,7 @@ void TextureCache::QueueTextureUploadTaskIfNeeded(const Texture* texture) {
   }
 }
 
-void TextureCache::QueueTextureDeleteTaskForNextFrame(const Texture* texture) {
+void TextureCache::QueueTextureDeleteTaskForNextFrame(const TextureBase* texture) {
   /**
    * Queue the texture for eviction from the cache, when the next frame begins rendering.
    * This ensures that the texture is only evicted after the current frame has fully rendered.
@@ -98,7 +99,7 @@ void TextureCache::ProcessQueuedDeleteTasks() {
 
 void TextureCache::ProcessQueuedUploadTasks() {
   for(const auto& upload_task : m_upload_tasks) {
-    const Texture* texture = upload_task.texture;
+    const TextureBase* texture = upload_task.texture;
     RenderTexture* render_texture = m_render_texture_table[texture];
 
     if(!render_texture) {

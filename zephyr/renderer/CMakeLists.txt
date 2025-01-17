@@ -45,6 +45,8 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/resource/geometry.hpp
   include/zephyr/renderer/resource/material.hpp
   include/zephyr/renderer/resource/resource.hpp
+  include/zephyr/renderer/resource/texture.hpp
+  include/zephyr/renderer/resource/texture_2d.hpp
   include/zephyr/renderer/vulkan/vulkan_instance.hpp
   include/zephyr/renderer/vulkan/vulkan_physical_device.hpp
   include/zephyr/renderer/render_engine.hpp
