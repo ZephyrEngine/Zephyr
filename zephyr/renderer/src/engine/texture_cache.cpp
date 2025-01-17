@@ -48,6 +48,7 @@ void TextureCache::QueueTextureUploadTaskIfNeeded(const TextureBase* texture) {
   TextureState& state = m_texture_state_table[texture];
 
   if(!state.uploaded || state.current_version != texture->CurrentVersion()) {
+    // TODO(fleroviux): implement logic for uploads of different texture types (e.g. 3D texture or cube map)
     // TODO(fleroviux): allocate staging memory from a dedicated allocator?
     const u32 width = dynamic_cast<const Texture2D*>(texture)->GetWidth();
     const u32 height = dynamic_cast<const Texture2D*>(texture)->GetHeight();

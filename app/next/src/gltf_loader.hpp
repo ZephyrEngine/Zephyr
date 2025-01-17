@@ -3,12 +3,15 @@
 
 #include <zephyr/renderer/component/mesh.hpp>
 #include <zephyr/renderer/resource/geometry.hpp>
+#include <zephyr/renderer/resource/material.hpp>
+#include <zephyr/renderer/resource/texture_2d.hpp>
 #include <zephyr/scene/scene_node.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
+#include <stb_image.h>
 #include <vector>
 
 namespace zephyr {
@@ -33,6 +36,9 @@ class GLTFLoader {
       LoadBuffers(gltf_json);
       LoadBufferViews(gltf_json);
       LoadAccessors(gltf_json);
+      LoadImages(gltf_json);
+      LoadTextures(gltf_json);
+      LoadMaterials(gltf_json);
       LoadMeshes(gltf_json);
 
       // TODO: proper scene parsing
@@ -221,6 +227,67 @@ class GLTFLoader {
       }
     }
 
+    void LoadImages(const nlohmann::json& gltf_json) {
+      if(!gltf_json.contains("images")) {
+        return;
+      }
+
+      for(const nlohmann::json& image : gltf_json["images"]) {
+        // TODO(fleroviux): assumes that URI is used and not an IRI or buffer view reference
+        //const std::string uri = image["uri"].get<std::string>();
+        const std::filesystem::path uri = m_base_path / image["uri"].get<std::string>();
+
+        int width{};
+        int height{};
+        int channels_in_file{};
+        u8* data = stbi_load(uri.string().c_str(), &width, &height, &channels_in_file, 3);
+        if(channels_in_file != 3) {
+          ZEPHYR_PANIC("failed to load image, expected three channels but got {}", channels_in_file);
+        }
+        std::shared_ptr<Texture2D> parsed_image = std::make_shared<Texture2D>(width, height);
+        u8* src = data;
+        u32* dst = parsed_image->Data<u32>();
+        for(size_t i = 0; i < width * height; i++) {
+          const u8 r = *src++;
+          const u8 g = *src++;
+          const u8 b = *src++;
+          *dst++ = 0xFF000000u | r << 16 | g << 8 | b;
+        }
+        stbi_image_free(data);
+
+        m_images.push_back(std::move(parsed_image));
+      }
+    }
+
+    void LoadTextures(const nlohmann::json& gltf_json) {
+      if(!gltf_json.contains("textures")) {
+        return;
+      }
+
+      for(const nlohmann::json& texture : gltf_json["textures"]) {
+        // TODO(fleroviux): source field isn't required!
+        m_textures.push_back(m_images[texture["source"].get<size_t>()]);
+      }
+    }
+
+    void LoadMaterials(const nlohmann::json& gltf_json) {
+      if(!gltf_json.contains("materials")) {
+        return;
+      }
+
+      // TODO: handle error when materials is not an array
+      for(const nlohmann::json& material : gltf_json["materials"]) {
+        std::shared_ptr<Material> parsed_material = std::make_shared<Material>();
+
+        if(material.contains("pbrMetallicRoughness")) {
+          const nlohmann::json& pbr_metallic_roughness = material["pbrMetallicRoughness"];
+          if(pbr_metallic_roughness.contains("baseColorTexture")) {
+            parsed_material->m_diffuse_map = m_textures[pbr_metallic_roughness["baseColorTexture"]["index"].get<size_t>()];
+          }
+        }
+      }
+    }
+
     void LoadMeshes(const nlohmann::json& gltf_json) {
       if(!gltf_json.contains("meshes")) {
         return;
@@ -401,6 +468,9 @@ class GLTFLoader {
     std::vector<BufferView> m_buffer_views{};
     std::vector<Accessor> m_accessors{};
     std::vector<Mesh> m_meshes{};
+    std::vector<std::shared_ptr<Texture2D>> m_images{};
+    std::vector<std::shared_ptr<Texture2D>> m_textures{};
+    std::vector<std::shared_ptr<Material>> m_materials{};
 };
 
 } // namespace zephyr
