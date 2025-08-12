@@ -16,11 +16,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
   # target_compile_options(zephyr-cxx-opts INTERFACE -fno-exceptions)
 endif()
 
+cmake_dependent_option(ZEPHYR_ENABLE_OGL "Enable OpenGL renderer" OFF APPLE ON)
+
 add_subdirectory(external)
 add_subdirectory(zephyr)
 
 option(ZEPHYR_BUILD_NEXT "Build Zephyr Next" ON)
-cmake_dependent_option(ZEPHYR_ENABLE_OGL "Enable OpenGL renderer" OFF APPLE ON)
 
 if(ZEPHYR_BUILD_NEXT)
   add_subdirectory(app/next)

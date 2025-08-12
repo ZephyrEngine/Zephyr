@@ -299,7 +299,7 @@ void MainWindow::CleanupVulkan() {
   SDL_DestroyWindow(m_window);
 }
 
-#ifdef ZEPHYR_OGL
+#ifdef ZEPHYR_OPENGL
 void MainWindow::CreateOpenGLEngine() {
   m_window = SDL_CreateWindow(
     "Zephyr Next (OpenGL)",

@@ -43,12 +43,6 @@ set(HEADERS_PUBLIC
 find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
 
-add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
-
-target_include_directories(zephyr-renderer PUBLIC include)
-target_include_directories(zephyr-renderer PRIVATE src)
-target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-logger zephyr-math zephyr-scene zephyr-cxx-opts SDL2::SDL2 Vulkan::Vulkan)
-
 if(ZEPHYR_ENABLE_OGL)
   list(APPEND SOURCES
     src/backend/opengl/render_geometry/render_geometry.cpp
@@ -76,7 +70,15 @@ if(ZEPHYR_ENABLE_OGL)
 
   find_package(OpenGL REQUIRED)
   find_package(GLEW REQUIRED)
+endif()
 
+add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
+
+target_include_directories(zephyr-renderer PUBLIC include)
+target_include_directories(zephyr-renderer PRIVATE src)
+target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-logger zephyr-math zephyr-scene zephyr-cxx-opts SDL2::SDL2 Vulkan::Vulkan)
+
+if(ZEPHYR_ENABLE_OGL)
   target_compile_definitions(zephyr-renderer PUBLIC ZEPHYR_OPENGL=1)
   target_link_libraries(zephyr-renderer PUBLIC OpenGL::GL GLEW::GLEW)
 endif()
