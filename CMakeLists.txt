@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(zephyr CXX)
 
+include(CMakeDependentOption)
+
 # Link against zephyr-cxx-opts to add common compiler flags to strictly our own targets.
 add_library(zephyr-cxx-opts INTERFACE)
 target_compile_features(zephyr-cxx-opts INTERFACE cxx_std_20)
@@ -18,6 +20,7 @@ add_subdirectory(external)
 add_subdirectory(zephyr)
 
 option(ZEPHYR_BUILD_NEXT "Build Zephyr Next" ON)
+cmake_dependent_option(ZEPHYR_ENABLE_OGL "Enable OpenGL renderer" OFF APPLE ON)
 
 if(ZEPHYR_BUILD_NEXT)
   add_subdirectory(app/next)
