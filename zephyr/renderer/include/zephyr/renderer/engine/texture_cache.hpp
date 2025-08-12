@@ -4,8 +4,8 @@
 #include <zephyr/renderer/backend/render_backend.hpp>
 #include <zephyr/renderer/resource/texture.hpp>
 #include <zephyr/integer.hpp>
-#include <eastl/hash_map.h>
-#include <eastl/hash_set.h>
+#include <EASTL/hash_map.h>
+#include <EASTL/hash_set.h>
 #include <memory>
 #include <span>
 #include <vector>

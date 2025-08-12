@@ -17,7 +17,7 @@
 
 #undef main
 
-#define ZEPHYR_OPENGL
+//#define ZEPHYR_OPENGL
 
 namespace zephyr {
 
