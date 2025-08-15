@@ -1,18 +1,12 @@
 [submodule "external/fmt"]
 	path = external/fmt
 	url = https://github.com/fmtlib/fmt
-[submodule "external/VulkanMemoryAllocator"]
-	path = external/VulkanMemoryAllocator
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/
 [submodule "external/json"]
 	path = external/json
 	url = https://github.com/nlohmann/json
 [submodule "external/EASTL"]
 	path = external/EASTL
 	url = https://github.com/electronicarts/EASTL
-[submodule "external/SPIRV-Cross"]
-	path = external/SPIRV-Cross
-	url = https://github.com/KhronosGroup/SPIRV-Cross.git
 [submodule "external/stb"]
 	path = external/stb
 	url = https://github.com/nothings/stb
