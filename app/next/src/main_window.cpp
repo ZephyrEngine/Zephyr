@@ -1,6 +1,5 @@
 
 #include <zephyr/renderer/backend/render_backend_ogl.hpp>
-#include <zephyr/renderer/backend/render_backend_vk.hpp>
 #include <zephyr/renderer/component/camera.hpp>
 
 #include "gltf_loader.hpp"
@@ -18,7 +17,7 @@ MainWindow::~MainWindow() {
   #ifdef ZEPHYR_OPENGL
     CleanupOpenGL();
   #else
-    CleanupVulkan();
+    ZEPHYR_PANIC("got no render backend");
   #endif
 }
 
@@ -37,7 +36,7 @@ void MainWindow::Setup() {
   #ifdef ZEPHYR_OPENGL
     CreateOpenGLEngine();
   #else
-    CreateVulkanEngine();
+    ZEPHYR_PANIC("got no render backend");
   #endif
 
   m_render_engine->SetSceneGraph(m_scene_graph);
@@ -133,49 +132,6 @@ void MainWindow::UpdateFramesPerSecondCounter() {
     m_fps_counter = 0;
     m_time_point_last_update = std::chrono::steady_clock::now();
   }
-}
-
-void MainWindow::CreateVulkanEngine() {
-  const VkApplicationInfo app_info{
-    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    .pNext = nullptr,
-    .pApplicationName = "Vulkan Playground",
-    .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-    .pEngineName = "Vulkan Playground Engine",
-    .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-    .apiVersion = VK_MAKE_VERSION(1, 0, 0)
-  };
-
-  m_window = SDL_CreateWindow(
-    "Zephyr Next (Vulkan)",
-    SDL_WINDOWPOS_CENTERED,
-    SDL_WINDOWPOS_CENTERED,
-    1920,
-    1080,
-    SDL_WINDOW_VULKAN
-  );
-
-  std::vector<const char*> required_extension_names{};
-  uint extension_count;
-  SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, nullptr);
-  required_extension_names.resize(extension_count);
-  SDL_Vulkan_GetInstanceExtensions(m_window, &extension_count, required_extension_names.data());
-
-  std::vector<const char*> required_layer_names{};
-  if(enable_validation_layers && VulkanInstance::QueryInstanceLayerSupport("VK_LAYER_KHRONOS_validation")) {
-    required_layer_names.push_back("VK_LAYER_KHRONOS_validation");
-  }
-
-  m_vk_instance = VulkanInstance::Create(app_info, required_extension_names, required_layer_names);
-
-  if(!SDL_Vulkan_CreateSurface(m_window, m_vk_instance->Handle(), &m_vk_surface)) {
-    ZEPHYR_PANIC("Failed to create a Vulkan surface for the window");
-  }
-
-  m_render_engine = std::make_unique<RenderEngine>(CreateVulkanRenderBackend({
-    .vk_instance = m_vk_instance,
-    .vk_surface = m_vk_surface
-  }));
 }
 
 void MainWindow::CreateScene() {
@@ -292,11 +248,6 @@ void MainWindow::CreateBenchmarkScene() {
       }
     }
   }
-}
-
-void MainWindow::CleanupVulkan() {
-  vkDestroySurfaceKHR(m_vk_instance->Handle(), m_vk_surface, nullptr);
-  SDL_DestroyWindow(m_window);
 }
 
 #ifdef ZEPHYR_OPENGL

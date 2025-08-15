@@ -3,23 +3,18 @@
 # TODO: remove dependency on SDL2 if possible
 
 set(SOURCES
-  src/backend/vulkan/render_backend.cpp
   src/engine/geometry_cache.cpp
   src/engine/material_cache.cpp
   src/engine/texture_cache.cpp
-  src/vulkan/vulkan_instance.cpp
   src/render_engine.cpp
   src/render_scene.cpp
 )
 
 set(HEADERS
-  src/backend/vulkan/shader/triangle.frag.h
-  src/backend/vulkan/shader/triangle.vert.h
 )
 
 set(HEADERS_PUBLIC
   include/zephyr/renderer/backend/render_backend.hpp
-  include/zephyr/renderer/backend/render_backend_vk.hpp
   include/zephyr/renderer/component/camera.hpp
   include/zephyr/renderer/component/mesh.hpp
   include/zephyr/renderer/engine/geometry_cache.hpp
@@ -34,14 +29,11 @@ set(HEADERS_PUBLIC
   include/zephyr/renderer/resource/resource.hpp
   include/zephyr/renderer/resource/texture.hpp
   include/zephyr/renderer/resource/texture_2d.hpp
-  include/zephyr/renderer/vulkan/vulkan_instance.hpp
-  include/zephyr/renderer/vulkan/vulkan_physical_device.hpp
   include/zephyr/renderer/render_engine.hpp
   include/zephyr/renderer/render_scene.hpp
 )
 
 find_package(SDL2 REQUIRED)
-find_package(Vulkan REQUIRED)
 
 if(ZEPHYR_ENABLE_OGL)
   list(APPEND SOURCES
@@ -76,7 +68,7 @@ add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
 target_include_directories(zephyr-renderer PUBLIC include)
 target_include_directories(zephyr-renderer PRIVATE src)
-target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-logger zephyr-math zephyr-scene zephyr-cxx-opts SDL2::SDL2 Vulkan::Vulkan)
+target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-logger zephyr-math zephyr-scene zephyr-cxx-opts SDL2::SDL2)
 
 if(ZEPHYR_ENABLE_OGL)
   target_compile_definitions(zephyr-renderer PUBLIC ZEPHYR_OPENGL=1)
