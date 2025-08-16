@@ -1,8 +1,9 @@
 
+#include <zephyr/io/gltf.hpp>
 #include <zephyr/renderer/backend/render_backend_ogl.hpp>
 #include <zephyr/renderer/component/camera.hpp>
+#include <zephyr/renderer/component/mesh.hpp>
 
-#include "gltf_loader.hpp"
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;

@@ -5,7 +5,6 @@ set(SOURCES
 )
 
 set(HEADERS
-  src/gltf_loader.hpp
   src/main_window.hpp
 )
 
@@ -13,6 +12,6 @@ find_package(SDL2 REQUIRED)
 
 add_executable(zephyr-next ${SOURCES} ${HEADERS})
 
-target_link_libraries(zephyr-next PRIVATE zephyr nlohmann_json stb)
+target_link_libraries(zephyr-next PRIVATE zephyr)
 target_include_directories(zephyr-next PRIVATE include)
 target_include_directories(zephyr-next PRIVATE src)
