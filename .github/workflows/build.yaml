@@ -9,7 +9,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
         with:
           submodules: true
       - uses: msys2/setup-msys2@v2
@@ -28,7 +28,7 @@ jobs:
           mkdir upload
           cp build/app/next/zephyr-next.exe upload
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Zephyr-win64
           path: upload
