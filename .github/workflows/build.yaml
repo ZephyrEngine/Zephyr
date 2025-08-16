@@ -18,11 +18,11 @@ jobs:
       - name: Build Zephyr
         run: |
           cmake -B build \
-                -GNinja \
+                -G Ninja \
+                -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
                 -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static" \
                 -DCMAKE_BUILD_TYPE=Release
-          cd build
-          ninja -j $NUMBER_OF_PROCESSORS
+          cmake --build build
       - name: Collect artifacts
         run: |
           mkdir upload
