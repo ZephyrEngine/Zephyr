@@ -1,4 +1,7 @@
-# IntelliJ CLion
+# Private content
+/content
+
+# JetBrains CLion
 .idea
 cmake-build-*
 
