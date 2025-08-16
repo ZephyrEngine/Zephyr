@@ -2,11 +2,12 @@
 #include <zephyr/renderer/backend/render_backend_ogl.hpp>
 #include <zephyr/renderer/component/camera.hpp>
 
+#include "sdl2_mgpu/sdl2_mgpu.hpp"
 #include "gltf_loader.hpp"
 #include "main_window.hpp"
 
 static const bool enable_validation_layers = true;
-static const bool benchmark_scene_size = false;
+static const bool benchmark_scene_size = true;
 
 namespace zephyr {
 
@@ -17,7 +18,7 @@ MainWindow::~MainWindow() {
   #ifdef ZEPHYR_OPENGL
     CleanupOpenGL();
   #else
-    ZEPHYR_PANIC("got no render backend");
+    CleanupMGPU();
   #endif
 }
 
@@ -36,7 +37,7 @@ void MainWindow::Setup() {
   #ifdef ZEPHYR_OPENGL
     CreateOpenGLEngine();
   #else
-    ZEPHYR_PANIC("got no render backend");
+    CreateMGPUEngine();
   #endif
 
   m_render_engine->SetSceneGraph(m_scene_graph);
@@ -251,6 +252,7 @@ void MainWindow::CreateBenchmarkScene() {
 }
 
 #ifdef ZEPHYR_OPENGL
+
 void MainWindow::CreateOpenGLEngine() {
   m_window = SDL_CreateWindow(
     "Zephyr Next (OpenGL)",
@@ -266,6 +268,36 @@ void MainWindow::CreateOpenGLEngine() {
 
 void MainWindow::CleanupOpenGL() {
 }
+
+#else
+
+void MainWindow::CreateMGPUEngine() {
+  m_window = SDL_CreateWindow(
+    "Zephyr Next (MGPU <3)",
+    SDL_WINDOWPOS_CENTERED,
+    SDL_WINDOWPOS_CENTERED,
+    1920,
+    1080,
+    SDL_WINDOW_VULKAN
+  );
+
+  MGPU_CHECK(mgpuCreateInstance(MGPU_BACKEND_TYPE_VULKAN, &m_mgpu_instance));
+
+  fmt::print("created mgpu instance\n");
+
+  auto mgpu_surface_result = mgpu_surface_from_sdl_window(m_mgpu_instance, m_window);
+  MGPU_CHECK(mgpu_surface_result.Code());
+  m_mgpu_surface = mgpu_surface_result.Unwrap();
+
+  fmt::print("created mgpu surface\n");
+
+}
+
+void MainWindow::CleanupMGPU() {
+  mgpuSurfaceDestroy(m_mgpu_surface);
+  mgpuInstanceDestroy(m_mgpu_instance);
+}
+
 #endif
 
 } // namespace zephyr

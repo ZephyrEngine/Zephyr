@@ -1,3 +1,4 @@
+
 #include <chrono>
 #include <algorithm>
 #include <zephyr/logger/sink/console.hpp>
@@ -8,6 +9,7 @@
 #include <zephyr/float.hpp>
 #include <zephyr/integer.hpp>
 #include <zephyr/panic.hpp>
+#include <mgpu/mgpu.h>
 #include <SDL.h>
 #include <vector>
 #include <optional>
@@ -30,8 +32,13 @@ class MainWindow {
     void CreateScene();
     void CreateBenchmarkScene();
 
+#ifdef ZEPHYR_OPENGL
     void CreateOpenGLEngine();
     void CleanupOpenGL();
+#else
+    void CreateMGPUEngine();
+    void CleanupMGPU();
+#endif
 
     std::unique_ptr<RenderEngine> m_render_engine{};
     std::shared_ptr<SceneGraph> m_scene_graph{};
@@ -43,6 +50,9 @@ class MainWindow {
     std::chrono::steady_clock::time_point m_time_point_last_update{};
     u64 m_frame{};
     SDL_Window* m_window{};
+
+    MGPUInstance m_mgpu_instance{};
+    MGPUSurface m_mgpu_surface{};
 };
 
 } // namespace zephyr
