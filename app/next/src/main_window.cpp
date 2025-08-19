@@ -1,8 +1,13 @@
 
-#include <zephyr/renderer/backend/render_backend_ogl.hpp>
-#include <zephyr/renderer/component/camera.hpp>
+#ifdef ZEPHYR_OPENGL
+  #include <zephyr/renderer/backend/render_backend_ogl.hpp>
+#else
+  #include <zephyr/renderer/backend/render_backend_mgpu.hpp>
+#endif
 
-#include "sdl2_mgpu/sdl2_mgpu.hpp"
+#include <zephyr/renderer/component/camera.hpp>
+#include <mgpu/plugins/sdl2.h>
+
 #include "gltf_loader.hpp"
 #include "main_window.hpp"
 
@@ -167,88 +172,88 @@ void MainWindow::CreateBenchmarkScene() {
   m_camera_node->CreateComponent<PerspectiveCameraComponent>(45.0f, 16.f / 9.f, 0.01f, 100.f);
   m_camera_node->GetTransform().SetPosition({0.f, 0.f, 5.f});
 
-  // TODO(fleroviux): fix cube geometry is rendered incorrectly.
-
-  /**
-   *   4-------5
-   *  /|      /|
-   * 0-------1 |
-   * | 6-----|-7
-   * |/      |/
-   * 2-------3
-   */
-  RenderGeometryLayout layout{};
-  layout.AddAttribute(RenderGeometryAttribute::Position);
-  layout.AddAttribute(RenderGeometryAttribute::Color);
-
-  std::shared_ptr<Geometry> cube_geometry = std::make_shared<Geometry>(layout, 8, 36);
-
-  auto positions = cube_geometry->GetPositions();
-  positions[0] = Vector3{-1.0, -1.0,  1.0};
-  positions[1] = Vector3{ 1.0, -1.0,  1.0};
-  positions[2] = Vector3{-1.0,  1.0,  1.0};
-  positions[3] = Vector3{ 1.0,  1.0,  1.0};
-  positions[4] = Vector3{-1.0, -1.0, -1.0};
-  positions[5] = Vector3{ 1.0, -1.0, -1.0};
-  positions[6] = Vector3{-1.0,  1.0, -1.0};
-  positions[7] = Vector3{ 1.0,  1.0, -1.0};
-
-  auto colors = cube_geometry->GetColors();
-  if(colors.IsValid()) {
-    colors[0] = Vector4{1.0, 0.0, 0.0, 1.0};
-    colors[1] = Vector4{0.0, 1.0, 0.0, 1.0};
-    colors[2] = Vector4{0.0, 0.0, 1.0, 1.0};
-    colors[3] = Vector4{1.0, 0.0, 1.0, 1.0};
-    colors[4] = Vector4{1.0, 1.0, 0.0, 1.0};
-    colors[5] = Vector4{0.0, 1.0, 1.0, 1.0};
-    colors[6] = Vector4{1.0, 1.0, 1.0, 1.0};
-    colors[7] = Vector4{0.0, 0.0, 0.0, 1.0};
-  }
-
-  auto indices = cube_geometry->GetIndices();
-  u32 index_data[] {
-    // front
-    0, 1, 2,
-    1, 3, 2,
-
-    // back
-    4, 5, 6,
-    5, 7, 6,
-
-    // left
-    0, 4, 6,
-    0, 6, 2,
-
-    // right
-    1, 5, 7,
-    1, 7, 3,
-
-    // top
-    4, 1, 0,
-    4, 5, 1,
-
-    // bottom
-    6, 3, 2,
-    6, 7, 3
-  };
-  std::copy_n(index_data, sizeof(index_data) / sizeof(u32), indices.begin());
-
-  const int grid_size = 37;
-
-  for(int x = -grid_size / 2; x < grid_size / 2; x++) {
-    for(int y = -grid_size / 2; y < grid_size / 2; y++) {
-      for(int z = -grid_size / 2; z < grid_size / 2; z++) {
-        std::shared_ptr<SceneNode> cube = m_scene_graph->GetRoot()->CreateChild("Cube");
-        cube->CreateComponent<MeshComponent>(cube_geometry, std::shared_ptr<Material>{});
-        cube->GetTransform().SetPosition({(f32)x, (f32)y, (f32)-z});
-        cube->GetTransform().SetScale({0.1, 0.1, 0.1});
-
-        if(m_dynamic_cubes.size() < 32768) {
-          m_dynamic_cubes.push_back(cube.get());
-        }
-      }
-    }
-  }
+//  // TODO(fleroviux): fix cube geometry is rendered incorrectly.
+//
+//  /**
+//   *   4-------5
+//   *  /|      /|
+//   * 0-------1 |
+//   * | 6-----|-7
+//   * |/      |/
+//   * 2-------3
+//   */
+//  RenderGeometryLayout layout{};
+//  layout.AddAttribute(RenderGeometryAttribute::Position);
+//  layout.AddAttribute(RenderGeometryAttribute::Color);
+//
+//  std::shared_ptr<Geometry> cube_geometry = std::make_shared<Geometry>(layout, 8, 36);
+//
+//  auto positions = cube_geometry->GetPositions();
+//  positions[0] = Vector3{-1.0, -1.0,  1.0};
+//  positions[1] = Vector3{ 1.0, -1.0,  1.0};
+//  positions[2] = Vector3{-1.0,  1.0,  1.0};
+//  positions[3] = Vector3{ 1.0,  1.0,  1.0};
+//  positions[4] = Vector3{-1.0, -1.0, -1.0};
+//  positions[5] = Vector3{ 1.0, -1.0, -1.0};
+//  positions[6] = Vector3{-1.0,  1.0, -1.0};
+//  positions[7] = Vector3{ 1.0,  1.0, -1.0};
+//
+//  auto colors = cube_geometry->GetColors();
+//  if(colors.IsValid()) {
+//    colors[0] = Vector4{1.0, 0.0, 0.0, 1.0};
+//    colors[1] = Vector4{0.0, 1.0, 0.0, 1.0};
+//    colors[2] = Vector4{0.0, 0.0, 1.0, 1.0};
+//    colors[3] = Vector4{1.0, 0.0, 1.0, 1.0};
+//    colors[4] = Vector4{1.0, 1.0, 0.0, 1.0};
+//    colors[5] = Vector4{0.0, 1.0, 1.0, 1.0};
+//    colors[6] = Vector4{1.0, 1.0, 1.0, 1.0};
+//    colors[7] = Vector4{0.0, 0.0, 0.0, 1.0};
+//  }
+//
+//  auto indices = cube_geometry->GetIndices();
+//  u32 index_data[] {
+//    // front
+//    0, 1, 2,
+//    1, 3, 2,
+//
+//    // back
+//    4, 5, 6,
+//    5, 7, 6,
+//
+//    // left
+//    0, 4, 6,
+//    0, 6, 2,
+//
+//    // right
+//    1, 5, 7,
+//    1, 7, 3,
+//
+//    // top
+//    4, 1, 0,
+//    4, 5, 1,
+//
+//    // bottom
+//    6, 3, 2,
+//    6, 7, 3
+//  };
+//  std::copy_n(index_data, sizeof(index_data) / sizeof(u32), indices.begin());
+//
+//  const int grid_size = 37;
+//
+//  for(int x = -grid_size / 2; x < grid_size / 2; x++) {
+//    for(int y = -grid_size / 2; y < grid_size / 2; y++) {
+//      for(int z = -grid_size / 2; z < grid_size / 2; z++) {
+//        std::shared_ptr<SceneNode> cube = m_scene_graph->GetRoot()->CreateChild("Cube");
+//        cube->CreateComponent<MeshComponent>(cube_geometry, std::shared_ptr<Material>{});
+//        cube->GetTransform().SetPosition({(f32)x, (f32)y, (f32)-z});
+//        cube->GetTransform().SetScale({0.1, 0.1, 0.1});
+//
+//        if(m_dynamic_cubes.size() < 32768) {
+//          m_dynamic_cubes.push_back(cube.get());
+//        }
+//      }
+//    }
+//  }
 }
 
 #ifdef ZEPHYR_OPENGL
@@ -273,23 +278,18 @@ void MainWindow::CleanupOpenGL() {
 
 void MainWindow::CreateMGPUEngine() {
   m_window = SDL_CreateWindow(
-    "Zephyr Next (MGPU <3)",
+    "Zephyr Next (MGPU) - hi gloria :3",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
     1920,
     1080,
-    SDL_WINDOW_VULKAN
+    SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
   );
 
   MGPU_CHECK(mgpuCreateInstance(MGPU_BACKEND_TYPE_VULKAN, &m_mgpu_instance));
+  MGPU_CHECK(mgpuSurfaceFromWindowSDL2(m_mgpu_instance, m_window, &m_mgpu_surface));
 
-  fmt::print("created mgpu instance\n");
-
-  auto mgpu_surface_result = mgpu_surface_from_sdl_window(m_mgpu_instance, m_window);
-  MGPU_CHECK(mgpu_surface_result.Code());
-  m_mgpu_surface = mgpu_surface_result.Unwrap();
-
-  fmt::print("created mgpu surface\n");
+  m_render_engine = std::make_unique<RenderEngine>(CreateMGPURenderBackend(m_mgpu_instance, m_mgpu_surface));
 
 }
 

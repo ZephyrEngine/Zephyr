@@ -62,6 +62,18 @@ if(ZEPHYR_ENABLE_OGL)
 
   find_package(OpenGL REQUIRED)
   find_package(GLEW REQUIRED)
+else()
+  list(APPEND SOURCES
+    src/backend/mgpu/render_backend.cpp
+  )
+
+  list(APPEND HEADERS
+    src/backend/mgpu/render_backend.hpp
+  )
+
+  list(APPEND HEADERS_PUBLIC
+    include/zephyr/renderer/backend/render_backend_mgpu.hpp
+  )
 endif()
 
 add_library(zephyr-renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
@@ -73,4 +85,6 @@ target_link_libraries(zephyr-renderer PUBLIC zephyr-common zephyr-logger zephyr-
 if(ZEPHYR_ENABLE_OGL)
   target_compile_definitions(zephyr-renderer PUBLIC ZEPHYR_OPENGL=1)
   target_link_libraries(zephyr-renderer PUBLIC OpenGL::GL GLEW::GLEW)
+else()
+  target_link_libraries(zephyr-renderer PUBLIC mgpu)
 endif()

@@ -1,11 +1,12 @@
 
+
 #pragma once
 
-#include "zephyr/result.hpp"
-#include "mgpu/mgpu.h"
-#include <SDL.h>
+#include <zephyr/renderer/backend/render_backend.hpp>
+#include <zephyr/panic.hpp>
+#include <mgpu/mgpu.h>
+#include <memory>
 
-// TODO: move this to the engine module
 #define MGPU_CHECK(result_expression) \
   do { \
     MGPUResult result = result_expression; \
@@ -15,6 +16,6 @@
 
 namespace zephyr {
 
-Result<MGPUResult, MGPUSurface> mgpu_surface_from_sdl_window(MGPUInstance mgpu_instance, SDL_Window* sdl_window);
+std::unique_ptr<RenderBackend> CreateMGPURenderBackend(MGPUInstance mgpu_instance, MGPUSurface mgpu_surface);
 
 } // namespace zephyr

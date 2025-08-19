@@ -28,6 +28,7 @@ void RenderScene::UpdateStage1() {
     PatchScene();
   }
 
+/*
   // Temporary: test creating a texture and uploading some data to it
   if(!m_test_texture) {
     m_test_texture = std::make_unique<Texture2D>(64, 64);
@@ -42,6 +43,7 @@ void RenderScene::UpdateStage1() {
 
     m_texture_cache.IncrementTextureRefCount(m_test_texture.get());
   }
+*/
 
   // Queue geometry cache updates and evictions to be processed on the render thread.
   m_geometry_cache.QueueTasksForRenderThread();
