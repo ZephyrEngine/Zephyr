@@ -5,6 +5,8 @@
 #include <mgpu/mgpu.h>
 #include <vector>
 
+#include "utility/dynamic_buffer.hpp"
+
 namespace zephyr {
 
 class MGPURenderBackend final : public RenderBackend {
@@ -45,6 +47,8 @@ class MGPURenderBackend final : public RenderBackend {
     std::vector<MGPUTextureView> m_mgpu_swap_chain_texture_views{};
     MGPUTexture m_mgpu_depth_texture{};
     MGPUTextureView m_mgpu_depth_texture_view{};
+
+    std::unique_ptr<MGPUDynamicBuffer> m_mgpu_test_dynamic_buffer{};
 };
 
 std::unique_ptr<RenderBackend> CreateMGPURenderBackend(MGPUInstance mgpu_instance, MGPUSurface mgpu_surface) {

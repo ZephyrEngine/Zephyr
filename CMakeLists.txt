@@ -11,9 +11,7 @@ target_compile_features(zephyr-cxx-opts INTERFACE cxx_std_20)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # TODO: fix warnings, so that we can actually enable -Wall and -Wextra.
   # target_compile_options(zephyr-cxx-opts INTERFACE -Wall -Wextra -fno-exceptions)
-
-  # SPIRV-Cross wants exceptions... even when we tell it to convert to asserts instead.
-  # target_compile_options(zephyr-cxx-opts INTERFACE -fno-exceptions)
+  target_compile_options(zephyr-cxx-opts INTERFACE -fno-exceptions)
 endif()
 
 cmake_dependent_option(ZEPHYR_ENABLE_OGL "Enable OpenGL renderer" OFF APPLE ON)

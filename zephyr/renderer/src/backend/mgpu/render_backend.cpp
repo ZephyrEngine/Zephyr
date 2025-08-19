@@ -23,10 +23,15 @@ void MGPURenderBackend::InitializeContext() {
 
   MGPU_CHECK(mgpuDeviceCreateCommandList(m_mgpu_device, &m_mgpu_command_list));
 
+  m_mgpu_test_dynamic_buffer = MGPUDynamicBuffer::Create(m_mgpu_device, 1024u, MGPU_BUFFER_USAGE_COPY_DST, 0).Unwrap();
+  m_mgpu_test_dynamic_buffer->Resize(2048u);
+
   CreateSwapChain();
 }
 
 void MGPURenderBackend::DestroyContext() {
+  m_mgpu_test_dynamic_buffer.reset(); // TODO: fix this, meh
+
   DestroySwapChain();
   mgpuCommandListDestroy(m_mgpu_command_list);
   mgpuDeviceDestroy(m_mgpu_device);

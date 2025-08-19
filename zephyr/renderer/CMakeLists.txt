@@ -64,10 +64,12 @@ if(ZEPHYR_ENABLE_OGL)
   find_package(GLEW REQUIRED)
 else()
   list(APPEND SOURCES
+    src/backend/mgpu/utility/dynamic_buffer.cpp
     src/backend/mgpu/render_backend.cpp
   )
 
   list(APPEND HEADERS
+    src/backend/mgpu/utility/dynamic_buffer.hpp
     src/backend/mgpu/render_backend.hpp
   )
 
